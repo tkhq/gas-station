@@ -17,14 +17,19 @@ abstract contract AbstractTKSmartWallet is Initializable, OwnableUpgradeable {
     error ExecutionNotAllowed();
     error FunctionNotAllowed();
     error ExecutionFailed();
+    error ExecutorBanned();
 
     address public interactionContract; //160
     bool public functionsLimited; //8
     bool public allowExecution; //8
 
+    bytes32 public constant TK_SMART_WALLET_EXECUTE_TYPEHASH =
+        keccak256("TKSmartWalletExecute(address smartWalletContract, address fundingEOA, address executor, uint256 timeout)");
 
-    mapping(bytes4 => bool) public allowedFunctions;
 
+    mapping(bytes4 => bool) public allowedFunctions; // TODO find a more efficient way to store this, maybe to include function types/etc
+
+    mapping(address => bool) public bannedExecutors;
 
     modifier onlyAllowExecution() {
         if (!allowExecution) {
@@ -44,10 +49,17 @@ abstract contract AbstractTKSmartWallet is Initializable, OwnableUpgradeable {
         allowExecution = true;
     }
 
-    function execute(bytes calldata _signature, bytes4 _functionId, bytes memory _data) external onlyAllowExecution {
+    function execute(address _fundingEOA, uint256 _timeout, bytes calldata _signature, bytes4 _functionId, bytes memory _data) external onlyAllowExecution {
         if (functionsLimited && !allowedFunctions[_functionId]) {
             revert FunctionNotAllowed();
         }
+
+        address executor = msg.sender;
+        if (bannedExecutors[executor]) {
+            revert ExecutorBanned();
+        }
+
+        address 
         /*
         (bool success, bytes memory result) = interactionContract.call(_functionId, _data);
         if (!success) {
@@ -62,8 +74,14 @@ abstract contract AbstractTKSmartWallet is Initializable, OwnableUpgradeable {
     function unfreezeExecution() external onlyOwner {
         allowExecution = true;
     }
+    function banExecutor(address _executor) external onlyOwner { // todo allow an executor to ban itself as a "logout"
+        bannedExecutors[_executor] = true;
+    }
+    function unbanExecutor(address _executor) external onlyOwner {
+        bannedExecutors[_executor] = false;
+    }
 
-    function _verifySignature(bytes calldata _signature, bytes4 _functionId, bytes memory _data) internal view returns (bool) {
+    function _verifySignature(bytes calldata _signature, bytes memory _data) internal view returns (bool) {
         return true;
     }
 }
