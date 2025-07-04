@@ -2,6 +2,9 @@
 pragma solidity ^0.8.30;
 
 contract MockContractInteraction {
+
+    error Msg(address a);
+    error Msg2(uint256 a);
     constructor() {
     }
     mapping(address => uint256) public balances;
