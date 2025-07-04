@@ -21,10 +21,14 @@ contract TKSmartWalletManager is Ownable, EIP712, ITKSmartWalletManager {
 
     address public immutable interactionContract; 
     bool public immutable functionsLimited; 
+
+    bytes4 public constant EMPTY_FUNCTIONID = 0x00000000;
+    
     bool public allowExecution; 
 
     bytes32 public constant TK_SMART_WALLET_EXECUTE_TYPEHASH =
         keccak256("TKSmartWalletExecute(address executor, uint256 timeout)"); // note: chainId and this address are part of the domain separator
+
 
     bytes32 public immutable allowedFunctions; // todo just use a mapping instead of this, this can't be saving that much gas 
 
@@ -45,7 +49,7 @@ contract TKSmartWalletManager is Ownable, EIP712, ITKSmartWalletManager {
 
         bytes32 tmpAllowedFunctions = 0;
         for (uint256 i = 0; i < _allowedFunctions.length; i++) {
-            tmpAllowedFunctions = bytes32(uint256(tmpAllowedFunctions) | (uint256(uint32(_allowedFunctions[i])) << (i * 32)));
+            tmpAllowedFunctions = bytes32(uint256(tmpAllowedFunctions) | (uint256(uint32(_allowedFunctions[i])) << ( (7 - i) * 32)));
         }
         allowedFunctions = tmpAllowedFunctions;
         allowExecution = true;
@@ -68,6 +72,9 @@ contract TKSmartWalletManager is Ownable, EIP712, ITKSmartWalletManager {
     }
 
     function validateAllReturnInteractionContract(bytes4 _functionId, address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature) external view returns (bool, address) {
+        if (!allowExecution) {
+            revert ExecutionNotAllowed();
+        }
         if (block.timestamp > _timeout) {
             revert Timeout();
         }
@@ -104,11 +111,12 @@ contract TKSmartWalletManager is Ownable, EIP712, ITKSmartWalletManager {
             return true;
         }
         for (uint256 i = 0; i < 8; i++) {
-            if (allowedFunctions & (bytes32(uint256(uint32(_functionId))) << (i * 32)) != 0) {
-                return true;
+            bytes4 tmp = bytes4(allowedFunctions >> (i * 32));
+            if (tmp == _functionId) {
+                return true; // function id has been found
             }
-            if ((allowedFunctions >> (i * 32)) & bytes32(0x00000000000000000000000000000000000000000000000000000000FFFFFFFF) == 0) {
-                return false;
+            if (tmp == EMPTY_FUNCTIONID) {
+                return false; // no more functions to check
             }
         }
         return false;

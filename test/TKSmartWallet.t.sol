@@ -47,6 +47,7 @@ contract TKSmartWalletTest is Test {
         smartWallet = BasicTKSmartWallet(smartWalletAddress);
         
         assertEq(managerAddress, smartWallet.managementContract());
+        assertEq(manager.functionsLimited(), false);
 
         vm.startBroadcast(A_PRIVATE_KEY);
         VmSafe.SignedDelegation memory signedDelegation = vm.signDelegation(address(smartWallet), A_PRIVATE_KEY);
@@ -89,9 +90,168 @@ contract TKSmartWalletTest is Test {
         assertEq(mockContract.getBalance(B_ADDRESS), 0);
 
     }
-    
+
+    function test_execute_reverts_if_not_execution_allowed() public {
+
+        (address managerAddress, address smartWalletAddress) = factory.createSmartWallet("TKSmartWallet", "1", OWNER, address(mockContract), emptyFunctions);
+        manager = TKSmartWalletManager(managerAddress);
+        smartWallet = BasicTKSmartWallet(smartWalletAddress);
+        uint256 timeout = block.timestamp + 1000;
+        // delegate 
+        vm.startBroadcast(A_PRIVATE_KEY);
+        vm.signAndAttachDelegation(smartWalletAddress, A_PRIVATE_KEY);
+        vm.stopBroadcast();
+
+        (bytes memory signature, ) = _sign(A_PRIVATE_KEY, manager, B_ADDRESS, timeout);
+
+        assertEq(manager.allowExecution(), true);
+
+        vm.startBroadcast(OWNER);
+        manager.freezeExecution();
+        vm.stopBroadcast();
+
+        assertEq(manager.allowExecution(), false);
+
+        vm.startBroadcast(B_PRIVATE_KEY);
+        vm.expectRevert(abi.encodeWithSelector(TKSmartWalletManager.ExecutionNotAllowed.selector));
+        BasicTKSmartWallet(A_ADDRESS).execute(A_ADDRESS, timeout, signature, ADD_FUNCTION, abi.encode(1));
+        vm.stopBroadcast();
+
+        vm.startBroadcast(OWNER);
+        manager.unfreezeExecution();
+        vm.stopBroadcast();
+
+        assertEq(manager.allowExecution(), true);
+
+        assertEq(mockContract.getBalance(A_ADDRESS), 0);
+        assertEq(mockContract.getBalance(B_ADDRESS), 0);
+
+        vm.startBroadcast(B_PRIVATE_KEY);
+        BasicTKSmartWallet(A_ADDRESS).execute(A_ADDRESS, timeout, signature, ADD_FUNCTION, abi.encode(1));
+        vm.stopBroadcast();
+
+        assertEq(mockContract.getBalance(A_ADDRESS), 1);
+        assertEq(mockContract.getBalance(B_ADDRESS), 0);
+
+    }
+
+    function test_execute_reverts_if_timeout() public {
+
+        (address managerAddress, address smartWalletAddress) = factory.createSmartWallet("TKSmartWallet", "1", OWNER, address(mockContract), emptyFunctions);
+        manager = TKSmartWalletManager(managerAddress);
+        smartWallet = BasicTKSmartWallet(smartWalletAddress);
+        uint256 timeout = block.timestamp + 1000;
+        // delegate 
+        vm.startBroadcast(A_PRIVATE_KEY);
+        vm.signAndAttachDelegation(smartWalletAddress, A_PRIVATE_KEY);
+        vm.stopBroadcast();
+
+        (bytes memory signature, ) = _sign(A_PRIVATE_KEY, manager, B_ADDRESS, timeout);
+
+        vm.warp(timeout + 1);
+        vm.startBroadcast(B_PRIVATE_KEY);
+        vm.expectRevert(abi.encodeWithSelector(TKSmartWalletManager.Timeout.selector));
+        BasicTKSmartWallet(A_ADDRESS).execute(A_ADDRESS, timeout, signature, ADD_FUNCTION, abi.encode(1));
+        vm.stopBroadcast();
+    }
+
+    function test_execute_reverts_if_banned() public {
+
+        (address managerAddress, address smartWalletAddress) = factory.createSmartWallet("TKSmartWallet", "1", OWNER, address(mockContract), emptyFunctions);
+        manager = TKSmartWalletManager(managerAddress);
+        smartWallet = BasicTKSmartWallet(smartWalletAddress);
+        uint256 timeout = block.timestamp + 1000;
+        // delegate 
+        vm.startBroadcast(A_PRIVATE_KEY);
+        vm.signAndAttachDelegation(smartWalletAddress, A_PRIVATE_KEY);
+        vm.stopBroadcast();
+
+        (bytes memory signature, ) = _sign(A_PRIVATE_KEY, manager, B_ADDRESS, timeout);
+
+        vm.startBroadcast(OWNER);
+        manager.banExecutor(B_ADDRESS);
+        vm.stopBroadcast();
+
+        vm.startBroadcast(B_PRIVATE_KEY);
+        vm.expectRevert(abi.encodeWithSelector(TKSmartWalletManager.ExecutorBanned.selector));
+        BasicTKSmartWallet(A_ADDRESS).execute(A_ADDRESS, timeout, signature, ADD_FUNCTION, abi.encode(1));
+        vm.stopBroadcast();
+
+        vm.startBroadcast(OWNER);
+        manager.unbanExecutor(B_ADDRESS);
+        vm.stopBroadcast();
+
+        assertEq(mockContract.getBalance(A_ADDRESS), 0);
+        assertEq(mockContract.getBalance(B_ADDRESS), 0);
+
+        vm.startBroadcast(B_PRIVATE_KEY);
+        BasicTKSmartWallet(A_ADDRESS).execute(A_ADDRESS, timeout, signature, ADD_FUNCTION, abi.encode(1));
+        vm.stopBroadcast();
+
+        assertEq(mockContract.getBalance(A_ADDRESS), 1);
+        assertEq(mockContract.getBalance(B_ADDRESS), 0);
+
+    }
+
+    function test_execute_reverts_if_not_signer() public {
+
+        (address managerAddress, address smartWalletAddress) = factory.createSmartWallet("TKSmartWallet", "1", OWNER, address(mockContract), emptyFunctions);
+        manager = TKSmartWalletManager(managerAddress);
+        smartWallet = BasicTKSmartWallet(smartWalletAddress);
+        uint256 timeout = block.timestamp + 1000;
+        // delegate 
+        vm.startBroadcast(A_PRIVATE_KEY);
+        vm.signAndAttachDelegation(smartWalletAddress, A_PRIVATE_KEY);
+        vm.stopBroadcast();
+
+        (bytes memory signature, ) = _sign(C_PRIVATE_KEY, manager, B_ADDRESS, timeout);
+
+        vm.startBroadcast(B_PRIVATE_KEY);
+        vm.expectRevert();
+        BasicTKSmartWallet(A_ADDRESS).execute(A_ADDRESS, timeout, signature, ADD_FUNCTION, abi.encode(1));
+        vm.stopBroadcast();
+
+    }
+
+    function test_execute_reverts_if_not_allowed_function() public {
+
+        uint256 timeout = block.timestamp + 1000;
+        bytes4[] memory allowedFunctions = new bytes4[](1);
+        allowedFunctions[0] = ADD_FUNCTION;
+        (address managerAddress, address smartWalletAddress) = factory.createSmartWallet("TKSmartWallet", "1", OWNER, address(mockContract), allowedFunctions);
+        manager = TKSmartWalletManager(managerAddress);
+        smartWallet = BasicTKSmartWallet(smartWalletAddress);
+
+        assertEq(manager.functionsLimited(), true);
+        assertEq(manager.isAllowedFunction(ADD_FUNCTION), true);
+        assertEq(manager.isAllowedFunction(SUB_FUNCTION), false);
+
+        vm.startBroadcast(A_PRIVATE_KEY);
+        vm.signAndAttachDelegation(smartWalletAddress, A_PRIVATE_KEY);
+        vm.stopBroadcast();
+
+
+
+        (bytes memory signature, ) = _sign(A_PRIVATE_KEY, manager, B_ADDRESS, timeout);
+
+        vm.startBroadcast(B_PRIVATE_KEY);
+        BasicTKSmartWallet(A_ADDRESS).execute(A_ADDRESS, timeout, signature, ADD_FUNCTION, abi.encode(1));
+        vm.stopBroadcast();
+
+        assertEq(mockContract.getBalance(A_ADDRESS), 1);
+
+        vm.startBroadcast(B_PRIVATE_KEY);
+        vm.expectRevert(abi.encodeWithSelector(TKSmartWalletManager.FunctionNotAllowed.selector));
+        BasicTKSmartWallet(A_ADDRESS).execute(A_ADDRESS, timeout, signature, SUB_FUNCTION, abi.encode(1));
+        vm.stopBroadcast();
+
+        assertEq(mockContract.getBalance(A_ADDRESS), 1);
+
+    }
+
     function _sign(uint256 _privateKey, TKSmartWalletManager _manager, address _executor, uint256 _timeout)
         internal
+        view 
         returns (bytes memory signature, bytes32 hash)
     {
         hash = _manager.getHash(_executor, _timeout);
