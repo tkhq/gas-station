@@ -19,12 +19,12 @@ contract BasicTKSmartWallet {
         managementContract = _manager;
     }
     
-    function execute(address _fundingEOA, uint256 _timeout, bytes calldata _signature, bytes memory _executionData) external returns (bytes memory) {
+    function execute(address _fundingEOA, uint256 _timeout, bytes calldata _signature, bytes memory _executionData) external payable returns (bytes memory) {
         /* todo list 
-            - Check initialized
-            - Enable eth payment recievable & pass to underlying contract 
+            - Check initialized - done 
+            - Enable eth payment recievable & pass to underlying contract - done
             - Check execution allowed - done
-            - Check executor allowed
+            - Check executor allowed - done 
             - Validate if signature has been signed by fundingEOA - done
             - Validate timestamp - done 
             - Validate that msg sender is executor - implicit in 712 - done 
@@ -40,12 +40,19 @@ contract BasicTKSmartWallet {
             revert ValidationFailed();
         }
 
-        // Make the actual call to the interaction contract
-        (bool success, bytes memory result) = interactionContractAddr.call(_executionData);
+        // Make the actual call to the interaction contract with ETH value
+        (bool success, bytes memory result) = interactionContractAddr.call{value: msg.value}(_executionData);
         if (!success) {
             revert ExecutionFailed();
         }
         return result;
+    }
+
+    /**
+     * @dev Allow the smart wallet to receive ETH
+     */
+    receive() external payable {
+        // Allow receiving ETH
     }
 
 }
