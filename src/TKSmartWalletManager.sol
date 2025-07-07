@@ -65,7 +65,7 @@ contract TKSmartWalletManager is Ownable, EIP712, AbstractTKSmartWalletManager {
         bannedExecutors[_executor] = false;
     }
 
-    function validateAllReturnInteractionContract(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature, bytes calldata _executionData) external view override returns (bool, address) {
+    function validateAllReturnInteractionContract(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature, uint256 /* _ethAmount */, bytes calldata _executionData) external view override returns (bool, address) {
         if (!allowExecution) {
             revert ExecutionNotAllowed();
         }
@@ -87,6 +87,9 @@ contract TKSmartWalletManager is Ownable, EIP712, AbstractTKSmartWalletManager {
         if (!validateExecutionSignature(_fundingEOA, _executor, _timeout, _signature)) {
             revert ValidationFailed();
         }
+        
+        // _ethAmount is available but not enforced - can be used for future validation logic
+        // For now, we just ignore it
         
         return (true, interactionContract);
     }

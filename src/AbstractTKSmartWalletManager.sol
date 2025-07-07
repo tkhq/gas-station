@@ -29,6 +29,6 @@ abstract contract AbstractTKSmartWalletManager is ITKSmartWalletManager, EIP712 
         return _hashTypedDataV4(keccak256(abi.encode(TK_SMART_WALLET_EXECUTE_TYPEHASH, _executor, _timeout)));
     }
 
-    function validateAllReturnInteractionContract(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature, bytes memory _executionData) external virtual view returns (bool, address);
+    function validateAllReturnInteractionContract(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature, uint256 _ethAmount, bytes memory _executionData) external virtual view returns (bool, address);
 
 }

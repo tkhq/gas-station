@@ -35,7 +35,7 @@ contract BasicTKSmartWallet {
         */
         ITKSmartWalletManager manager = ITKSmartWalletManager(managementContract);
 
-        (bool valid, address interactionContractAddr) = manager.validateAllReturnInteractionContract(_fundingEOA, msg.sender, _timeout, _signature, _executionData);
+        (bool valid, address interactionContractAddr) = manager.validateAllReturnInteractionContract(_fundingEOA, msg.sender, _timeout, _signature, msg.value, _executionData);
         if (!valid || interactionContractAddr == address(0)) {
             revert ValidationFailed();
         }
