@@ -9,7 +9,7 @@ import {ITKSmartWalletManager} from "./ITKSmartWalletManager.sol";
 import {AbstractTKSmartWalletManager} from "./AbstractTKSmartWalletManager.sol";
 
 
-contract TKSmartWalletManager is Ownable, EIP712, AbstractTKSmartWalletManager {
+contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
 
     error ExecutionNotAllowed();
     error FunctionNotAllowed(bytes4 functionId);
@@ -18,8 +18,6 @@ contract TKSmartWalletManager is Ownable, EIP712, AbstractTKSmartWalletManager {
     error ValidationFailed();
     error Timeout();
     error AllowedFunctionsTooLong();
-
-    address public immutable interactionContract; 
 
     bytes4 public constant EMPTY_FUNCTIONID = 0x00000000;
     
@@ -35,8 +33,7 @@ contract TKSmartWalletManager is Ownable, EIP712, AbstractTKSmartWalletManager {
         address _owner,
         address _interactionContract,
         bytes4[] memory _allowedFunctions
-    ) EIP712(_name, _version) Ownable(_owner) {
-        interactionContract = _interactionContract;
+    ) AbstractTKSmartWalletManager(_name, _version, _interactionContract) Ownable(_owner) {
         if (_allowedFunctions.length > 8) {
             revert AllowedFunctionsTooLong();
         }

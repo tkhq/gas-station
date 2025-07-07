@@ -13,6 +13,12 @@ abstract contract AbstractTKSmartWalletManager is ITKSmartWalletManager, EIP712 
     bytes32 public constant TK_SMART_WALLET_EXECUTE_TYPEHASH =
         keccak256("TKSmartWalletExecute(address executor, uint256 timeout)"); // note: chainId and this address are part of the domain separator
 
+    address public immutable interactionContract; 
+
+    constructor(string memory _name, string memory _version, address _interactionContract) EIP712(_name, _version) {
+        interactionContract = _interactionContract;
+    }
+
     function validateExecutionSignature(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature) public view returns (bool) {
 
         bytes32 hash = getHash(_executor, _timeout);
