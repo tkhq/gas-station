@@ -6,31 +6,26 @@ import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
 import {ITKSmartWalletManager} from "./ITKSmartWalletManager.sol";
+import {AbstractTKSmartWalletManager} from "./AbstractTKSmartWalletManager.sol";
 
 
-contract TKSmartWalletManager is Ownable, EIP712, ITKSmartWalletManager {
+contract TKSmartWalletManager is Ownable, EIP712, AbstractTKSmartWalletManager {
 
     error ExecutionNotAllowed();
-    error FunctionNotAllowed();
+    error FunctionNotAllowed(bytes4 functionId);
     error ExecutionFailed();
     error ExecutorBanned();
-    error InvalidSignature(bytes signature, bytes32 hash, address signer, address templateContract, address fundingEOA, address executor, uint256 timeout);
     error ValidationFailed();
     error Timeout();
     error AllowedFunctionsTooLong();
 
     address public immutable interactionContract; 
-    bool public immutable functionsLimited; 
 
     bytes4 public constant EMPTY_FUNCTIONID = 0x00000000;
     
     bool public allowExecution; 
 
-    bytes32 public constant TK_SMART_WALLET_EXECUTE_TYPEHASH =
-        keccak256("TKSmartWalletExecute(address executor, uint256 timeout)"); // note: chainId and this address are part of the domain separator
-
-
-    bytes32 public immutable allowedFunctions; // todo just use a mapping instead of this, this can't be saving that much gas 
+    bytes32 public immutable allowedFunctions; // This saves about 1/4 gas compared to a mapping on each execution, but it limits the number of allowed functions to 8
 
     mapping(address => bool) public bannedExecutors; 
 
@@ -42,7 +37,6 @@ contract TKSmartWalletManager is Ownable, EIP712, ITKSmartWalletManager {
         bytes4[] memory _allowedFunctions
     ) EIP712(_name, _version) Ownable(_owner) {
         interactionContract = _interactionContract;
-        functionsLimited = _allowedFunctions.length > 0;
         if (_allowedFunctions.length > 8) {
             revert AllowedFunctionsTooLong();
         }
@@ -71,43 +65,35 @@ contract TKSmartWalletManager is Ownable, EIP712, ITKSmartWalletManager {
         bannedExecutors[_executor] = false;
     }
 
-    function validateAllReturnInteractionContract(bytes4 _functionId, address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature) external view returns (bool, address) {
+    function validateAllReturnInteractionContract(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature, bytes calldata _executionData) external view override returns (bool, address) {
         if (!allowExecution) {
             revert ExecutionNotAllowed();
         }
+
         if (block.timestamp > _timeout) {
             revert Timeout();
         }
+
         if (bannedExecutors[_executor]) {
             revert ExecutorBanned();
         }
-        if (!isAllowedFunction(_functionId)) {
-            revert FunctionNotAllowed();
+
+        bytes4 functionId = bytes4(_executionData[:4]);
+        if (!isAllowedFunction(functionId)) {
+
+            revert FunctionNotAllowed(functionId);
         }
+
         if (!validateExecutionSignature(_fundingEOA, _executor, _timeout, _signature)) {
             revert ValidationFailed();
         }
+        
         return (true, interactionContract);
     }
 
-    function validateExecutionSignature(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature) public view returns (bool) {
-
-        bytes32 hash = getHash(_executor, _timeout);
-        address signer = ECDSA.recover(hash, _signature);
-
-        if (signer != _fundingEOA) {
-            revert InvalidSignature(_signature, hash, signer, address(this), _fundingEOA, _executor, _timeout);
-        }
-
-        return signer == _fundingEOA;
-    }
-
-    function getHash(address _executor, uint256 _timeout) public view returns (bytes32) { // todo remove this and use internal functions properly 
-        return _hashTypedDataV4(keccak256(abi.encode(TK_SMART_WALLET_EXECUTE_TYPEHASH, _executor, _timeout)));
-    }
 
     function isAllowedFunction(bytes4 _functionId) public view returns (bool) {
-        if (!functionsLimited) {
+        if (allowedFunctions == 0) {
             return true;
         }
         for (uint256 i = 0; i < 8; i++) {

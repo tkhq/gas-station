@@ -4,15 +4,12 @@ pragma solidity ^0.8.30;
 import {ITKSmartWalletManager} from "./ITKSmartWalletManager.sol";
 
 contract BasicTKSmartWallet {
-    
 
     error ExecutionNotAllowed();
     error FunctionNotAllowed();
     error ExecutionFailed();
     error ExecutorBanned();
     error ValidationFailed();
-
-    error Msg(address a);
 
     address public immutable managementContract; 
 
@@ -22,7 +19,7 @@ contract BasicTKSmartWallet {
         managementContract = _manager;
     }
     
-    function execute(address _fundingEOA, uint256 _timeout, bytes calldata _signature, bytes4 _functionId, bytes memory _data) external returns (bytes memory) {
+    function execute(address _fundingEOA, uint256 _timeout, bytes calldata _signature, bytes memory _executionData) external returns (bytes memory) {
         /* todo list 
             - Check initialized
             - Enable eth payment recievable & pass to underlying contract 
@@ -38,13 +35,13 @@ contract BasicTKSmartWallet {
         */
         ITKSmartWalletManager manager = ITKSmartWalletManager(managementContract);
 
-        (bool valid, address interactionContractAddr) = manager.validateAllReturnInteractionContract(_functionId, _fundingEOA, msg.sender, _timeout, _signature);
+        (bool valid, address interactionContractAddr) = manager.validateAllReturnInteractionContract(_fundingEOA, msg.sender, _timeout, _signature, _executionData);
         if (!valid || interactionContractAddr == address(0)) {
             revert ValidationFailed();
         }
 
         // Make the actual call to the interaction contract
-        (bool success, bytes memory result) = interactionContractAddr.call(abi.encodePacked(_functionId, _data));
+        (bool success, bytes memory result) = interactionContractAddr.call(_executionData);
         if (!success) {
             revert ExecutionFailed();
         }
