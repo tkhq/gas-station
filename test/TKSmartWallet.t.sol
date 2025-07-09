@@ -276,7 +276,7 @@ contract TKSmartWalletTest is Test {
 
         BasicTKSmartWallet(A_ADDRESS).executeMetaTx(B_ADDRESS, nonce, timeout, 0, abi.encodeWithSelector(ADD_FUNCTION, ONE), signature);
 
-        vm.expectRevert(abi.encodeWithSelector(TKSmartWalletManager.InvalidNonce.selector));
+        vm.expectRevert("InvalidNonce()");
         BasicTKSmartWallet(A_ADDRESS).executeMetaTx(B_ADDRESS, nonce, timeout, 0, abi.encodeWithSelector(ADD_FUNCTION, ONE), signature);
         
         vm.stopBroadcast();

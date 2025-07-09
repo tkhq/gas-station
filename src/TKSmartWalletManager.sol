@@ -17,15 +17,12 @@ contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
     error ValidationFailed();
     error Timeout();
     error AllowedFunctionsTooLong();
-    error InvalidNonce();
 
     bytes4 public constant EMPTY_FUNCTIONID = 0x00000000;
     
     bool public allowExecution; 
 
     bytes32 public immutable allowedFunctions; // This saves about 1/4 gas compared to a mapping on each execution, but it limits the number of allowed functions to 8
-
-    mapping(address eoa7702 => mapping(address executor => uint256)) public nonces;
 
     constructor(
         string memory _name,
@@ -68,10 +65,7 @@ contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
             revert FunctionNotAllowed(functionId);
         }
         
-        if (nonces[msg.sender][_executor] != _nonce) {
-            revert InvalidNonce();
-        }
-        nonces[msg.sender][_executor]++;
+        _validateAndIncrementNonce(msg.sender, _executor, _nonce);
 
         bool isValid = _validateExecutionSignature(msg.sender, _executor, _nonce, _timeout, _ethAmount, _executionData, _signature);
         
@@ -89,23 +83,6 @@ contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
             revert FunctionNotAllowed(functionId);
         }
         return (true, interactionContract);
-    }
-
-    function validateExecutionSignature(address _executor, uint256 _nonce, uint256 _timeout, uint256 _ethAmount, bytes calldata _executionData, bytes calldata _signature) external override returns (bool) {
-        if (block.timestamp > _timeout) {
-            revert Timeout();
-        }
-
-        if (nonces[msg.sender][_executor] != _nonce) {
-            revert InvalidNonce();
-        }
-        nonces[msg.sender][_executor]++;
-
-        return _validateExecutionSignature(msg.sender, _executor, _nonce, _timeout, _ethAmount, _executionData, _signature);
-    }
-
-    function getNonce(address _eoa7702, address _executor) external view override returns (uint256) {
-        return nonces[_eoa7702][_executor];
     }
 
     function isAllowedFunction(bytes4 _functionId) public view returns (bool) {
