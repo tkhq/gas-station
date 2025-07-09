@@ -221,6 +221,33 @@ contract TKSmartWalletTest is Test {
         assertEq(mockContract.getBalance(A_ADDRESS), 1);
 
     }
+
+    function test_execute_with_eth() public {
+        _generalSetup();
+        
+        // Fund the executor with ETH to send with the transaction
+        vm.deal(A_ADDRESS, 1 ether);
+        
+        assertEq(mockContract.getBalance(A_ADDRESS), 0 ether);
+        assertEq(mockContract.getETHBalance(), 0);
+
+        // Execute with ETH value (ETH comes from B_ADDRESS, not A_ADDRESS)
+        vm.startBroadcast(B_PRIVATE_KEY);
+        BasicTKSmartWallet(A_ADDRESS).execute(
+            0.5 ether, 
+            abi.encodeWithSelector(mockContract.addWithETH.selector, ONE)
+        );
+        vm.stopBroadcast();
+        
+        // Verify the operation worked
+        assertEq(mockContract.getBalance(A_ADDRESS), 1);
+        assertEq(mockContract.getETHBalance(), 0.5 ether);
+        
+        // Verify the executor still has the remaining ETH
+        assertEq(A_ADDRESS.balance, 0.5 ether);
+        
+    }
+
     /*
 
     function _sign(uint256 _privateKey, TKSmartWalletManager _manager, address _executor, uint256 _timeout)
@@ -231,37 +258,6 @@ contract TKSmartWalletTest is Test {
         hash = _manager.getHash(_executor, _timeout);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, hash);
         signature = abi.encodePacked(r, s, v);
-    }
-
-    function test_execute_with_eth() public {
-        _generalSetup();
-        
-        // Check if delegation created contract at A_ADDRESS
-        bytes memory code = address(A_ADDRESS).code;
-        assertGt(code.length, 0, "No contract deployed at A_ADDRESS via delegation");
-        
-        (bytes memory signature, ) = _sign(A_PRIVATE_KEY, manager, B_ADDRESS, timeout);
-
-        // Fund the executor with ETH to send with the transaction
-        vm.deal(B_ADDRESS, 1 ether);
-        
-        assertEq(mockContract.getBalance(A_ADDRESS), 0);
-        assertEq(mockContract.getETHBalance(), 0);
-
-        // Execute with ETH value (ETH comes from B_ADDRESS, not A_ADDRESS)
-        vm.startBroadcast(B_PRIVATE_KEY);
-        BasicTKSmartWallet(A_ADDRESS).execute{value: 0.5 ether}(
-            0, 
-            abi.encodeWithSelector(mockContract.addWithETH.selector, ONE)
-        );
-        vm.stopBroadcast();
-
-        // Verify the operation worked
-        assertEq(mockContract.getBalance(A_ADDRESS), 1);
-        assertEq(mockContract.getETHBalance(), 0.5 ether);
-        
-        // Verify the executor still has the remaining ETH
-        assertEq(B_ADDRESS.balance, 0.5 ether);
     }
     
   */
