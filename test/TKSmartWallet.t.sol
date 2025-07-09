@@ -281,6 +281,9 @@ contract TKSmartWalletTest is Test {
         
         vm.stopBroadcast();
 
+        uint256 newNonce = manager.getNonce(A_ADDRESS, B_ADDRESS);
+        assertEq(newNonce, nonce + 1);
+
         assertEq(mockContract.getBalance(A_ADDRESS), 1);
         assertEq(mockContract.getBalance(B_ADDRESS), 0);
         assertEq(mockContract.getBalance(C_ADDRESS), 0);
