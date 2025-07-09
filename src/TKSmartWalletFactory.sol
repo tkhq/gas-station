@@ -5,27 +5,18 @@ import {TKSmartWalletManager} from "./TKSmartWalletManager.sol";
 import {BasicTKSmartWallet} from "./BasicTKSmartWallet.sol";
 
 contract TKSmartWalletFactory {
-
     event SmartWalletCreated(string name, string version, address owner, address interactionContract, bytes4[] allowedFunctions, address manager, address smartWallet);
 
     function createSmartWallet(string memory _name, string memory _version, address _owner, address _interactionContract, bytes4[] memory _allowedFunctions) external returns (address, address payable) {
-        address manager = address(new TKSmartWalletManager(_name, _version, _owner, _interactionContract, _allowedFunctions));
-        address payable smartWallet = payable(address(new BasicTKSmartWallet(manager)));
-
+        address manager = address(new TKSmartWalletManager(_name, _version, _owner, _interactionContract));
+        address payable smartWallet = payable(address(new BasicTKSmartWallet(manager, true, _allowedFunctions)));
         emit SmartWalletCreated(_name, _version, _owner, _interactionContract, _allowedFunctions, manager, smartWallet);
-
         return (manager, smartWallet);
     }
 
-
-    function createSmartWalletRenounceOwnership(string memory _name, string memory _version, address _interactionContract, bytes4[] memory _allowedFunctions) external returns (address, address payable) {
-        TKSmartWalletManager tkManager = new TKSmartWalletManager(_name, _version, address(this), _interactionContract, _allowedFunctions);
-        address manager = address(tkManager);
-        address payable smartWallet = payable(address(new BasicTKSmartWallet(manager)));
-        tkManager.renounceOwnership();
-
-        emit SmartWalletCreated(_name, _version, address(0), _interactionContract, _allowedFunctions, manager, smartWallet);
-
-        return (manager, smartWallet);
+    function createSmartWalletNoManagement(string memory _name, string memory _version, address _interactionContract, bytes4[] memory _allowedFunctions) external returns (address payable) {
+        address payable smartWallet = payable(address(new BasicTKSmartWallet(_interactionContract, false, _allowedFunctions)));
+        emit SmartWalletCreated(_name, _version, address(0), _interactionContract, _allowedFunctions, address(0), smartWallet);
+        return (smartWallet);
     }
 }

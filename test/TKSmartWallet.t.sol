@@ -78,8 +78,8 @@ contract TKSmartWalletTest is Test {
         manager = TKSmartWalletManager(managerAddress);
         smartWallet = BasicTKSmartWallet(smartWalletAddress);
         
-        assertEq(managerAddress, smartWallet.managementContract());
-        assertEq(manager.allowedFunctions() == 0, true);
+        assertEq(managerAddress, smartWallet.interactionContract());
+        assertEq(smartWallet.allowedFunctions() == 0, true);
 
         vm.startBroadcast(A_PRIVATE_KEY);
         VmSafe.SignedDelegation memory signedDelegation = vm.signDelegation(address(smartWallet), A_PRIVATE_KEY);
@@ -88,7 +88,7 @@ contract TKSmartWalletTest is Test {
         bytes memory code = address(A_ADDRESS).code;
         assertGt(code.length, 0, "no code written to A");
 
-        assertEq(BasicTKSmartWallet(A_ADDRESS).managementContract(), address(manager));
+        assertEq(BasicTKSmartWallet(A_ADDRESS).interactionContract(), address(manager));
 
         vm.stopBroadcast();
 
@@ -200,9 +200,9 @@ contract TKSmartWalletTest is Test {
         manager = TKSmartWalletManager(managerAddress);
         smartWallet = BasicTKSmartWallet(smartWalletAddress);
 
-        assertEq(manager.allowedFunctions() != 0, true);
-        assertEq(manager.isAllowedFunction(ADD_FUNCTION), true);
-        assertEq(manager.isAllowedFunction(SUB_FUNCTION), false);
+        assertEq(smartWallet.allowedFunctions() != 0, true);
+        assertEq(smartWallet.isAllowedFunction(ADD_FUNCTION), true);
+        assertEq(smartWallet.isAllowedFunction(SUB_FUNCTION), false);
 
         timeout = block.timestamp + 1000;
         // delegate 
@@ -216,15 +216,9 @@ contract TKSmartWalletTest is Test {
         vm.stopBroadcast();
 
         assertEq(mockContract.getBalance(A_ADDRESS), 1);
-        console.log("sub function");
-        console.logBytes(abi.encodePacked(SUB_FUNCTION, ONE));
-        console.logBytes32(manager.allowedFunctions());
-        console.log(manager.isAllowedFunction(SUB_FUNCTION));
-        assertEq(manager.isAllowedFunction(SUB_FUNCTION), false);
-        
 
         vm.startBroadcast(B_PRIVATE_KEY);
-        vm.expectRevert(abi.encodeWithSelector(TKSmartWalletManager.FunctionNotAllowed.selector, SUB_FUNCTION));
+        vm.expectRevert(abi.encodeWithSelector(BasicTKSmartWallet.FunctionNotAllowed.selector, SUB_FUNCTION));
         BasicTKSmartWallet(A_ADDRESS).execute(0, abi.encodeWithSelector(SUB_FUNCTION, ONE));
         vm.stopBroadcast();
         
