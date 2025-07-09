@@ -6,7 +6,6 @@ import {ITKSmartWallet} from "./Interfaces/ITKSmartWallet.sol";
 
 contract BasicTKSmartWallet is ITKSmartWallet {
 
-    error ExecutionNotAllowed();
     error FunctionNotAllowed();
     error ExecutionFailed();
     error ExecutorBanned();
@@ -16,9 +15,12 @@ contract BasicTKSmartWallet is ITKSmartWallet {
     error ExecutorTimeout();
     error InvalidFunctionId();
     error ZeroAddress();
+    error MetaTxNotAllowed();
+    error TooManyFunctions();
 
     address public immutable interactionContract; 
     bool public immutable useManager;
+    bool public immutable useAllowedFunctions;
     
     bytes32 public immutable allowedFunctions;
 
@@ -32,14 +34,23 @@ contract BasicTKSmartWallet is ITKSmartWallet {
         if (_interactionContract == address(0)) {
             revert ZeroAddress();
         }
+        if (_allowedFunctions.length > 8) {
+            revert TooManyFunctions();
+        }
         interactionContract = _interactionContract;
         useManager = _useManager;
+        
+        useAllowedFunctions = _allowedFunctions.length > 0;
         // Pack up to 8 function selectors into bytes32
-        bytes32 tmpAllowedFunctions = 0;
-        for (uint256 i = 0; i < _allowedFunctions.length; i++) {
-            tmpAllowedFunctions = bytes32(uint256(tmpAllowedFunctions) | (uint256(uint32(_allowedFunctions[i])) << ((7 - i) * 32)));
+        if (useAllowedFunctions) {
+            bytes32 tmpAllowedFunctions = 0;
+            for (uint256 i = 0; i < _allowedFunctions.length; i++) {
+                tmpAllowedFunctions = bytes32(uint256(tmpAllowedFunctions) | (uint256(uint32(_allowedFunctions[i])) << ((7 - i) * 32)));
+            }
+            allowedFunctions = tmpAllowedFunctions;
+        } else {
+            allowedFunctions = 0;
         }
-        allowedFunctions = tmpAllowedFunctions;
     }
 
     modifier onlySelf() {
@@ -50,6 +61,9 @@ contract BasicTKSmartWallet is ITKSmartWallet {
     }
 
     function isAllowedFunction(bytes4 _functionId) public view returns (bool) {
+        if (!useAllowedFunctions) {
+            return true;
+        }
         if (allowedFunctions == 0) {
             return true;
         }
@@ -71,6 +85,7 @@ contract BasicTKSmartWallet is ITKSmartWallet {
 
         if (_executor.code.length > 0) {
             // It's a contract, safe to call
+            // todo: decide if we want to allow smart wallets to execute txs
             (bool success, ) = _executor.call{value: msg.value}("");
             if (!success) {
                 revert ExecutionFailed();
@@ -121,7 +136,7 @@ contract BasicTKSmartWallet is ITKSmartWallet {
 
     function _getInteractionAddressMetaTx(address _executor, uint256 _nonce, uint256 _timeout, uint256 _ethAmount, bytes calldata _executionData, bytes calldata _signature) internal returns (address) {
         if (!useManager) {
-            return interactionContract;
+            revert MetaTxNotAllowed();
         }
         
         ITKSmartWalletManager manager = ITKSmartWalletManager(interactionContract);
