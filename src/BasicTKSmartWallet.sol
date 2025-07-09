@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {ITKSmartWalletManager} from "./ITKSmartWalletManager.sol";
+import {ITKSmartWalletManager} from "./interfaces/ITKSmartWalletManager.sol";
+import {ITKSmartWallet} from "./Interfaces/ITKSmartWallet.sol";
 
-contract BasicTKSmartWallet {
+contract BasicTKSmartWallet is ITKSmartWallet {
 
     error ExecutionNotAllowed();
     error FunctionNotAllowed();

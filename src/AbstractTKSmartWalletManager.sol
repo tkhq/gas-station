@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {ITKSmartWalletManager} from "./ITKSmartWalletManager.sol";
+import {ITKSmartWalletManager} from "./interfaces/ITKSmartWalletManager.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
