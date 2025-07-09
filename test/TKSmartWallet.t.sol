@@ -44,6 +44,16 @@ contract TKSmartWalletTest is Test {
         factory = new TKSmartWalletFactory();
     }
 
+    function _sign(uint256 _privateKey, TKSmartWalletManager _manager, address _fundingEOA, address _executor, uint256 _nonce, uint256 _timeout, uint256 _ethAmount, bytes memory _executionData)
+        internal
+        view 
+        returns (bytes memory signature, bytes32 hash)
+    {
+        hash = _manager.getHash(_fundingEOA, _executor, _nonce, _timeout, _ethAmount, _executionData);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, hash);
+        signature = abi.encodePacked(r, s, v);
+    }
+
     function _generalSetup() internal returns (TKSmartWalletManager, BasicTKSmartWallet, address, address) {
         
         (managerAddress, smartWalletAddress) = factory.createSmartWallet("TKSmartWallet", "1", OWNER, address(mockContract), emptyFunctions);
@@ -248,17 +258,32 @@ contract TKSmartWalletTest is Test {
         
     }
 
-    /*
+    function test_executeMetaTx() public {
+        _generalSetup();
 
-    function _sign(uint256 _privateKey, TKSmartWalletManager _manager, address _executor, uint256 _timeout)
-        internal
-        view 
-        returns (bytes memory signature, bytes32 hash)
-    {
-        hash = _manager.getHash(_executor, _timeout);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, hash);
-        signature = abi.encodePacked(r, s, v);
+        uint256 nonce = manager.getNonce(A_ADDRESS, B_ADDRESS);
+
+        (bytes memory signature, ) = _sign(B_PRIVATE_KEY, manager, A_ADDRESS, B_ADDRESS, nonce, timeout, 0, abi.encodeWithSelector(ADD_FUNCTION, ONE));
+
+        assertEq(mockContract.getBalance(A_ADDRESS), 0);
+        assertEq(mockContract.getBalance(B_ADDRESS), 0);
+        assertEq(mockContract.getBalance(C_ADDRESS), 0);
+
+        vm.startBroadcast(C_PRIVATE_KEY);
+        
+        vm.expectRevert(abi.encodeWithSelector(BasicTKSmartWallet.ExecutorNotInitialized.selector));
+        BasicTKSmartWallet(A_ADDRESS).execute(0, abi.encodeWithSelector(ADD_FUNCTION, ONE));
+
+        BasicTKSmartWallet(A_ADDRESS).executeMetaTx(B_ADDRESS, nonce, timeout, 0, abi.encodeWithSelector(ADD_FUNCTION, ONE), signature);
+
+        vm.expectRevert(abi.encodeWithSelector(TKSmartWalletManager.InvalidNonce.selector));
+        BasicTKSmartWallet(A_ADDRESS).executeMetaTx(B_ADDRESS, nonce, timeout, 0, abi.encodeWithSelector(ADD_FUNCTION, ONE), signature);
+        
+        vm.stopBroadcast();
+
+        assertEq(mockContract.getBalance(A_ADDRESS), 1);
+        assertEq(mockContract.getBalance(B_ADDRESS), 0);
+        assertEq(mockContract.getBalance(C_ADDRESS), 0);
     }
     
-  */
 } 
