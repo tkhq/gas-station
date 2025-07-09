@@ -8,10 +8,10 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 
 abstract contract AbstractTKSmartWalletManager is ITKSmartWalletManager, EIP712 {
 
-    error InvalidSignature(bytes signature, bytes32 hash, address signer, address templateContract, address fundingEOA, address executor, uint256 timeout);
+    error InvalidSignature(bytes signature, bytes32 hash, address signer, address templateContract, address fundingEOA, address executor, uint256 nonce, uint256 timeout);
 
     bytes32 public constant TK_SMART_WALLET_EXECUTE_TYPEHASH =
-        keccak256("TKSmartWalletExecute(address executor, uint256 timeout)"); // note: chainId and this address are part of the domain separator
+        keccak256("TKSmartWalletExecute(address fundingEOA, address executor, uint256 nonce, uint256 timeout, uint256 ethAmount, bytes executionData)"); // note: chainId and this address are part of the domain separator
 
     address public immutable interactionContract; 
 
@@ -19,22 +19,27 @@ abstract contract AbstractTKSmartWalletManager is ITKSmartWalletManager, EIP712 
         interactionContract = _interactionContract;
     }
 
-    function validateExecutionSignature(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature) public view returns (bool) {
+    function _validateExecutionSignature(address _fundingEOA, address _executor, uint256 _nonce, uint256 _timeout, uint256 _ethAmount, bytes memory _executionData, bytes calldata _signature) internal view returns (bool) {
 
-        bytes32 hash = getHash(_executor, _timeout);
+        bytes32 hash = getHash(_fundingEOA, _executor, _nonce, _timeout, _ethAmount, _executionData);
         address signer = ECDSA.recover(hash, _signature);
 
-        if (signer != _fundingEOA) {
-            revert InvalidSignature(_signature, hash, signer, address(this), _fundingEOA, _executor, _timeout);
+        if (signer != _executor) {
+            revert InvalidSignature(_signature, hash, signer, address(this), _fundingEOA, _executor, _nonce, _timeout);
         }
 
-        return signer == _fundingEOA;
+        return signer == _executor;
     }
 
-    function getHash(address _executor, uint256 _timeout) public view returns (bytes32) { // todo remove this and use internal functions properly 
-        return _hashTypedDataV4(keccak256(abi.encode(TK_SMART_WALLET_EXECUTE_TYPEHASH, _executor, _timeout)));
+    function getHash(address _fundingEOA, address _executor, uint256 _nonce, uint256 _timeout, uint256 _ethAmount, bytes memory _executionData) public view returns (bytes32) { // todo remove this and use internal functions properly 
+        return _hashTypedDataV4(keccak256(abi.encode(TK_SMART_WALLET_EXECUTE_TYPEHASH, _fundingEOA, _executor, _nonce, _timeout, _ethAmount, _executionData)));
     }
 
-    function validateAllReturnInteractionContract(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature, uint256 _ethAmount, bytes memory _executionData) external virtual view returns (bool, address);
+    function validateAllReturnInteractionContract(address _executor, uint256 _nonce, uint256 _timeout, uint256 _ethAmount, bytes memory _executionData, bytes calldata _signature) external virtual returns (bool, address);
 
+    function validateExecutionDataOnlyReturnInteractionContract(uint256 _ethAmount, bytes memory _executionData) external virtual returns (bool, address);
+
+    function validateExecutionSignature(address _executor, uint256 _nonce, uint256 _timeout, uint256 _ethAmount, bytes memory _executionData, bytes calldata _signature) external virtual returns (bool);
+
+    function getNonce(address _eoa7702, address _executor) external virtual view returns (uint256);
 }

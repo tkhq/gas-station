@@ -16,4 +16,16 @@ contract TKSmartWalletFactory {
 
         return (manager, smartWallet);
     }
+
+
+    function createSmartWalletRenounceOwnership(string memory _name, string memory _version, address _interactionContract, bytes4[] memory _allowedFunctions) external returns (address, address payable) {
+        TKSmartWalletManager tkManager = new TKSmartWalletManager(_name, _version, address(this), _interactionContract, _allowedFunctions);
+        address manager = address(tkManager);
+        address payable smartWallet = payable(address(new BasicTKSmartWallet(manager)));
+        tkManager.renounceOwnership();
+
+        emit SmartWalletCreated(_name, _version, address(0), _interactionContract, _allowedFunctions, manager, smartWallet);
+
+        return (manager, smartWallet);
+    }
 }

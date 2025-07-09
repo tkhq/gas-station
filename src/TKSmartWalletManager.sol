@@ -14,10 +14,10 @@ contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
     error ExecutionNotAllowed();
     error FunctionNotAllowed(bytes4 functionId);
     error ExecutionFailed();
-    error ExecutorBanned();
     error ValidationFailed();
     error Timeout();
     error AllowedFunctionsTooLong();
+    error InvalidNonce();
 
     bytes4 public constant EMPTY_FUNCTIONID = 0x00000000;
     
@@ -25,7 +25,7 @@ contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
 
     bytes32 public immutable allowedFunctions; // This saves about 1/4 gas compared to a mapping on each execution, but it limits the number of allowed functions to 8
 
-    mapping(address => bool) public bannedExecutors; 
+    mapping(address eoa7702 => mapping(address executor => uint256)) public nonces;
 
     constructor(
         string memory _name,
@@ -54,15 +54,7 @@ contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
         allowExecution = true;
     }
 
-    function banExecutor(address _executor) external onlyOwner { 
-        bannedExecutors[_executor] = true;
-    }
-
-    function unbanExecutor(address _executor) external onlyOwner {
-        bannedExecutors[_executor] = false;
-    }
-
-    function validateAllReturnInteractionContract(address _fundingEOA, address _executor, uint256 _timeout, bytes calldata _signature, uint256 /* _ethAmount */, bytes calldata _executionData) external view override returns (bool, address) {
+    function validateAllReturnInteractionContract(address _executor, uint256 _nonce, uint256 _timeout, uint256 _ethAmount, bytes calldata _executionData, bytes calldata _signature) external override returns (bool, address) {
         if (!allowExecution) {
             revert ExecutionNotAllowed();
         }
@@ -71,8 +63,24 @@ contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
             revert Timeout();
         }
 
-        if (bannedExecutors[_executor]) {
-            revert ExecutorBanned();
+        bytes4 functionId = bytes4(_executionData[:4]);
+        if (!isAllowedFunction(functionId)) {
+            revert FunctionNotAllowed(functionId);
+        }
+        
+        if (nonces[msg.sender][_executor] != _nonce) {
+            revert InvalidNonce();
+        }
+        nonces[msg.sender][_executor]++;
+
+        bool isValid = _validateExecutionSignature(msg.sender, _executor, _nonce, _timeout, _ethAmount, _executionData, _signature);
+        
+        return (isValid, interactionContract);
+    }
+
+    function validateExecutionDataOnlyReturnInteractionContract(uint256 /* _ethAmount */, bytes calldata _executionData) external view override returns (bool, address) {
+        if (!allowExecution) {
+            revert ExecutionNotAllowed();
         }
 
         bytes4 functionId = bytes4(_executionData[:4]);
@@ -80,17 +88,25 @@ contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
 
             revert FunctionNotAllowed(functionId);
         }
-
-        if (!validateExecutionSignature(_fundingEOA, _executor, _timeout, _signature)) {
-            revert ValidationFailed();
-        }
-        
-        // _ethAmount is available but not enforced - can be used for future validation logic
-        // For now, we just ignore it
-        
         return (true, interactionContract);
     }
 
+    function validateExecutionSignature(address _executor, uint256 _nonce, uint256 _timeout, uint256 _ethAmount, bytes calldata _executionData, bytes calldata _signature) external override returns (bool) {
+        if (block.timestamp > _timeout) {
+            revert Timeout();
+        }
+
+        if (nonces[msg.sender][_executor] != _nonce) {
+            revert InvalidNonce();
+        }
+        nonces[msg.sender][_executor]++;
+
+        return _validateExecutionSignature(msg.sender, _executor, _nonce, _timeout, _ethAmount, _executionData, _signature);
+    }
+
+    function getNonce(address _eoa7702, address _executor) external view override returns (uint256) {
+        return nonces[_eoa7702][_executor];
+    }
 
     function isAllowedFunction(bytes4 _functionId) public view returns (bool) {
         if (allowedFunctions == 0) {
