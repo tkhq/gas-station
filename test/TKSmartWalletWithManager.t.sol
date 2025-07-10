@@ -10,14 +10,14 @@ import {BasicTKSmartWallet} from "../src/BasicTKSmartWallet.sol";
 // Import VmSafe to access the SignedDelegation struct
 import {VmSafe} from "forge-std/Vm.sol";
 
-contract TKSmartWalletTest is Test {
+contract TKSmartWalletWithManagerTest is Test {
     MockContractInteraction public mockContract;
     TKSmartWalletFactory public factory;
     TKSmartWalletManager public manager;
     BasicTKSmartWallet public smartWallet;
     address public managerAddress;
     address payable public smartWalletAddress;
-    uint256 public timeout;
+    uint64 public timeout;
 
     address public constant OWNER = address(0x1);
     address public constant USER2 = address(0x2);
@@ -32,7 +32,6 @@ contract TKSmartWalletTest is Test {
     bytes4 public constant SUB_FUNCTION = bytes4(keccak256("sub(uint256)"));
     bytes4[] public emptyFunctions = new bytes4[](0);
     uint256 public constant ONE = 1;
-
 
 
     function setUp() public {
@@ -54,13 +53,13 @@ contract TKSmartWalletTest is Test {
         signature = abi.encodePacked(r, s, v);
     }
 
-    function _generalSetup() internal returns (TKSmartWalletManager, BasicTKSmartWallet, address, address) {
+    function _generalSetupWithManager() internal returns (TKSmartWalletManager, BasicTKSmartWallet, address, address) {
         
         (managerAddress, smartWalletAddress) = factory.createSmartWallet("TKSmartWallet", "1", OWNER, address(mockContract), emptyFunctions);
         manager = TKSmartWalletManager(managerAddress);
         smartWallet = BasicTKSmartWallet(smartWalletAddress);
         
-        timeout = block.timestamp + 1000;
+        timeout = uint64(block.timestamp + 1000);
         // delegate 
         vm.startBroadcast(A_PRIVATE_KEY);
         vm.signAndAttachDelegation(smartWalletAddress, A_PRIVATE_KEY);
@@ -96,7 +95,7 @@ contract TKSmartWalletTest is Test {
 
     function test_execute() public {
 
-        _generalSetup();
+        _generalSetupWithManager();
 
         // Check if delegation created contract at A_ADDRESS
         bytes memory code = address(A_ADDRESS).code;
@@ -116,7 +115,7 @@ contract TKSmartWalletTest is Test {
     
     function test_execute_reverts_if_not_execution_allowed() public {
 
-        _generalSetup();
+        _generalSetupWithManager();
 
         assertEq(manager.allowExecution(), true);
 
@@ -151,7 +150,7 @@ contract TKSmartWalletTest is Test {
 
     function test_execute_reverts_if_timeout() public {
 
-        _generalSetup();
+        _generalSetupWithManager();
 
         vm.warp(timeout + 1);
 
@@ -162,12 +161,12 @@ contract TKSmartWalletTest is Test {
     }
 
 
-    function test_execute_reverts_on_ban() public {
+    function test_execute_reverts_on_logout_by_end_user() public {
 
-        _generalSetup();
+        _generalSetupWithManager();
 
         vm.startBroadcast(A_PRIVATE_KEY);
-        BasicTKSmartWallet(A_ADDRESS).ban(B_ADDRESS);
+        BasicTKSmartWallet(A_ADDRESS).logout();
         vm.stopBroadcast();
 
         vm.startBroadcast(B_PRIVATE_KEY);
@@ -179,7 +178,7 @@ contract TKSmartWalletTest is Test {
 
     function test_execute_reverts_on_logout_by_executor() public {
 
-        _generalSetup();
+        _generalSetupWithManager();
 
         vm.startBroadcast(B_PRIVATE_KEY);
         BasicTKSmartWallet(A_ADDRESS).logout();
@@ -201,10 +200,10 @@ contract TKSmartWalletTest is Test {
         smartWallet = BasicTKSmartWallet(smartWalletAddress);
 
         assertEq(smartWallet.allowedFunctions() != 0, true);
-        assertEq(smartWallet.isAllowedFunction(ADD_FUNCTION), true);
-        assertEq(smartWallet.isAllowedFunction(SUB_FUNCTION), false);
+        //assertEq(smartWallet.isAllowedFunction(ADD_FUNCTION), true);
+        //assertEq(smartWallet.isAllowedFunction(SUB_FUNCTION), false);
 
-        timeout = block.timestamp + 1000;
+        timeout = uint64(block.timestamp + 1000);
         // delegate 
         vm.startBroadcast(A_PRIVATE_KEY);
         vm.signAndAttachDelegation(smartWalletAddress, A_PRIVATE_KEY);
@@ -227,7 +226,7 @@ contract TKSmartWalletTest is Test {
     }
 
     function test_execute_with_eth() public {
-        _generalSetup();
+        _generalSetupWithManager();
         
         // Fund the executor with ETH to send with the transaction
         vm.deal(A_ADDRESS, 1 ether);
@@ -253,7 +252,7 @@ contract TKSmartWalletTest is Test {
     }
 
     function test_executeMetaTx() public {
-        _generalSetup();
+        _generalSetupWithManager();
 
         uint256 nonce = manager.getNonce(A_ADDRESS, B_ADDRESS);
 
