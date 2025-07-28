@@ -45,7 +45,6 @@ contract TKSmartWalletNoManagerTest is Test {
         // Deploy smart wallet without manager
         smartWallet = new MockBasicTKSmartWallet(
             address(mockContract),  // interactionContract
-            false,                  // useManager = false
             emptyFunctions          // no allowed functions restriction
         );
         
@@ -60,7 +59,6 @@ contract TKSmartWalletNoManagerTest is Test {
     function test_CreateSmartWallet() public view {
         assertEq(address(smartWallet) != address(0), true);
         assertEq(smartWallet.interactionContract(), address(mockContract));
-        assertEq(smartWallet.useManager(), false);
         assertEq(smartWallet.allowedFunctions() == 0, true);
     }
 
@@ -212,7 +210,6 @@ contract TKSmartWalletNoManagerTest is Test {
         // Deploy smart wallet with function restrictions
         MockBasicTKSmartWallet restrictedWallet = new MockBasicTKSmartWallet(
             address(mockContract),
-            false,                  // useManager = false
             allowedFunctions        // only ADD_FUNCTION allowed
         );
 

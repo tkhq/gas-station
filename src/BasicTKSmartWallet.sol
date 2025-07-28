@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {ITKSmartWalletManager} from "./interfaces/ITKSmartWalletManager.sol";
+import {ITKSmartWalletManager} from "./Interfaces/ITKSmartWalletManager.sol";
 import {ITKSmartWallet} from "./Interfaces/ITKSmartWallet.sol";
 import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
-contract BasicTKSmartWallet is ITKSmartWallet, EIP712 {
+import "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+
+
+contract BasicTKSmartWallet is ITKSmartWallet, EIP712, IERC1155Receiver, IERC721Receiver {
 
     error FunctionNotAllowed();
     error ExecutionFailed();
@@ -23,7 +27,7 @@ contract BasicTKSmartWallet is ITKSmartWallet, EIP712 {
     error InvalidNonce();
 
     address public immutable interactionContract; 
-    bool public immutable useManager;
+
     bool public immutable useAllowedFunctions;
     
     bytes32 public immutable allowedFunctions;
@@ -40,11 +44,9 @@ contract BasicTKSmartWallet is ITKSmartWallet, EIP712 {
     }
     State public state;
 
-
     // note: This should not be a clonable proxy contract since it needs the state variables to be part of the immutable variables (bytecode)
     constructor(
         address _interactionContract,
-        bool _useManager,
         bytes4[] memory _allowedFunctions
     ) EIP712("TKSmartWallet", "1.0.0") {
         if (_interactionContract == address(0)) {
@@ -54,7 +56,6 @@ contract BasicTKSmartWallet is ITKSmartWallet, EIP712 {
             revert TooManyFunctions();
         }
         interactionContract = _interactionContract;
-        useManager = _useManager;
         
         useAllowedFunctions = _allowedFunctions.length > 0;
         // Pack up to 8 function selectors into bytes32
@@ -136,50 +137,30 @@ contract BasicTKSmartWallet is ITKSmartWallet, EIP712 {
         }
 
         // Make the actual call to the interaction contract with ETH value
-        if (!useManager) {
-            // Handle meta transaction validation directly in the wallet
-            if (block.timestamp > _timeout) {
-                revert ExecutorTimeout();
-            }
-
-            uint32 currentNonce = state.nonce;
-            if (currentNonce != _nonce) {
-                revert InvalidNonce();
-            }
-            state.nonce = currentNonce + 1;
-
-            bytes32 hash = _hashTypedDataV4(keccak256(abi.encode(TK_SMART_WALLET_EXECUTE_TYPEHASH, _executor, _nonce, _timeout, _ethAmount, _executionData)));
-            address signer = ECDSA.recover(hash, _signature);
-            
-            if (signer != _executor) {
-                revert InvalidSignature();
-            }
-
-            (success, result) = interactionContract.call{value: _ethAmount}(_executionData);
-            if (!success) {
-                revert ExecutionFailed();
-            }
-            return (success, result);
+        // Handle meta transaction validation directly in the wallet
+        if (block.timestamp > _timeout) {
+            revert ExecutorTimeout();
         }
 
-        // Manager logic - note that the manager needs to check the nonce and the signature
-        ITKSmartWalletManager manager = ITKSmartWalletManager(interactionContract);
-        (bool valid, address addr) = manager.validateAllReturnInteractionContract(
-            _executor, 
-            _nonce,
-            _timeout, 
-            _ethAmount, 
-            _executionData,
-            _signature
-        );
+        uint32 currentNonce = state.nonce;
+        if (currentNonce != _nonce) {
+            revert InvalidNonce();
+        }
+        state.nonce = currentNonce + 1;
+
+        bytes32 hash = _hashTypedDataV4(keccak256(abi.encode(TK_SMART_WALLET_EXECUTE_TYPEHASH, _executor, _nonce, _timeout, _ethAmount, _executionData)));
+        address signer = ECDSA.recover(hash, _signature);
         
-        if (!valid || addr == address(0)) {
-            revert ValidationFailed();
+        if (signer != _executor) {
+            revert InvalidSignature();
         }
-        (success, result) = addr.call{value: _ethAmount}(_executionData);
+
+        (success, result) = interactionContract.call{value: _ethAmount}(_executionData);
         if (!success) {
             revert ExecutionFailed();
         }
+        return (success, result);
+
     }
 
     function execute(uint256 _ethAmount, bytes calldata _executionData) public returns (bool success, bytes memory result) {
@@ -205,31 +186,53 @@ contract BasicTKSmartWallet is ITKSmartWallet, EIP712 {
         }
 
         // Make the actual call to the interaction contract with ETH value
-        if (!useManager) {
-            (success, result) = interactionContract.call{value: _ethAmount}(_executionData);
-            if (!success) {
-                revert ExecutionFailed();
-            }
-            return (success, result);
-        }
+        (success, result) = interactionContract.call{value: _ethAmount}(_executionData);
 
-        // Manager logic
-        ITKSmartWalletManager manager = ITKSmartWalletManager(interactionContract);
-        (bool valid, address addr) = manager.validateExecutionDataOnlyReturnInteractionContract(_ethAmount, _executionData);
-        if (!valid || addr == address(0)) {
-            revert ValidationFailed();
-        }
-        (success, result) = addr.call{value: _ethAmount}(_executionData);
         if (!success) {
             revert ExecutionFailed();
         }
+        return (success, result);
+
     }
 
     /**
-     * @dev Allow the smart wallet to receive ETH
+     * @dev Allow the smart wallet to receive ETH and ERC1155/721 tokens
      */
     receive() external payable {
         // Allow receiving ETH
     }
+
+    // ERC721 Receiver function
+    function onERC721Received(
+        address, /* operator */
+        address, /* from */
+        uint256, /* tokenId */
+        bytes calldata /* data */
+    ) external pure override returns (bytes4) {
+        return this.onERC721Received.selector;
+    }
+
+    // ERC1155 Receiver function
+    function onERC1155Received(
+        address, /* operator */
+        address, /* from */
+        uint256, /* id */
+        uint256, /* value */
+        bytes calldata /* data */
+    ) external pure override returns (bytes4) {
+        return this.onERC1155Received.selector;
+    }
+
+    // ERC1155 Batch Receiver function
+    function onERC1155BatchReceived(
+        address, /* operator */
+        address, /* from */
+        uint256[] calldata, /* ids */
+        uint256[] calldata, /* values */
+        bytes calldata /* data */
+    ) external pure override returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
+    }
+
 
 }

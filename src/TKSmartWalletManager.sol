@@ -5,7 +5,7 @@ import {EIP712} from "openzeppelin-contracts/contracts/utils/cryptography/EIP712
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
-import {ITKSmartWalletManager} from "./interfaces/ITKSmartWalletManager.sol";
+import {ITKSmartWalletManager} from "./Interfaces/ITKSmartWalletManager.sol";
 import {AbstractTKSmartWalletManager} from "./AbstractTKSmartWalletManager.sol";
 
 contract TKSmartWalletManager is Ownable, AbstractTKSmartWalletManager {
