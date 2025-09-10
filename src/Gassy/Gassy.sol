@@ -14,6 +14,7 @@ interface IERC1155Receiver {
 contract Gassy is IERC1155Receiver, IERC721Receiver {
 
     address public immutable paymaster;
+    uint256 public nonce;
 
     // note: This should not be a clonable proxy contract since it needs the state variables to be part of the immutable variables (bytecode)
     constructor(
@@ -23,56 +24,39 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
     }
     /* External functions */
 
-    function execute(address _outContract, uint256 _ethAmount, bytes calldata _executionData) external returns (bool, bytes memory) {
-        assembly {
-            if and(gt(_ethAmount, 0), lt(selfbalance(), _ethAmount)) {
-                revert(0, 0) // Insufficient balance
-            }
-        }
-        
+    function execute(uint256 _nonce, address _outContract, uint256 _ethAmount, bytes calldata _executionData) external returns (bool, bytes memory) {
         if (msg.sender == paymaster) {
-            assembly {
-            // Make the call
-            let success := call(gas(), _outContract, _ethAmount, add(_executionData.offset, 0x20), _executionData.length, 0, 0)
-            
-            if iszero(success) {
-                revert(0, 1) // ExecutionFailed
-            }
-            
-            // Handle returndata
-            let returndataSize := returndatasize()
-            let returndataPtr := mload(0x40) // Get free memory pointer
-            
-            // Copy returndata to memory
-            returndatacopy(returndataPtr, 0, returndataSize)
-            
-            // Store success (true) at memory position 0
-            mstore(0, 1)
-            
-            // Store returndata size at memory position 0x20
-            mstore(0x20, returndataSize)
-            
-            // Store returndata pointer at memory position 0x40
-            mstore(0x40, returndataPtr)
-            
-            // Update free memory pointer
-            mstore(0x40, add(returndataPtr, returndataSize))
-            
-            // Return (success, returndata)
-            return(0, add(0x40, returndataSize))
-            }
-        }
-        assembly { revert(0, 2) } // NotPaymaster
-    }
+            if (_nonce == nonce) {
+                ++nonce;
+                (bool success, bytes memory result) = _outContract.call{value: _ethAmount}(_executionData);
 
+                if (success) {
+                    return (success, result);
+                }
+                assembly { revert(0, 0) } // ExecutionFailed
+            }
+            assembly { revert(0, 2) } // InvalidNonce
+        }
+        assembly { revert(0, 1) } // NotPaymaster
+    }
+/*
     function execute(address _outContract, bytes calldata _executionData) external returns (bool, bytes memory) {
+        if (msg.sender == paymaster) {
+            (bool success, bytes memory result) = _outContract.call(_executionData);
+
+            if (success) {
+                return (success, result);
+            }
+            assembly { revert(0, 0) } // ExecutionFailed
+        }
+        assembly { revert(0, 1) } // NotPaymaster
         if (msg.sender == paymaster) {
             assembly {
             // Make the call (no ETH value)
             let success := call(gas(), _outContract, 0, add(_executionData.offset, 0x20), _executionData.length, 0, 0)
             
             if iszero(success) {
-                revert(0, 1) // ExecutionFailed
+               // revert(0, 1) // ExecutionFailed
             }
             
             // Handle returndata
@@ -99,7 +83,9 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
             }
         }
         assembly { revert(0, 2) } // NotPaymaster
+        
     }
+    */
 
     /**
      * @dev Needed to allow the smart wallet to receive ETH and ERC1155/721 tokens

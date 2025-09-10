@@ -26,35 +26,28 @@ contract LimitedGassy is IERC1155Receiver, IERC721Receiver {
     }
     /* External functions */
 
-    function execute(uint256 _ethAmount, bytes calldata _executionData) external returns (bool, bytes memory) {
-        assembly {
-            if and(gt(_ethAmount, 0), lt(selfbalance(), _ethAmount)) {
-                revert(0, 0) // Insufficient balance
-            }
-        }
-        
+    function execute(uint256 _ethAmount, bytes calldata _executionData) external returns (bool, bytes memory) {        
         if (msg.sender == paymaster) {
             (bool success, bytes memory result) = presetOutContract.call{value: _ethAmount}(_executionData);
 
             if (success) {
                 return (success, result);
             }
-            assembly { revert(0, 1) } // ExecutionFailed
+            assembly { revert(0, 0) } // ExecutionFailed
         }
-        assembly { revert(0, 2) } // NotPaymaster
+        assembly { revert(0, 1) } // NotPaymaster
     }
 
     function execute(bytes calldata _executionData) external returns (bool, bytes memory) {
-        
         if (msg.sender == paymaster) {
             (bool success, bytes memory result) = presetOutContract.call(_executionData);
 
             if (success) {
                 return (success, result);
             }
-            assembly { revert(0, 1) } // ExecutionFailed
+            assembly { revert(0, 0) } // ExecutionFailed
         }
-        assembly { revert(0, 2) } // NotPaymaster
+        assembly { revert(0, 1) } // NotPaymaster
     }
 
     /**
