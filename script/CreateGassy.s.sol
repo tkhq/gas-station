@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import "forge-std/Script.sol";
 import "../src/Gassy/GassyStation.sol";
 
+/*
 contract CreateGassy is Script {
     // Deployed GassyStation addresses
     address constant BASE_GASSY_STATION = 0xFb76BED658C3f590084Fa75beaD6AB5513a2Cf3d;
@@ -71,3 +72,4 @@ contract CreateGassy is Script {
         vm.stopBroadcast();
     }
 }
+*/

@@ -3,6 +3,7 @@ pragma solidity ^0.8.30;
 
 import "forge-std/Script.sol";
 
+/*
 contract Init7702 is Script {
     // EIP-7702 constants
     uint8 constant SET_CODE_TX_TYPE = 0x04;
@@ -164,3 +165,4 @@ contract Init7702 is Script {
         console.log("3. Or use a wallet/tool that supports Type 4 transactions");
     }
 }
+*/

@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import "forge-std/Script.sol";
 import "../src/Gassy/GassyStation.sol";
 
+/*
 contract DeployGassyStation is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -26,3 +27,4 @@ contract DeployGassyStation is Script {
         console.log("GassyStation address:", address(gassyStation));
     }
 }
+*/
