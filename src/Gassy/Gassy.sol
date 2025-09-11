@@ -29,7 +29,7 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
     address public immutable paymaster;
 
     uint128 public nonce;
-    uint128 public timeboxedCounter; 
+    uint128 public timeboxedCounter;
 
     // note: This should not be a clonable proxy contract since it needs the state variables to be part of the immutable variables (bytecode)
     constructor(address _paymaster) {
@@ -95,26 +95,35 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
         if (msg.sender == paymaster) {
             if (_nonce == nonce) {
                 ++nonce;
-                
+
                 bytes[] memory results = new bytes[](_executions.length);
-                
+
                 for (uint8 i = 0; i < _executions.length;) {
                     if (_executions[i].ethAmount == 0) {
-                        (bool success, bytes memory result) = _executions[i].outputContract.call(_executions[i].arguments);
+                        (bool success, bytes memory result) =
+                            _executions[i].outputContract.call(_executions[i].arguments);
                         results[i] = result;
                         if (!success) {
-                            assembly { revert(0, 0) } // ExecutionFailed
+                            assembly {
+                                revert(0, 0)
+                            } // ExecutionFailed
                         }
                     } else {
-                        (bool success, bytes memory result) = _executions[i].outputContract.call{value: _executions[i].ethAmount}(_executions[i].arguments);
+                        (bool success, bytes memory result) = _executions[i].outputContract.call{
+                            value: _executions[i].ethAmount
+                        }(_executions[i].arguments);
                         results[i] = result;
                         if (!success) {
-                            assembly { revert(0, 0) } // ExecutionFailed
+                            assembly {
+                                revert(0, 0)
+                            } // ExecutionFailed
                         }
                     }
-                    unchecked { ++i; }
+                    unchecked {
+                        ++i;
+                    }
                 }
-                
+
                 return (true, results);
             }
             assembly {
@@ -141,11 +150,16 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
         } // NotPaymaster
     }
 
-    function executeTimeboxed(uint128 _counter, address _outputContract, uint256 _ethAmount, bytes calldata _executionData) external returns (bool, bytes memory)  {
-        if (msg.sender == paymaster) {            
+    function executeTimeboxed(
+        uint128 _counter,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes calldata _executionData
+    ) external returns (bool, bytes memory) {
+        if (msg.sender == paymaster) {
             if (_counter == timeboxedCounter) {
                 (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_executionData);
-                
+
                 if (success) {
                     return (success, result);
                 }
@@ -169,24 +183,33 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
         if (msg.sender == paymaster) {
             if (_counter == timeboxedCounter) {
                 bytes[] memory results = new bytes[](_executions.length);
-                
+
                 for (uint8 i = 0; i < _executions.length;) {
                     if (_executions[i].ethAmount == 0) {
-                        (bool success, bytes memory result) = _executions[i].outputContract.call(_executions[i].arguments);
-                        results[i] = result;
-                        if (!success) { 
-                            assembly { revert(0, 0) } // ExecutionFailed
-                        }
-                    } else {
-                        (bool success, bytes memory result) = _executions[i].outputContract.call{value: _executions[i].ethAmount}(_executions[i].arguments);
+                        (bool success, bytes memory result) =
+                            _executions[i].outputContract.call(_executions[i].arguments);
                         results[i] = result;
                         if (!success) {
-                            assembly { revert(0, 0) } // ExecutionFailed
+                            assembly {
+                                revert(0, 0)
+                            } // ExecutionFailed
+                        }
+                    } else {
+                        (bool success, bytes memory result) = _executions[i].outputContract.call{
+                            value: _executions[i].ethAmount
+                        }(_executions[i].arguments);
+                        results[i] = result;
+                        if (!success) {
+                            assembly {
+                                revert(0, 0)
+                            } // ExecutionFailed
                         }
                     }
-                    unchecked { ++i; }
+                    unchecked {
+                        ++i;
+                    }
                 }
-                
+
                 return (true, results);
             }
             assembly {
