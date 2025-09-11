@@ -3,39 +3,51 @@ pragma solidity ^0.8.30;
 
 // Minimal interfaces defined inline to save gas
 interface IERC721Receiver {
-    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data) external pure returns (bytes4);
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
+        external
+        pure
+        returns (bytes4);
 }
 
 interface IERC1155Receiver {
-    function onERC1155Received(address operator, address from, uint256 id, uint256 value, bytes calldata data) external pure returns (bytes4);
-    function onERC1155BatchReceived(address operator, address from, uint256[] calldata ids, uint256[] calldata values, bytes calldata data) external pure returns (bytes4);
+    function onERC1155Received(address operator, address from, uint256 id, uint256 value, bytes calldata data)
+        external
+        pure
+        returns (bytes4);
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external pure returns (bytes4);
 }
 
 contract LimitedGassy is IERC1155Receiver, IERC721Receiver {
-
     address public immutable paymaster;
     address public immutable presetOutContract;
 
     // note: This should not be a clonable proxy contract since it needs the state variables to be part of the immutable variables (bytecode)
-    constructor(
-        address _paymaster,
-        address _presetOutContract
-    ) {
+    constructor(address _paymaster, address _presetOutContract) {
         paymaster = _paymaster;
         presetOutContract = _presetOutContract;
     }
     /* External functions */
 
-    function execute(uint256 _ethAmount, bytes calldata _executionData) external returns (bool, bytes memory) {        
+    function execute(uint256 _ethAmount, bytes calldata _executionData) external returns (bool, bytes memory) {
         if (msg.sender == paymaster) {
             (bool success, bytes memory result) = presetOutContract.call{value: _ethAmount}(_executionData);
 
             if (success) {
                 return (success, result);
             }
-            assembly { revert(0, 0) } // ExecutionFailed
+            assembly {
+                revert(0, 0)
+            } // ExecutionFailed
         }
-        assembly { revert(0, 1) } // NotPaymaster
+        assembly {
+            revert(0, 1)
+        } // NotPaymaster
     }
 
     function execute(bytes calldata _executionData) external returns (bool, bytes memory) {
@@ -45,9 +57,13 @@ contract LimitedGassy is IERC1155Receiver, IERC721Receiver {
             if (success) {
                 return (success, result);
             }
-            assembly { revert(0, 0) } // ExecutionFailed
+            assembly {
+                revert(0, 0)
+            } // ExecutionFailed
         }
-        assembly { revert(0, 1) } // NotPaymaster
+        assembly {
+            revert(0, 1)
+        } // NotPaymaster
     }
 
     /**
@@ -97,5 +113,4 @@ contract LimitedGassy is IERC1155Receiver, IERC721Receiver {
             return(0, 4)
         }
     }
-
 }
