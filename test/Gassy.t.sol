@@ -345,13 +345,11 @@ contract GassyTest is Test {
         // Create batch execution with multiple transfers
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
         executions[0] = IBatchExecution.Execution({
-            nonce: nonce,
             outputContract: address(mockToken),
             ethAmount: 0,
             arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18)
         });
         executions[1] = IBatchExecution.Execution({
-            nonce: nonce,
             outputContract: address(mockToken),
             ethAmount: 0,
             arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
@@ -403,7 +401,6 @@ contract GassyTest is Test {
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](51);
         for (uint256 i = 0; i < 51; i++) {
             executions[i] = IBatchExecution.Execution({
-                nonce: nonce,
                 outputContract: address(mockToken),
                 ethAmount: 0,
                 arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 * 10 ** 18)
@@ -430,7 +427,6 @@ contract GassyTest is Test {
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](50);
         for (uint256 i = 0; i < 50; i++) {
             executions[i] = IBatchExecution.Execution({
-                nonce: nonce,
                 outputContract: address(mockToken),
                 ethAmount: 0,
                 arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 * 10 ** 18)
@@ -779,9 +775,9 @@ contract GassyTest is Test {
         address receiver2 = makeAddr("receiver2");
 
         executions[0] =
-            IBatchExecution.Execution({nonce: 0, outputContract: receiver1, ethAmount: 0.05 ether, arguments: ""});
+            IBatchExecution.Execution({outputContract: receiver1, ethAmount: 0.05 ether, arguments: ""});
         executions[1] =
-            IBatchExecution.Execution({nonce: 1, outputContract: receiver2, ethAmount: 0.05 ether, arguments: ""});
+            IBatchExecution.Execution({outputContract: receiver2, ethAmount: 0.05 ether, arguments: ""});
 
         // Sign the arbitrary timeboxed execution
         bytes memory signature = _signTimeboxedArbitrary(USER_PRIVATE_KEY, gassyStation, counter, deadline, paymaster);
