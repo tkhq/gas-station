@@ -174,7 +174,7 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                     if (_executions[i].ethAmount == 0) {
                         (bool success, bytes memory result) = _executions[i].outputContract.call(_executions[i].arguments);
                         results[i] = result;
-                        if (!success) {
+                        if (!success) { 
                             assembly { revert(0, 0) } // ExecutionFailed
                         }
                     } else {

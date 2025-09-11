@@ -25,12 +25,12 @@ contract GassyStation is EIP712 {
     // Original: keccak256("BurnNonce(uint128 nonce)")
     
     bytes32 private constant TIMEBOXED_EXECUTION_TYPEHASH = 
-        0x41bc49739e4c75c199a94c313c59220ea3fad5f540640aba1efc279565d8d590;
-    // Original: keccak256("TimeboxedExecution(uint128 counter,address sender,address outputContract,uint256 deadline)")
+        0x572542ff5f8730cc3585cab0d01b4696eadf4bd390c1dbbaa4467a76cb6f95bf;
+    // Original: keccak256("TimeboxedExecution(uint128 counter,uint128 deadline,address sender,address outputContract)")
     
     bytes32 private constant ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH = 
-        0xa4ef4da66b7fb53293dd8db9fd8f020d496676ab97d8d812f4a2fc8b40b67b7f;
-    // Original: keccak256("ArbitraryTimeboxedExecution(uint128 counter,address sender,uint256 deadline)")
+        0xc0d6acc328e7656b4ab6234f5efb8bc56b83d5b67d829ae64ea7ebe07f0968ee;
+    // Original: keccak256("ArbitraryTimeboxedExecution(uint128 counter,uint128 deadline,address sender)")
     
     bytes32 private constant BURN_TIMEBOXED_COUNTER_TYPEHASH = 
         0x9d7c8bed876f7441d00239a75cdc94ef7a45d0ffb8c804be7d5aee5dcfa1764d;
@@ -106,30 +106,30 @@ contract GassyStation is EIP712 {
 
     function hashTimeboxedExecution(
         uint128 _counter,
+        uint128 _deadline,
         address _sender,
-        address _outputContract,
-        uint256 _deadline
+        address _outputContract
     )
         external
         view
         returns (bytes32)
     {
         return _hashTypedDataV4(
-            keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _sender, _outputContract, _deadline))
+            keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, _sender, _outputContract))
         );
     }
 
     function hashArbitraryTimeboxedExecution(
         uint128 _counter,
-        address _sender,
-        uint256 _deadline
+        uint128 _deadline,
+        address _sender
     )
         external
         view
         returns (bytes32)
     {
         return _hashTypedDataV4(
-            keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _sender, _deadline))
+            keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, _sender))
         );
     }
 
@@ -145,10 +145,10 @@ contract GassyStation is EIP712 {
 
     function executeTimeboxed(
         uint128 _counter,
+        uint128 _deadline,
         address _outputContract,
         uint256 _ethAmount,
         bytes calldata _arguments,
-        uint256 _deadline,
         bytes calldata _signature
     ) external returns (bool, bytes memory) {
         // Check if deadline has passed
@@ -157,7 +157,7 @@ contract GassyStation is EIP712 {
         }
 
         bytes32 hash = _hashTypedDataV4(
-            keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, msg.sender, _outputContract, _deadline))
+            keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender, _outputContract))
         );
         address signer = ECDSA.recover(hash, _signature);
 
@@ -167,10 +167,10 @@ contract GassyStation is EIP712 {
 
     function executeTimeboxedArbitrary(
         uint128 _counter,
+        uint128 _deadline,
         address _outputContract,
         uint256 _ethAmount,
         bytes calldata _arguments,
-        uint256 _deadline,
         bytes calldata _signature
     ) external returns (bool, bytes memory) {
         // Check if deadline has passed
@@ -179,7 +179,7 @@ contract GassyStation is EIP712 {
         }
 
         bytes32 hash = _hashTypedDataV4(
-            keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, msg.sender, _deadline))
+            keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender))
         );
         address signer = ECDSA.recover(hash, _signature);
 
@@ -189,8 +189,8 @@ contract GassyStation is EIP712 {
 
     function executeBatchTimeboxedArbitrary(
         uint128 _counter,
+        uint128 _deadline,
         IBatchExecution.Execution[] calldata _executions,
-        uint256 _deadline,
         bytes calldata _signature
     ) external returns (bool, bytes[] memory) {
         // Check if deadline has passed
@@ -203,7 +203,7 @@ contract GassyStation is EIP712 {
         }
         
         bytes32 hash = _hashTypedDataV4(
-            keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, msg.sender, _deadline))
+            keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender))
         );
         address signer = ECDSA.recover(hash, _signature);
 

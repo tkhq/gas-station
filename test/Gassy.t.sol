@@ -702,4 +702,57 @@ contract GassyTest is Test {
         vm.stopPrank();
         return signature;
     }
+
+    function _signTimeboxed(
+        uint256 _privateKey,
+        GassyStation _gassyStation,
+        uint128 _counter,
+        uint128 _deadline,
+        address _sender,
+        address _outputContract
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey,
+            _gassyStation.hashTimeboxedExecution(_counter, _deadline, _sender, _outputContract)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function _signTimeboxedArbitrary(
+        uint256 _privateKey,
+        GassyStation _gassyStation,
+        uint128 _counter,
+        uint128 _deadline,
+        address _sender
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey,
+            _gassyStation.hashArbitraryTimeboxedExecution(_counter, _deadline, _sender)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function _signBurnTimeboxedCounter(
+        uint256 _privateKey,
+        GassyStation _gassyStation,
+        uint128 _counter
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey,
+            _gassyStation.hashBurnTimeboxedCounter(_counter)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
 }
