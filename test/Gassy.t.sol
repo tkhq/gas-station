@@ -794,9 +794,57 @@ contract GassyTest is Test {
         assertEq(receiver1.balance, 0.05 ether);
         assertEq(receiver2.balance, 0.05 ether);
         assertEq(user.balance, 1 ether - 0.1 ether);
+     }
+
+    function testExecuteBatchTimeboxed() public {
+        uint128 counter = Gassy(user).timeboxedCounter();
+        uint128 deadline = uint128(block.timestamp + 1 hours);
+        
+        // Fund the user contract
+        vm.deal(user, 1 ether);
+        
+        // Create batch executions with same output contract
+        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](3);
+        address receiver = makeAddr("receiver");
+        
+        executions[0] = IBatchExecution.Execution({
+            outputContract: receiver,
+            ethAmount: 0.1 ether,
+            arguments: ""
+        });
+        executions[1] = IBatchExecution.Execution({
+            outputContract: receiver,
+            ethAmount: 0.2 ether,
+            arguments: ""
+        });
+        executions[2] = IBatchExecution.Execution({
+            outputContract: receiver,
+            ethAmount: 0.3 ether,
+            arguments: ""
+        });
+        
+        // Sign the timeboxed execution
+        bytes memory signature = _signTimeboxed(USER_PRIVATE_KEY, gassyStation, counter, deadline, paymaster, receiver);
+        
+        // Execute batch timeboxed transaction
+        vm.startPrank(paymaster);
+        (bool success, bytes[] memory results) = gassyStation.executeBatchTimeboxed(
+            counter,
+            deadline,
+            receiver,
+            executions,
+            signature
+        );
+        vm.stopPrank();
+        
+        assertTrue(success);
+        assertEq(results.length, 3);
+        assertEq(Gassy(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(receiver.balance, 0.6 ether); // 0.1 + 0.2 + 0.3
+        assertEq(user.balance, 1 ether - 0.6 ether);
     }
 
-    function testBurnTimeboxedCounter() public {
+     function testBurnTimeboxedCounter() public {
         uint128 counter = 0;
 
         // Sign the burn timeboxed counter
