@@ -26,6 +26,11 @@ interface IERC1155Receiver {
 }
 
 contract Gassy is IERC1155Receiver, IERC721Receiver {
+    // Custom errors
+    error ExecutionFailed();
+    error InvalidNonce();
+    error NotPaymaster();
+
     address public immutable paymaster;
 
     uint128 public nonce;
@@ -50,17 +55,11 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                 if (success) {
                     return (success, result);
                 }
-                assembly {
-                    revert(0, 0)
-                } // ExecutionFailed
+                revert ExecutionFailed();
             }
-            assembly {
-                revert(0, 1)
-            } // InvalidNonce
+            revert InvalidNonce();
         }
-        assembly {
-            revert(0, 2)
-        } // NotPaymaster
+        revert NotPaymaster();
     }
 
     function execute(uint128 _nonce, address _outContract, uint256 _ethAmount, bytes calldata _executionData)
@@ -75,17 +74,11 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                 if (success) {
                     return (success, result);
                 }
-                assembly {
-                    revert(0, 0)
-                } // ExecutionFailed
+                revert ExecutionFailed();
             }
-            assembly {
-                revert(0, 1)
-            } // InvalidNonce
+            revert InvalidNonce();
         }
-        assembly {
-            revert(0, 2)
-        } // NotPaymaster
+        revert NotPaymaster();
     }
 
     function executeBatch(uint128 _nonce, IBatchExecution.Execution[] calldata _executions)
@@ -104,9 +97,7 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                             _executions[i].outputContract.call(_executions[i].arguments);
                         results[i] = result;
                         if (!success) {
-                            assembly {
-                                revert(0, 0)
-                            } // ExecutionFailed
+                            revert ExecutionFailed();
                         }
                     } else {
                         (bool success, bytes memory result) = _executions[i].outputContract.call{
@@ -114,9 +105,7 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                         }(_executions[i].arguments);
                         results[i] = result;
                         if (!success) {
-                            assembly {
-                                revert(0, 0)
-                            } // ExecutionFailed
+                            revert ExecutionFailed();
                         }
                     }
                     unchecked {
@@ -126,13 +115,9 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
 
                 return (true, results);
             }
-            assembly {
-                revert(0, 1)
-            } // InvalidNonce
+            revert InvalidNonce();
         }
-        assembly {
-            revert(0, 2)
-        } // NotPaymaster
+        revert NotPaymaster();
     }
 
     function burnNonce(uint128 _nonce) external {
@@ -141,13 +126,9 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                 ++nonce;
                 return;
             }
-            assembly {
-                revert(0, 1)
-            } // InvalidNonce
+            revert InvalidNonce();
         }
-        assembly {
-            revert(0, 2)
-        } // NotPaymaster
+        revert NotPaymaster();
     }
 
     function executeTimeboxed(
@@ -163,17 +144,11 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                 if (success) {
                     return (success, result);
                 }
-                assembly {
-                    revert(0, 0)
-                } // ExecutionFailed
+                revert ExecutionFailed();
             }
-            assembly {
-                revert(0, 1)
-            } // InvalidNonce
+            revert InvalidNonce();
         }
-        assembly {
-            revert(0, 2)
-        } // NotPaymaster
+        revert NotPaymaster();
     }
 
     function executeBatchTimeboxed(uint128 _counter, IBatchExecution.Execution[] calldata _executions)
@@ -190,9 +165,7 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                             _executions[i].outputContract.call(_executions[i].arguments);
                         results[i] = result;
                         if (!success) {
-                            assembly {
-                                revert(0, 0)
-                            } // ExecutionFailed
+                            revert ExecutionFailed();
                         }
                     } else {
                         (bool success, bytes memory result) = _executions[i].outputContract.call{
@@ -200,9 +173,7 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                         }(_executions[i].arguments);
                         results[i] = result;
                         if (!success) {
-                            assembly {
-                                revert(0, 0)
-                            } // ExecutionFailed
+                            revert ExecutionFailed();
                         }
                     }
                     unchecked {
@@ -212,13 +183,9 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
 
                 return (true, results);
             }
-            assembly {
-                revert(0, 1)
-            } // InvalidNonce
+            revert InvalidNonce();
         }
-        assembly {
-            revert(0, 2)
-        } // NotPaymaster
+        revert NotPaymaster();
     }
 
     function burnTimeboxedCounter(uint128 _counter) external {
@@ -227,13 +194,9 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                 ++timeboxedCounter;
                 return;
             }
-            assembly {
-                revert(0, 1)
-            } // InvalidNonce
+            revert InvalidNonce();
         }
-        assembly {
-            revert(0, 2)
-        } // NotPaymaster
+        revert NotPaymaster();
     }
 
     /**
