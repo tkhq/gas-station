@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {IBatchExecution} from "./IBatchExecution.sol";
+
 // Minimal interfaces defined inline to save gas
 interface IERC721Receiver {
     function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
@@ -74,6 +76,62 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                 assembly {
                     revert(0, 0)
                 } // ExecutionFailed
+            }
+            assembly {
+                revert(0, 1)
+            } // InvalidNonce
+        }
+        assembly {
+            revert(0, 2)
+        } // NotPaymaster
+    }
+
+    function executeBatch(uint256 _nonce, IBatchExecution.Execution[] calldata _executions)
+        external
+        returns (bool[] memory, bytes[] memory)
+    {
+        if (msg.sender == paymaster) {
+            if (_nonce == nonce) {
+                ++nonce;
+                
+                bool[] memory successes = new bool[](_executions.length);
+                bytes[] memory results = new bytes[](_executions.length);
+                
+                for (uint8 i = 0; i < _executions.length;) {
+                    if (_executions[i].ethAmount == 0) {
+                        (bool success, bytes memory result) = _executions[i].outputContract.call(_executions[i].arguments);
+                        successes[i] = success;
+                        results[i] = result;
+                        if (!success) {
+                            assembly { revert(0, 0) } // ExecutionFailed
+                        }
+                    } else {
+                        (bool success, bytes memory result) = _executions[i].outputContract.call{value: _executions[i].ethAmount}(_executions[i].arguments);
+                        successes[i] = success;
+                        results[i] = result;
+                        if (!success) {
+                            assembly { revert(0, 0) } // ExecutionFailed
+                        }
+                    }
+                    unchecked { ++i; }
+                }
+                
+                return (successes, results);
+            }
+            assembly {
+                revert(0, 1)
+            } // InvalidNonce
+        }
+        assembly {
+            revert(0, 2)
+        } // NotPaymaster
+    }
+
+    function burnNonce(uint256 _nonce) external {
+        if (msg.sender == paymaster || msg.sender == address(this)) {
+            if (_nonce == nonce) {
+                ++nonce;
+                return;
             }
             assembly {
                 revert(0, 1)

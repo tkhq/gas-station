@@ -4,35 +4,36 @@ pragma solidity ^0.8.30;
 import "forge-std/Test.sol";
 import "../src/Gassy/Gassy.sol";
 import "../src/Gassy/GassyStation.sol";
+import "../src/Gassy/IBatchExecution.sol";
 import "../test/Mocks/MockERC20.sol";
 
 contract GassyTest is Test {
     GassyStation public gassyStation;
     Gassy public gassy;
     MockERC20 public mockToken;
-
+    
     address public paymaster = makeAddr("paymaster");
     address public targetContract = makeAddr("targetContract");
     uint256 public constant USER_PRIVATE_KEY = 0xAAAAAA;
-    address payable public user;
-
+    address payable public user; 
+    
     function setUp() public {
         // Deploy GassyStation
         gassyStation = new GassyStation();
         user = payable(vm.addr(USER_PRIVATE_KEY)); // 0x3545A2F3928d5b21E71a790FB458F4AE03306C55
-
+        
         // Deploy Mock ERC20
         mockToken = new MockERC20("Test Token", "TEST");
-
+        
         vm.deal(paymaster, 10 ether);
 
         gassy = gassyStation.gassy();
     }
-
+    
     function testGassyStationDeployment() public {
         assertTrue(address(gassyStation) != address(0));
     }
-
+    
     function testGassyCreation() public {
         assertTrue(address(gassy) != address(0));
         assertEq(gassy.paymaster(), address(gassyStation));
@@ -45,7 +46,7 @@ contract GassyTest is Test {
         vm.attachDelegation(signedDelegation);
         vm.stopPrank();
     }
-
+    
     function _sign(
         uint256 _privateKey,
         GassyStation _gassyStation,
@@ -64,17 +65,17 @@ contract GassyTest is Test {
     }
 
     function testGassyBinding() public {
-        assertEq(address(user).code.length, 0);
+            assertEq(address(user).code.length, 0);
         _delegateGassy(USER_PRIVATE_KEY);
 
-        bytes memory code = address(user).code;
-        assertGt(code.length, 0);
-        assertEq(Gassy(user).paymaster(), address(gassyStation));
+            bytes memory code = address(user).code;
+            assertGt(code.length, 0);
+            assertEq(Gassy(user).paymaster(), address(gassyStation));
     }
 
     function testGassyExecuteSendERC20() public {
         mockToken.mint(user, 20 * 10 ** 18);
-        address receiver = makeAddr("receiver");
+            address receiver = makeAddr("receiver");
 
         _delegateGassy(USER_PRIVATE_KEY);
         uint256 nonce = Gassy(user).nonce();
@@ -116,16 +117,16 @@ contract GassyTest is Test {
             abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18)
         );
 
-        bool success;
-        bytes memory result;
-        vm.prank(paymaster);
+            bool success;
+            bytes memory result;
+            vm.prank(paymaster);
         (success, result) = gassyStation.execute(
             nonce,
             address(mockToken),
             abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18),
             signature
         );
-        vm.stopPrank();
+            vm.stopPrank();
         assertEq(success, true);
         assertEq(result.length, 32);
         assertEq(abi.decode(result, (uint256)), 30 * 10 ** 18);
@@ -137,28 +138,28 @@ contract GassyTest is Test {
 
         _delegateGassy(USER_PRIVATE_KEY);
 
-        address receiver = makeAddr("receiver");
-        vm.deal(user, 2 ether);
-        assertEq(address(receiver).balance, 0 ether);
+            address receiver = makeAddr("receiver");
+            vm.deal(user, 2 ether);
+            assertEq(address(receiver).balance, 0 ether);
 
         uint256 nonce = Gassy(user).nonce();
         bytes memory signature = _sign(USER_PRIVATE_KEY, gassyStation, nonce, receiver, 1 ether, "");
 
-        bool success;
-        bytes memory result;
-        vm.startPrank(paymaster);
+            bool success;
+            bytes memory result;
+            vm.startPrank(paymaster);
         (success, result) = gassyStation.execute(nonce, receiver, 1 ether, "", signature);
-
-        assertEq(success, true);
+            
+            assertEq(success, true);
         assertEq(result.length, 0); // returns 0x00
 
-        vm.stopPrank();
+            vm.stopPrank();
 
-        assertEq(address(receiver).balance, 1 ether);
+            assertEq(address(receiver).balance, 1 ether);
         assertEq(Gassy(user).nonce(), nonce + 1);
 
-        // Note: In tests, the test contract pays gas, not the pranked address
-        // The paymaster is just the msg.sender, but gas comes from the test contract
+            // Note: In tests, the test contract pays gas, not the pranked address
+            // The paymaster is just the msg.sender, but gas comes from the test contract
     }
 
     function testGassyExecuteRevertsInvalidNonce() public {
@@ -348,5 +349,366 @@ contract GassyTest is Test {
             signature
         );
         vm.stopPrank();
+    }
+
+    function testGassyExecuteBatch() public {
+        mockToken.mint(user, 50 * 10 ** 18);
+        address receiver1 = makeAddr("receiver1");
+        address receiver2 = makeAddr("receiver2");
+
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // Create batch execution with multiple transfers
+        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
+        executions[0] = IBatchExecution.Execution({
+            nonce: nonce,
+            outputContract: address(mockToken),
+            ethAmount: 0,
+            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18)
+        });
+        executions[1] = IBatchExecution.Execution({
+            nonce: nonce,
+            outputContract: address(mockToken),
+            ethAmount: 0,
+            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
+        });
+
+        // Create signature for batch execution
+        bytes memory signature = _signBatch(
+            USER_PRIVATE_KEY,
+            gassyStation,
+            nonce,
+            executions
+        );
+
+        bool[] memory successes;
+        bytes[] memory results;
+        
+        vm.prank(paymaster);
+        (successes, results) = gassyStation.executeBatch(
+            nonce,
+            executions,
+            signature
+        );
+        vm.stopPrank();
+        
+        // Verify both executions succeeded
+        assertEq(successes.length, 2);
+        assertEq(successes[0], true);
+        assertEq(successes[1], true);
+        
+        // Verify token transfers
+        assertEq(mockToken.balanceOf(receiver1), 10 * 10 ** 18);
+        assertEq(mockToken.balanceOf(receiver2), 15 * 10 ** 18);
+        assertEq(mockToken.balanceOf(user), 25 * 10 ** 18); // 50 - 10 - 15
+        
+        // Verify nonce incremented
+        assertEq(Gassy(user).nonce(), nonce + 1);
+    }
+
+    function _signBatch(
+        uint256 _privateKey,
+        GassyStation _gassyStation,
+        uint256 _nonce,
+        IBatchExecution.Execution[] memory _executions
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey,
+            _gassyStation.hashBatchExecution(_nonce, _executions)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function testGassyExecuteBatchSizeLimit() public {
+        mockToken.mint(user, 1000 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // Create batch execution with 51 transactions (exceeds MAX_BATCH_SIZE of 50)
+        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](51);
+        for (uint256 i = 0; i < 51; i++) {
+            executions[i] = IBatchExecution.Execution({
+                nonce: nonce,
+                outputContract: address(mockToken),
+                ethAmount: 0,
+                arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 * 10 ** 18)
+            });
+        }
+
+        // Create signature for batch execution
+        bytes memory signature = _signBatch(
+            USER_PRIVATE_KEY,
+            gassyStation,
+            nonce,
+            executions
+        );
+
+        // Should revert due to batch size limit
+        vm.prank(paymaster);
+        vm.expectRevert();
+        gassyStation.executeBatch(
+            nonce,
+            executions,
+            signature
+        );
+        vm.stopPrank();
+    }
+
+    function testGassyExecuteBatchMaxSizeAllowed() public {
+        mockToken.mint(user, 1000 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // Create batch execution with exactly 50 transactions (MAX_BATCH_SIZE)
+        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](50);
+        for (uint256 i = 0; i < 50; i++) {
+            executions[i] = IBatchExecution.Execution({
+                nonce: nonce,
+                outputContract: address(mockToken),
+                ethAmount: 0,
+                arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 * 10 ** 18)
+            });
+        }
+
+        // Create signature for batch execution
+        bytes memory signature = _signBatch(
+            USER_PRIVATE_KEY,
+            gassyStation,
+            nonce,
+            executions
+        );
+
+        bool[] memory successes;
+        bytes[] memory results;
+        
+        // Should succeed with exactly MAX_BATCH_SIZE transactions
+        vm.prank(paymaster);
+        (successes, results) = gassyStation.executeBatch(
+            nonce,
+            executions,
+            signature
+        );
+        vm.stopPrank();
+        
+        // Verify all executions succeeded
+        assertEq(successes.length, 50);
+        for (uint256 i = 0; i < 50; i++) {
+            assertEq(successes[i], true);
+        }
+        
+        // Verify token transfers
+        assertEq(mockToken.balanceOf(receiver), 50 * 10 ** 18);
+        assertEq(mockToken.balanceOf(user), 950 * 10 ** 18); // 1000 - 50
+        
+        // Verify nonce incremented
+        assertEq(Gassy(user).nonce(), nonce + 1);
+    }
+
+    function testGassyBurnNonce() public {
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // Create signature for burning nonce
+        bytes memory signature = _signBurnNonce(
+            USER_PRIVATE_KEY,
+            gassyStation,
+            nonce
+        );
+
+        // Burn the nonce
+        vm.prank(paymaster);
+        gassyStation.burnNonce(nonce, signature);
+        vm.stopPrank();
+        
+        // Verify nonce was incremented
+        assertEq(Gassy(user).nonce(), nonce + 1);
+    }
+
+    function testGassyBurnNonceRevertsInvalidNonce() public {
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // Create signature for burning wrong nonce
+        bytes memory signature = _signBurnNonce(
+            USER_PRIVATE_KEY,
+            gassyStation,
+            nonce + 1  // Wrong nonce
+        );
+
+        // Should revert when trying to burn wrong nonce
+        vm.prank(paymaster);
+        vm.expectRevert();
+        gassyStation.burnNonce(nonce + 1, signature);
+        vm.stopPrank();
+        
+        // Verify nonce was not changed
+        assertEq(Gassy(user).nonce(), nonce);
+    }
+
+    function testGassyBurnNonceThenExecute() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // Burn the nonce first
+        bytes memory burnSignature = _signBurnNonce(
+            USER_PRIVATE_KEY,
+            gassyStation,
+            nonce
+        );
+
+        vm.prank(paymaster);
+        gassyStation.burnNonce(nonce, burnSignature);
+        vm.stopPrank();
+        
+        // Verify nonce was incremented
+        assertEq(Gassy(user).nonce(), nonce + 1);
+        
+        // Now try to execute with the burned nonce - should fail
+        bytes memory executeSignature = _sign(
+            USER_PRIVATE_KEY,
+            gassyStation,
+            nonce,  // This nonce was burned
+            address(mockToken),
+            0,
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+        );
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        vm.expectRevert();
+        (success, result) = gassyStation.execute(
+            nonce,
+            address(mockToken),
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
+            executeSignature
+        );
+        vm.stopPrank();
+        
+        // Verify no tokens were transferred
+        assertEq(mockToken.balanceOf(receiver), 0);
+    }
+
+    function testGassyDirectBurnNonce() public {
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // User can directly burn their own nonce without signature
+        vm.prank(user);
+        Gassy(user).burnNonce(nonce);
+        
+        // Verify nonce was incremented
+        assertEq(Gassy(user).nonce(), nonce + 1);
+    }
+
+    function testGassyDirectBurnNonceRevertsInvalidNonce() public {
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // User tries to burn wrong nonce - should revert
+        vm.prank(user);
+        vm.expectRevert();
+        Gassy(user).burnNonce(nonce + 1);
+        
+        // Verify nonce was not changed
+        assertEq(Gassy(user).nonce(), nonce);
+    }
+
+    function testGassyDirectBurnNonceThenExecute() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // User directly burns their own nonce
+        vm.prank(user);
+        Gassy(user).burnNonce(nonce);
+        
+        // Verify nonce was incremented
+        assertEq(Gassy(user).nonce(), nonce + 1);
+        
+        // Now try to execute with the burned nonce - should fail
+        bytes memory executeSignature = _sign(
+            USER_PRIVATE_KEY,
+            gassyStation,
+            nonce,  // This nonce was burned
+            address(mockToken),
+            0,
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+        );
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        vm.expectRevert();
+        (success, result) = gassyStation.execute(
+            nonce,
+            address(mockToken),
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
+            executeSignature
+        );
+        vm.stopPrank();
+        
+        // Verify no tokens were transferred
+        assertEq(mockToken.balanceOf(receiver), 0);
+    }
+
+    function testGassyDirectBurnNonceVsSignatureBurn() public {
+        _delegateGassy(USER_PRIVATE_KEY);
+        uint256 nonce = Gassy(user).nonce();
+        
+        // Method 1: Direct burn (user calls their own contract)
+        vm.prank(user);
+        Gassy(user).burnNonce(nonce);
+        
+        uint256 nonceAfterDirect = Gassy(user).nonce();
+        assertEq(nonceAfterDirect, nonce + 1);
+        
+        // Method 2: Signature burn (through GassyStation)
+        uint256 newNonce = Gassy(user).nonce();
+        bytes memory signature = _signBurnNonce(
+            USER_PRIVATE_KEY,
+            gassyStation,
+            newNonce
+        );
+
+        vm.prank(paymaster);
+        gassyStation.burnNonce(newNonce, signature);
+        vm.stopPrank();
+        
+        uint256 nonceAfterSignature = Gassy(user).nonce();
+        assertEq(nonceAfterSignature, newNonce + 1);
+        
+        // Both methods should work and increment nonce
+        assertEq(nonceAfterSignature, nonceAfterDirect + 1);
+    }
+
+    function _signBurnNonce(
+        uint256 _privateKey,
+        GassyStation _gassyStation,
+        uint256 _nonce
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey,
+            _gassyStation.hashBurnNonce(_nonce)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
     }
 }
