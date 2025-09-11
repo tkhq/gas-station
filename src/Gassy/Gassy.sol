@@ -27,7 +27,9 @@ interface IERC1155Receiver {
 
 contract Gassy is IERC1155Receiver, IERC721Receiver {
     address public immutable paymaster;
-    uint256 public nonce;
+
+    uint128 public nonce;
+    uint128 public timeboxedCounter; 
 
     // note: This should not be a clonable proxy contract since it needs the state variables to be part of the immutable variables (bytecode)
     constructor(address _paymaster) {
@@ -36,7 +38,7 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
 
     /* External functions */
 
-    function execute(uint256 _nonce, address _outContract, bytes calldata _executionData)
+    function execute(uint128 _nonce, address _outContract, bytes calldata _executionData)
         external
         returns (bool, bytes memory)
     {
@@ -61,7 +63,7 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
         } // NotPaymaster
     }
 
-    function execute(uint256 _nonce, address _outContract, uint256 _ethAmount, bytes calldata _executionData)
+    function execute(uint128 _nonce, address _outContract, uint256 _ethAmount, bytes calldata _executionData)
         external
         returns (bool, bytes memory)
     {
@@ -86,28 +88,25 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
         } // NotPaymaster
     }
 
-    function executeBatch(uint256 _nonce, IBatchExecution.Execution[] calldata _executions)
+    function executeBatch(uint128 _nonce, IBatchExecution.Execution[] calldata _executions)
         external
-        returns (bool[] memory, bytes[] memory)
+        returns (bool, bytes[] memory)
     {
         if (msg.sender == paymaster) {
             if (_nonce == nonce) {
                 ++nonce;
                 
-                bool[] memory successes = new bool[](_executions.length);
                 bytes[] memory results = new bytes[](_executions.length);
                 
                 for (uint8 i = 0; i < _executions.length;) {
                     if (_executions[i].ethAmount == 0) {
                         (bool success, bytes memory result) = _executions[i].outputContract.call(_executions[i].arguments);
-                        successes[i] = success;
                         results[i] = result;
                         if (!success) {
                             assembly { revert(0, 0) } // ExecutionFailed
                         }
                     } else {
                         (bool success, bytes memory result) = _executions[i].outputContract.call{value: _executions[i].ethAmount}(_executions[i].arguments);
-                        successes[i] = success;
                         results[i] = result;
                         if (!success) {
                             assembly { revert(0, 0) } // ExecutionFailed
@@ -116,7 +115,7 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
                     unchecked { ++i; }
                 }
                 
-                return (successes, results);
+                return (true, results);
             }
             assembly {
                 revert(0, 1)
@@ -127,10 +126,82 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
         } // NotPaymaster
     }
 
-    function burnNonce(uint256 _nonce) external {
-        if (msg.sender == paymaster || msg.sender == address(this)) {
+    function burnNonce(uint128 _nonce) external {
+        if (msg.sender == paymaster || (msg.sender == address(this) && tx.origin == address(this))) {
             if (_nonce == nonce) {
                 ++nonce;
+                return;
+            }
+            assembly {
+                revert(0, 1)
+            } // InvalidNonce
+        }
+        assembly {
+            revert(0, 2)
+        } // NotPaymaster
+    }
+
+    function executeTimeboxed(uint128 _counter, address _outputContract, uint256 _ethAmount, bytes calldata _executionData) external returns (bool, bytes memory)  {
+        if (msg.sender == paymaster) {            
+            if (_counter == timeboxedCounter) {
+                (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_executionData);
+                
+                if (success) {
+                    return (success, result);
+                }
+                assembly {
+                    revert(0, 0)
+                } // ExecutionFailed
+            }
+            assembly {
+                revert(0, 1)
+            } // InvalidNonce
+        }
+        assembly {
+            revert(0, 2)
+        } // NotPaymaster
+    }
+
+    function executeBatchTimeboxed(uint128 _counter, IBatchExecution.Execution[] calldata _executions)
+        external
+        returns (bool, bytes[] memory)
+    {
+        if (msg.sender == paymaster) {
+            if (_counter == timeboxedCounter) {
+                bytes[] memory results = new bytes[](_executions.length);
+                
+                for (uint8 i = 0; i < _executions.length;) {
+                    if (_executions[i].ethAmount == 0) {
+                        (bool success, bytes memory result) = _executions[i].outputContract.call(_executions[i].arguments);
+                        results[i] = result;
+                        if (!success) {
+                            assembly { revert(0, 0) } // ExecutionFailed
+                        }
+                    } else {
+                        (bool success, bytes memory result) = _executions[i].outputContract.call{value: _executions[i].ethAmount}(_executions[i].arguments);
+                        results[i] = result;
+                        if (!success) {
+                            assembly { revert(0, 0) } // ExecutionFailed
+                        }
+                    }
+                    unchecked { ++i; }
+                }
+                
+                return (true, results);
+            }
+            assembly {
+                revert(0, 1)
+            } // InvalidNonce
+        }
+        assembly {
+            revert(0, 2)
+        } // NotPaymaster
+    }
+
+    function burnTimeboxedCounter(uint128 _counter) external {
+        if (msg.sender == paymaster || (msg.sender == address(this) && tx.origin == address(this))) {
+            if (timeboxedCounter == _counter) {
+                ++timeboxedCounter;
                 return;
             }
             assembly {

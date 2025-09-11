@@ -30,11 +30,11 @@ contract GassyTest is Test {
         gassy = gassyStation.gassy();
     }
     
-    function testGassyStationDeployment() public {
+    function testGassyStationDeployment() public view {
         assertTrue(address(gassyStation) != address(0));
     }
     
-    function testGassyCreation() public {
+    function testGassyCreation() public view {
         assertTrue(address(gassy) != address(0));
         assertEq(gassy.paymaster(), address(gassyStation));
     }
@@ -50,7 +50,7 @@ contract GassyTest is Test {
     function _sign(
         uint256 _privateKey,
         GassyStation _gassyStation,
-        uint256 _nonce,
+        uint128 _nonce,
         address _outputContract,
         uint256 _ethAmount,
         bytes memory _arguments
@@ -78,7 +78,7 @@ contract GassyTest is Test {
             address receiver = makeAddr("receiver");
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -107,7 +107,7 @@ contract GassyTest is Test {
     function testGassyExecuteCheckReturnValue() public {
         mockToken.mint(user, 20 * 10 ** 18);
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -142,7 +142,7 @@ contract GassyTest is Test {
             vm.deal(user, 2 ether);
             assertEq(address(receiver).balance, 0 ether);
 
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         bytes memory signature = _sign(USER_PRIVATE_KEY, gassyStation, nonce, receiver, 1 ether, "");
 
             bool success;
@@ -166,7 +166,7 @@ contract GassyTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -193,15 +193,7 @@ contract GassyTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
-        bytes memory signature = _sign(
-            USER_PRIVATE_KEY,
-            gassyStation,
-            nonce,
-            address(mockToken),
-            0,
-            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18)
-        );
+        uint128 nonce = Gassy(user).nonce();
 
         bool success;
         bytes memory result;
@@ -218,7 +210,7 @@ contract GassyTest is Test {
         address receiver = makeAddr("receiver");
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -246,7 +238,7 @@ contract GassyTest is Test {
         address receiver = makeAddr("receiver");
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -277,8 +269,8 @@ contract GassyTest is Test {
         _delegateGassy(USER_PRIVATE_KEY);
         _delegateGassy(user2PrivateKey);
 
-        uint256 nonce = Gassy(user).nonce();
-        uint256 nonce2 = Gassy(user2).nonce();
+        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce2 = Gassy(user2).nonce();
         assertEq(nonce, 0);
         assertEq(nonce2, 0);
 
@@ -311,7 +303,7 @@ contract GassyTest is Test {
         address receiver = makeAddr("receiver");
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // Create signature for first execution
         bytes memory signature = _sign(
@@ -357,7 +349,7 @@ contract GassyTest is Test {
         address receiver2 = makeAddr("receiver2");
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // Create batch execution with multiple transfers
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
@@ -382,21 +374,19 @@ contract GassyTest is Test {
             executions
         );
 
-        bool[] memory successes;
+        bool success;
         bytes[] memory results;
         
         vm.prank(paymaster);
-        (successes, results) = gassyStation.executeBatch(
+        (success, results) = gassyStation.executeBatch(
             nonce,
             executions,
             signature
         );
         vm.stopPrank();
         
-        // Verify both executions succeeded
-        assertEq(successes.length, 2);
-        assertEq(successes[0], true);
-        assertEq(successes[1], true);
+        // Verify batch execution succeeded
+        assertEq(success, true);
         
         // Verify token transfers
         assertEq(mockToken.balanceOf(receiver1), 10 * 10 ** 18);
@@ -410,7 +400,7 @@ contract GassyTest is Test {
     function _signBatch(
         uint256 _privateKey,
         GassyStation _gassyStation,
-        uint256 _nonce,
+        uint128 _nonce,
         IBatchExecution.Execution[] memory _executions
     ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
@@ -429,7 +419,7 @@ contract GassyTest is Test {
         address receiver = makeAddr("receiver");
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // Create batch execution with 51 transactions (exceeds MAX_BATCH_SIZE of 50)
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](51);
@@ -466,7 +456,7 @@ contract GassyTest is Test {
         address receiver = makeAddr("receiver");
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // Create batch execution with exactly 50 transactions (MAX_BATCH_SIZE)
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](50);
@@ -487,23 +477,20 @@ contract GassyTest is Test {
             executions
         );
 
-        bool[] memory successes;
+        bool success;
         bytes[] memory results;
         
         // Should succeed with exactly MAX_BATCH_SIZE transactions
         vm.prank(paymaster);
-        (successes, results) = gassyStation.executeBatch(
+        (success, results) = gassyStation.executeBatch(
             nonce,
             executions,
             signature
         );
         vm.stopPrank();
         
-        // Verify all executions succeeded
-        assertEq(successes.length, 50);
-        for (uint256 i = 0; i < 50; i++) {
-            assertEq(successes[i], true);
-        }
+        // Verify batch execution succeeded
+        assertEq(success, true);
         
         // Verify token transfers
         assertEq(mockToken.balanceOf(receiver), 50 * 10 ** 18);
@@ -515,7 +502,7 @@ contract GassyTest is Test {
 
     function testGassyBurnNonce() public {
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // Create signature for burning nonce
         bytes memory signature = _signBurnNonce(
@@ -535,7 +522,7 @@ contract GassyTest is Test {
 
     function testGassyBurnNonceRevertsInvalidNonce() public {
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // Create signature for burning wrong nonce
         bytes memory signature = _signBurnNonce(
@@ -559,7 +546,7 @@ contract GassyTest is Test {
         address receiver = makeAddr("receiver");
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // Burn the nonce first
         bytes memory burnSignature = _signBurnNonce(
@@ -603,11 +590,12 @@ contract GassyTest is Test {
 
     function testGassyDirectBurnNonce() public {
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // User can directly burn their own nonce without signature
-        vm.prank(user);
+        vm.startPrank(user, user); // msg.sender = user, tx.origin = user
         Gassy(user).burnNonce(nonce);
+        vm.stopPrank();
         
         // Verify nonce was incremented
         assertEq(Gassy(user).nonce(), nonce + 1);
@@ -615,12 +603,13 @@ contract GassyTest is Test {
 
     function testGassyDirectBurnNonceRevertsInvalidNonce() public {
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // User tries to burn wrong nonce - should revert
-        vm.prank(user);
+        vm.startPrank(user, user); // msg.sender = user, tx.origin = user
         vm.expectRevert();
         Gassy(user).burnNonce(nonce + 1);
+        vm.stopPrank();
         
         // Verify nonce was not changed
         assertEq(Gassy(user).nonce(), nonce);
@@ -631,11 +620,12 @@ contract GassyTest is Test {
         address receiver = makeAddr("receiver");
 
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // User directly burns their own nonce
-        vm.prank(user);
+        vm.startPrank(user, user); // msg.sender = user, tx.origin = user
         Gassy(user).burnNonce(nonce);
+        vm.stopPrank();
         
         // Verify nonce was incremented
         assertEq(Gassy(user).nonce(), nonce + 1);
@@ -668,17 +658,18 @@ contract GassyTest is Test {
 
     function testGassyDirectBurnNonceVsSignatureBurn() public {
         _delegateGassy(USER_PRIVATE_KEY);
-        uint256 nonce = Gassy(user).nonce();
+        uint128 nonce = Gassy(user).nonce();
         
         // Method 1: Direct burn (user calls their own contract)
-        vm.prank(user);
+        vm.startPrank(user, user); // msg.sender = user, tx.origin = user
         Gassy(user).burnNonce(nonce);
+        vm.stopPrank();
         
-        uint256 nonceAfterDirect = Gassy(user).nonce();
+        uint128 nonceAfterDirect = Gassy(user).nonce();
         assertEq(nonceAfterDirect, nonce + 1);
         
         // Method 2: Signature burn (through GassyStation)
-        uint256 newNonce = Gassy(user).nonce();
+        uint128 newNonce = Gassy(user).nonce();
         bytes memory signature = _signBurnNonce(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -689,7 +680,7 @@ contract GassyTest is Test {
         gassyStation.burnNonce(newNonce, signature);
         vm.stopPrank();
         
-        uint256 nonceAfterSignature = Gassy(user).nonce();
+        uint128 nonceAfterSignature = Gassy(user).nonce();
         assertEq(nonceAfterSignature, newNonce + 1);
         
         // Both methods should work and increment nonce
@@ -699,7 +690,7 @@ contract GassyTest is Test {
     function _signBurnNonce(
         uint256 _privateKey,
         GassyStation _gassyStation,
-        uint256 _nonce
+        uint128 _nonce
     ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
