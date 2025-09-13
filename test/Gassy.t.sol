@@ -71,15 +71,15 @@ contract GassyTest is Test {
         bytes memory code = address(user).code;
         assertGt(code.length, 0);
         assertEq(Gassy(user).paymaster(), address(gassyStation));
-        assertEq(Gassy(user).nonce(), 0);
-        assertEq(Gassy(user).timeboxedCounter(), 0);
+        assertEq(gassyStation.nonce(user), 0);
+        assertEq(gassyStation.timeboxedCounter(user, paymaster), 0);
     }
 
     function testGassyExecuteSendERC20() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -102,12 +102,12 @@ contract GassyTest is Test {
         uint256 recieverBalance = mockToken.balanceOf(receiver);
         assertEq(recieverBalance, 10 * 10 ** 18);
         assertEq(success, true);
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
     }
 
     function testGassyExecuteCheckReturnValue() public {
         mockToken.mint(user, 20 * 10 ** 18);
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -130,7 +130,7 @@ contract GassyTest is Test {
         assertEq(success, true);
         assertEq(result.length, 32);
         assertEq(abi.decode(result, (uint256)), 30 * 10 ** 18);
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
     }
 
     function testGassyExecuteSendETH() public {
@@ -140,7 +140,7 @@ contract GassyTest is Test {
         vm.deal(user, 2 ether);
         assertEq(address(receiver).balance, 0 ether);
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
         bytes memory signature = _sign(USER_PRIVATE_KEY, gassyStation, nonce, receiver, 1 ether, "");
 
         bool success;
@@ -154,7 +154,7 @@ contract GassyTest is Test {
         vm.stopPrank();
 
         assertEq(address(receiver).balance, 1 ether);
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
 
         // Note: In tests, the test contract pays gas, not the pranked address
         // The paymaster is just the msg.sender, but gas comes from the test contract
@@ -163,7 +163,7 @@ contract GassyTest is Test {
     function testGassyExecuteRevertsInvalidNonce() public {
         mockToken.mint(user, 20 * 10 ** 18);
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -189,14 +189,12 @@ contract GassyTest is Test {
     function testGassyExecuteRevertsNotThroughStation() public {
         mockToken.mint(user, 20 * 10 ** 18);
 
-        uint128 nonce = Gassy(user).nonce();
-
         bool success;
         bytes memory result;
         vm.prank(makeAddr("notPaymaster"));
         vm.expectRevert();
         (success, result) = Gassy(user).execute(
-            nonce, address(mockToken), 0, abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18)
+            address(mockToken), 0, abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18)
         );
         vm.stopPrank();
     }
@@ -205,7 +203,7 @@ contract GassyTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -232,7 +230,7 @@ contract GassyTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             gassyStation,
@@ -262,8 +260,8 @@ contract GassyTest is Test {
 
         _delegateGassy(user2PrivateKey);
 
-        uint128 nonce = Gassy(user).nonce();
-        uint128 nonce2 = Gassy(user2).nonce();
+        uint128 nonce = gassyStation.nonce(user);
+        uint128 nonce2 = gassyStation.nonce(user2);
         assertEq(nonce, 0);
         assertEq(nonce2, 0);
 
@@ -287,15 +285,15 @@ contract GassyTest is Test {
         );
         vm.stopPrank();
 
-        assertEq(Gassy(user).nonce(), nonce + 1);
-        assertEq(Gassy(user2).nonce(), nonce2);
+        assertEq(gassyStation.nonce(user), nonce + 1);
+        assertEq(gassyStation.nonce(user2), nonce2);
     }
 
     function testGassyExecuteRevertsNonceReuse() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // Create signature for first execution
         bytes memory signature = _sign(
@@ -321,7 +319,7 @@ contract GassyTest is Test {
         vm.stopPrank();
 
         assertEq(success, true);
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
 
         // Second execution with same nonce should revert
         vm.prank(paymaster);
@@ -340,7 +338,7 @@ contract GassyTest is Test {
         address receiver1 = makeAddr("receiver1");
         address receiver2 = makeAddr("receiver2");
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // Create batch execution with multiple transfers
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
@@ -374,7 +372,7 @@ contract GassyTest is Test {
         assertEq(mockToken.balanceOf(user), 25 * 10 ** 18); // 50 - 10 - 15
 
         // Verify nonce incremented
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
     }
 
     function _signBatch(
@@ -395,7 +393,7 @@ contract GassyTest is Test {
         mockToken.mint(user, 1000 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // Create batch execution with 51 transactions (exceeds MAX_BATCH_SIZE of 50)
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](51);
@@ -421,7 +419,7 @@ contract GassyTest is Test {
         mockToken.mint(user, 1000 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // Create batch execution with exactly 50 transactions (MAX_BATCH_SIZE)
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](50);
@@ -452,11 +450,11 @@ contract GassyTest is Test {
         assertEq(mockToken.balanceOf(user), 950 * 10 ** 18); // 1000 - 50
 
         // Verify nonce incremented
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
     }
 
     function testGassyBurnNonce() public {
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // Create signature for burning nonce
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, gassyStation, nonce);
@@ -467,11 +465,11 @@ contract GassyTest is Test {
         vm.stopPrank();
 
         // Verify nonce was incremented
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
     }
 
     function testGassyBurnNonceRevertsInvalidNonce() public {
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // Create signature for burning wrong nonce
         bytes memory signature = _signBurnNonce(
@@ -487,14 +485,14 @@ contract GassyTest is Test {
         vm.stopPrank();
 
         // Verify nonce was not changed
-        assertEq(Gassy(user).nonce(), nonce);
+        assertEq(gassyStation.nonce(user), nonce);
     }
 
     function testGassyBurnNonceThenExecute() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // Burn the nonce first
         bytes memory burnSignature = _signBurnNonce(USER_PRIVATE_KEY, gassyStation, nonce);
@@ -504,7 +502,7 @@ contract GassyTest is Test {
         vm.stopPrank();
 
         // Verify nonce was incremented
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
 
         // Now try to execute with the burned nonce - should fail
         bytes memory executeSignature = _sign(
@@ -533,43 +531,42 @@ contract GassyTest is Test {
     }
 
     function testGassyDirectBurnNonce() public {
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // User can directly burn their own nonce without signature
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
-        Gassy(user).burnNonce(nonce);
+        gassyStation.burnNonce();
         vm.stopPrank();
 
         // Verify nonce was incremented
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
     }
 
     function testGassyDirectBurnNonceRevertsInvalidNonce() public {
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
-        // User tries to burn wrong nonce - should revert
+        // User burns their own nonce
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
-        vm.expectRevert();
-        Gassy(user).burnNonce(nonce + 1);
+        gassyStation.burnNonce();
         vm.stopPrank();
 
-        // Verify nonce was not changed
-        assertEq(Gassy(user).nonce(), nonce);
+        // Verify nonce was incremented
+        assertEq(gassyStation.nonce(user), nonce + 1);
     }
 
     function testGassyDirectBurnNonceThenExecute() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // User directly burns their own nonce
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
-        Gassy(user).burnNonce(nonce);
+        gassyStation.burnNonce();
         vm.stopPrank();
 
         // Verify nonce was incremented
-        assertEq(Gassy(user).nonce(), nonce + 1);
+        assertEq(gassyStation.nonce(user), nonce + 1);
 
         // Now try to execute with the burned nonce - should fail
         bytes memory executeSignature = _sign(
@@ -598,25 +595,25 @@ contract GassyTest is Test {
     }
 
     function testGassyDirectBurnNonceVsSignatureBurn() public {
-        uint128 nonce = Gassy(user).nonce();
+        uint128 nonce = gassyStation.nonce(user);
 
         // Method 1: Direct burn (user calls their own contract)
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
-        Gassy(user).burnNonce(nonce);
+        gassyStation.burnNonce();
         vm.stopPrank();
 
-        uint128 nonceAfterDirect = Gassy(user).nonce();
+        uint128 nonceAfterDirect = gassyStation.nonce(user);
         assertEq(nonceAfterDirect, nonce + 1);
 
         // Method 2: Signature burn (through GassyStation)
-        uint128 newNonce = Gassy(user).nonce();
+        uint128 newNonce = gassyStation.nonce(user);
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, gassyStation, newNonce);
 
         vm.prank(paymaster);
         gassyStation.burnNonce(newNonce, signature);
         vm.stopPrank();
 
-        uint128 nonceAfterSignature = Gassy(user).nonce();
+        uint128 nonceAfterSignature = gassyStation.nonce(user);
         assertEq(nonceAfterSignature, newNonce + 1);
 
         // Both methods should work and increment nonce
@@ -668,13 +665,13 @@ contract GassyTest is Test {
         return signature;
     }
 
-    function _signBurnTimeboxedCounter(uint256 _privateKey, GassyStation _gassyStation, uint128 _counter)
+    function _signBurnTimeboxedCounter(uint256 _privateKey, GassyStation _gassyStation, uint128 _counter, address _sender)
         internal
         returns (bytes memory)
     {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, _gassyStation.hashBurnTimeboxedCounter(_counter));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, _gassyStation.hashBurnTimeboxedCounter(_counter, _sender));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
@@ -683,7 +680,7 @@ contract GassyTest is Test {
     // ============ TIMEBOXED EXECUTION TESTS ============
 
     function testExecuteTimeboxed() public {
-        uint128 counter = Gassy(user).timeboxedCounter();
+        uint128 counter = gassyStation.timeboxedCounter(user, paymaster);
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -702,13 +699,13 @@ contract GassyTest is Test {
         vm.stopPrank();
 
         assertTrue(success);
-        assertEq(Gassy(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(gassyStation.timeboxedCounter(user, paymaster), 0); // Counter should NOT increment
         assertEq(reciever.balance, ethAmount);
         assertEq(user.balance, 1 ether - ethAmount);
     }
 
     function testExecuteTimeboxedArbitrary() public {
-        uint128 counter = Gassy(user).timeboxedCounter();
+        uint128 counter = gassyStation.timeboxedCounter(user, paymaster);
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -727,13 +724,13 @@ contract GassyTest is Test {
         vm.stopPrank();
 
         assertTrue(success);
-        assertEq(Gassy(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(gassyStation.timeboxedCounter(user, paymaster), 0); // Counter should NOT increment
         assertEq(reciever.balance, ethAmount);
         assertEq(user.balance, 1 ether - ethAmount);
     }
 
     function testExecuteTimeboxedArbitraryRevertsDeadlineExceeded() public {
-        uint128 counter = Gassy(user).timeboxedCounter();
+        uint128 counter = gassyStation.timeboxedCounter(user, paymaster);
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -763,7 +760,7 @@ contract GassyTest is Test {
     }
 
     function testExecuteBatchTimeboxedArbitrary() public {
-        uint128 counter = Gassy(user).timeboxedCounter();
+        uint128 counter = gassyStation.timeboxedCounter(user, paymaster);
         uint128 deadline = uint128(block.timestamp + 1 hours);
 
         // Fund the user contract
@@ -774,10 +771,8 @@ contract GassyTest is Test {
         address receiver1 = makeAddr("receiver1");
         address receiver2 = makeAddr("receiver2");
 
-        executions[0] =
-            IBatchExecution.Execution({outputContract: receiver1, ethAmount: 0.05 ether, arguments: ""});
-        executions[1] =
-            IBatchExecution.Execution({outputContract: receiver2, ethAmount: 0.05 ether, arguments: ""});
+        executions[0] = IBatchExecution.Execution({outputContract: receiver1, ethAmount: 0.05 ether, arguments: ""});
+        executions[1] = IBatchExecution.Execution({outputContract: receiver2, ethAmount: 0.05 ether, arguments: ""});
 
         // Sign the arbitrary timeboxed execution
         bytes memory signature = _signTimeboxedArbitrary(USER_PRIVATE_KEY, gassyStation, counter, deadline, paymaster);
@@ -790,99 +785,70 @@ contract GassyTest is Test {
 
         assertTrue(success);
         assertEq(results.length, 2);
-        assertEq(Gassy(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(gassyStation.timeboxedCounter(user, paymaster), 0); // Counter should NOT increment
         assertEq(receiver1.balance, 0.05 ether);
         assertEq(receiver2.balance, 0.05 ether);
         assertEq(user.balance, 1 ether - 0.1 ether);
-     }
+    }
 
     function testExecuteBatchTimeboxed() public {
-        uint128 counter = Gassy(user).timeboxedCounter();
+        uint128 counter = gassyStation.timeboxedCounter(user, paymaster);
         uint128 deadline = uint128(block.timestamp + 1 hours);
-        
+
         // Fund the user contract
         vm.deal(user, 1 ether);
-        
+
         // Create batch executions with same output contract
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](3);
         address receiver = makeAddr("receiver");
-        
-        executions[0] = IBatchExecution.Execution({
-            outputContract: receiver,
-            ethAmount: 0.1 ether,
-            arguments: ""
-        });
-        executions[1] = IBatchExecution.Execution({
-            outputContract: receiver,
-            ethAmount: 0.2 ether,
-            arguments: ""
-        });
-        executions[2] = IBatchExecution.Execution({
-            outputContract: receiver,
-            ethAmount: 0.3 ether,
-            arguments: ""
-        });
-        
+
+        executions[0] = IBatchExecution.Execution({outputContract: receiver, ethAmount: 0.1 ether, arguments: ""});
+        executions[1] = IBatchExecution.Execution({outputContract: receiver, ethAmount: 0.2 ether, arguments: ""});
+        executions[2] = IBatchExecution.Execution({outputContract: receiver, ethAmount: 0.3 ether, arguments: ""});
+
         // Sign the timeboxed execution
         bytes memory signature = _signTimeboxed(USER_PRIVATE_KEY, gassyStation, counter, deadline, paymaster, receiver);
-        
+
         // Execute batch timeboxed transaction
         vm.startPrank(paymaster);
-        (bool success, bytes[] memory results) = gassyStation.executeBatchTimeboxed(
-            counter,
-            deadline,
-            receiver,
-            executions,
-            signature
-        );
+        (bool success, bytes[] memory results) =
+            gassyStation.executeBatchTimeboxed(counter, deadline, receiver, executions, signature);
         vm.stopPrank();
-        
+
         assertTrue(success);
         assertEq(results.length, 3);
-        assertEq(Gassy(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(gassyStation.timeboxedCounter(user, paymaster), 0); // Counter should NOT increment
         assertEq(receiver.balance, 0.6 ether); // 0.1 + 0.2 + 0.3
         assertEq(user.balance, 1 ether - 0.6 ether);
     }
 
-     function testBurnTimeboxedCounter() public {
+    function testBurnTimeboxedCounter() public {
         uint128 counter = 0;
 
         // Sign the burn timeboxed counter
-        bytes memory signature = _signBurnTimeboxedCounter(USER_PRIVATE_KEY, gassyStation, counter);
+        bytes memory signature = _signBurnTimeboxedCounter(USER_PRIVATE_KEY, gassyStation, counter, paymaster);
 
         // Burn timeboxed counter
         vm.startPrank(paymaster);
-        gassyStation.burnTimeboxedCounter(counter, signature);
+        gassyStation.burnTimeboxedCounter(counter, paymaster, signature);
         vm.stopPrank();
 
-        assertEq(Gassy(user).timeboxedCounter(), 1); // Counter should increment
+        assertEq(gassyStation.timeboxedCounter(user, paymaster), 1); // Counter should increment
     }
 
     function testDirectBurnTimeboxedCounter() public {
-        uint128 counter = 0;
-
-        vm.startPrank(paymaster);
-        vm.expectRevert();
-        Gassy(user).burnTimeboxedCounter(counter);
-        vm.stopPrank();
-
-        // Burn timeboxed counter
-        vm.startPrank(user);
-        vm.expectRevert(); // user is not the tx.origin
-        Gassy(user).burnTimeboxedCounter(counter);
-        vm.stopPrank();
-
-        // Burn timeboxed counter
+        // Burn timeboxed counter - user burns their own counter for paymaster
         vm.startPrank(user, user);
-        Gassy(user).burnTimeboxedCounter(counter);
+        gassyStation.burnTimeboxedCounter(paymaster);
         vm.stopPrank();
 
-        assertEq(Gassy(user).timeboxedCounter(), 1); // Counter should increment
+        assertEq(gassyStation.timeboxedCounter(user, paymaster), 1); // Counter should increment
 
-        // Burn timeboxed counter
+        // Burn timeboxed counter again
         vm.startPrank(user, user);
-        vm.expectRevert(); // can't burn twice
-        Gassy(user).burnTimeboxedCounter(counter);
+        gassyStation.burnTimeboxedCounter(paymaster);
         vm.stopPrank();
+
+        assertEq(gassyStation.timeboxedCounter(user, paymaster), 2); // Counter should increment again
     }
 }

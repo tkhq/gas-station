@@ -161,8 +161,6 @@ contract GassyStation is EIP712 {
             revert InvalidCounter();
         }
 
-        timeboxedCounter[signer][msg.sender]++;
-        // Execute the timeboxed transaction
         return Gassy(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
     }
 
@@ -186,8 +184,7 @@ contract GassyStation is EIP712 {
         if (_counter != timeboxedCounter[signer][msg.sender]) {
             revert InvalidCounter();
         }
-        timeboxedCounter[signer][msg.sender]++;
-        // Execute the timeboxed transaction
+        // Execute the timeboxed transaction (counter does NOT increment for timeboxed)
         return Gassy(payable(signer)).execute(_outputContract, _arguments);
     }
 
