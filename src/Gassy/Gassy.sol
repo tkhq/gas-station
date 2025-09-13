@@ -28,13 +28,9 @@ interface IERC1155Receiver {
 contract Gassy is IERC1155Receiver, IERC721Receiver {
     // Custom errors
     error ExecutionFailed();
-    error InvalidNonce();
     error NotPaymaster();
 
     address public immutable paymaster;
-
-    uint128 public nonce;
-    uint128 public timeboxedCounter;
 
     // note: This should not be a clonable proxy contract since it needs the state variables to be part of the immutable variables (bytecode)
     constructor(address _paymaster) {
@@ -43,158 +39,58 @@ contract Gassy is IERC1155Receiver, IERC721Receiver {
 
     /* External functions */
 
-    function execute(uint128 _nonce, address _outContract, bytes calldata _executionData)
+    function execute(address _outContract, bytes calldata _executionData) external returns (bool, bytes memory) {
+        if (msg.sender == paymaster) {
+            (bool success, bytes memory result) = _outContract.call(_executionData);
+
+            if (success) {
+                return (success, result);
+            }
+            revert ExecutionFailed();
+        }
+        revert NotPaymaster();
+    }
+
+    function execute(address _outContract, uint256 _ethAmount, bytes calldata _executionData)
         external
         returns (bool, bytes memory)
     {
         if (msg.sender == paymaster) {
-            if (_nonce == nonce) {
-                ++nonce;
-                (bool success, bytes memory result) = _outContract.call(_executionData);
+            (bool success, bytes memory result) = _outContract.call{value: _ethAmount}(_executionData);
 
-                if (success) {
-                    return (success, result);
-                }
-                revert ExecutionFailed();
+            if (success) {
+                return (success, result);
             }
-            revert InvalidNonce();
+            revert ExecutionFailed();
         }
         revert NotPaymaster();
     }
 
-    function execute(uint128 _nonce, address _outContract, uint256 _ethAmount, bytes calldata _executionData)
-        external
-        returns (bool, bytes memory)
-    {
+    function executeBatch(IBatchExecution.Execution[] calldata _executions) external returns (bool, bytes[] memory) {
         if (msg.sender == paymaster) {
-            if (_nonce == nonce) {
-                ++nonce;
-                (bool success, bytes memory result) = _outContract.call{value: _ethAmount}(_executionData);
+            bytes[] memory results = new bytes[](_executions.length);
 
-                if (success) {
-                    return (success, result);
-                }
-                revert ExecutionFailed();
-            }
-            revert InvalidNonce();
-        }
-        revert NotPaymaster();
-    }
-
-    function executeBatch(uint128 _nonce, IBatchExecution.Execution[] calldata _executions)
-        external
-        returns (bool, bytes[] memory)
-    {
-        if (msg.sender == paymaster) {
-            if (_nonce == nonce) {
-                ++nonce;
-
-                bytes[] memory results = new bytes[](_executions.length);
-
-                for (uint8 i = 0; i < _executions.length;) {
-                    if (_executions[i].ethAmount == 0) {
-                        (bool success, bytes memory result) =
-                            _executions[i].outputContract.call(_executions[i].arguments);
-                        results[i] = result;
-                        if (!success) {
-                            revert ExecutionFailed();
-                        }
-                    } else {
-                        (bool success, bytes memory result) = _executions[i].outputContract.call{
-                            value: _executions[i].ethAmount
-                        }(_executions[i].arguments);
-                        results[i] = result;
-                        if (!success) {
-                            revert ExecutionFailed();
-                        }
+            for (uint8 i = 0; i < _executions.length;) {
+                if (_executions[i].ethAmount == 0) {
+                    (bool success, bytes memory result) = _executions[i].outputContract.call(_executions[i].arguments);
+                    results[i] = result;
+                    if (!success) {
+                        revert ExecutionFailed();
                     }
-                    unchecked {
-                        ++i;
+                } else {
+                    (bool success, bytes memory result) =
+                        _executions[i].outputContract.call{value: _executions[i].ethAmount}(_executions[i].arguments);
+                    results[i] = result;
+                    if (!success) {
+                        revert ExecutionFailed();
                     }
                 }
-
-                return (true, results);
-            }
-            revert InvalidNonce();
-        }
-        revert NotPaymaster();
-    }
-
-    function burnNonce(uint128 _nonce) external {
-        if (msg.sender == paymaster || (msg.sender == address(this) && tx.origin == address(this))) {
-            if (_nonce == nonce) {
-                ++nonce;
-                return;
-            }
-            revert InvalidNonce();
-        }
-        revert NotPaymaster();
-    }
-
-    function executeTimeboxed(
-        uint128 _counter,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _executionData
-    ) external returns (bool, bytes memory) {
-        if (msg.sender == paymaster) {
-            if (_counter == timeboxedCounter) {
-                (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_executionData);
-
-                if (success) {
-                    return (success, result);
+                unchecked {
+                    ++i;
                 }
-                revert ExecutionFailed();
             }
-            revert InvalidNonce();
-        }
-        revert NotPaymaster();
-    }
 
-    function executeBatchTimeboxed(uint128 _counter, IBatchExecution.Execution[] calldata _executions)
-        external
-        returns (bool, bytes[] memory)
-    {
-        if (msg.sender == paymaster) {
-            if (_counter == timeboxedCounter) {
-                bytes[] memory results = new bytes[](_executions.length);
-
-                for (uint8 i = 0; i < _executions.length;) {
-                    if (_executions[i].ethAmount == 0) {
-                        (bool success, bytes memory result) =
-                            _executions[i].outputContract.call(_executions[i].arguments);
-                        results[i] = result;
-                        if (!success) {
-                            revert ExecutionFailed();
-                        }
-                    } else {
-                        (bool success, bytes memory result) = _executions[i].outputContract.call{
-                            value: _executions[i].ethAmount
-                        }(_executions[i].arguments);
-                        results[i] = result;
-                        if (!success) {
-                            revert ExecutionFailed();
-                        }
-                    }
-                    unchecked {
-                        ++i;
-                    }
-                }
-
-                return (true, results);
-            }
-            revert InvalidNonce();
-        }
-        revert NotPaymaster();
-    }
-
-    function burnTimeboxedCounter(uint128 _counter) external {
-        if (msg.sender == paymaster || (msg.sender == address(this) && tx.origin == address(this))) {
-            if (timeboxedCounter == _counter) {
-                ++timeboxedCounter;
-                return;
-            }
-            revert InvalidNonce();
+            return (true, results);
         }
         revert NotPaymaster();
     }

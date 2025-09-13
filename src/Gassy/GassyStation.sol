@@ -11,12 +11,15 @@ contract GassyStation is EIP712 {
     error BatchSizeExceeded();
     error DeadlineExceeded();
     error InvalidOutputContract();
+    error InvalidNonce();
+    error InvalidCounter();
+    error SenderMustBeTxOrigin();
 
     // EIP712 type hashes (precomputed for gas optimization)
     bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
     // Original: keccak256("Execution(uint128 nonce,address outputContract,uint256 ethAmount,bytes arguments)")
 
-    bytes32 private constant BATCH_EXECUTION_TYPEHASH = 
+    bytes32 private constant BATCH_EXECUTION_TYPEHASH =
         0xf73c9911df56a9710eecfac385726c4fd80b78c1f52622e0a468473af71dccc8;
     // Original: keccak256("BatchExecution(uint128 nonce,Execution[] executions)Execution(address outputContract,uint256 ethAmount,bytes arguments)")
 
@@ -32,13 +35,16 @@ contract GassyStation is EIP712 {
     // Original: keccak256("ArbitraryTimeboxedExecution(uint128 counter,uint128 deadline,address sender)")
 
     bytes32 private constant BURN_TIMEBOXED_COUNTER_TYPEHASH =
-        0x9d7c8bed876f7441d00239a75cdc94ef7a45d0ffb8c804be7d5aee5dcfa1764d;
-    // Original: keccak256("BurnTimeboxedCounter(uint128 counter)")
+        0x96d439a73c6f9c1949a24d89d523289f8d4857543fa33be656cc2a3037807baa;
+    // Original: keccak256("BurnTimeboxedCounter(uint128 counter,address sender)")
 
     // Maximum batch size to prevent griefing attacks
     uint256 public constant MAX_BATCH_SIZE = 50;
 
     Gassy public immutable gassy; // just to have the exact gassy instance for this station
+
+    mapping(address => uint128) public nonce; //sequentional nonce for each address
+    mapping(address => mapping(address => uint128)) public timeboxedCounter; //timeboxed counter for each address + sender combination to enable blocking a sender
 
     constructor() EIP712("GassyStation", "1") {
         gassy = new Gassy(address(this));
@@ -62,8 +68,11 @@ contract GassyStation is EIP712 {
             keccak256(abi.encode(EXECUTION_TYPEHASH, _nonce, _outputContract, 0, keccak256(_arguments)))
         );
         address signer = ECDSA.recover(hash, _signature);
-
-        return Gassy(payable(signer)).execute(_nonce, _outputContract, _arguments);
+        if (_nonce == nonce[signer]) {
+            nonce[signer]++;
+            return Gassy(payable(signer)).execute(_outputContract, _arguments);
+        }
+        revert InvalidNonce();
     }
 
     function execute(
@@ -77,8 +86,11 @@ contract GassyStation is EIP712 {
             keccak256(abi.encode(EXECUTION_TYPEHASH, _nonce, _outputContract, _ethAmount, keccak256(_arguments)))
         );
         address signer = ECDSA.recover(hash, _signature);
-
-        return Gassy(payable(signer)).execute(_nonce, _outputContract, _ethAmount, _arguments);
+        if (_nonce == nonce[signer]) {
+            nonce[signer]++;
+            return Gassy(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
+        }
+        revert InvalidNonce();
     }
 
     function hashBurnNonce(uint128 _nonce) external view returns (bytes32) {
@@ -88,9 +100,20 @@ contract GassyStation is EIP712 {
     function burnNonce(uint128 _nonce, bytes calldata _signature) external {
         bytes32 hash = _hashTypedDataV4(keccak256(abi.encode(BURN_NONCE_TYPEHASH, _nonce)));
         address signer = ECDSA.recover(hash, _signature);
-
-        Gassy(payable(signer)).burnNonce(_nonce);
+        if (_nonce != nonce[signer]) {
+            revert InvalidNonce();
+        }
+        ++nonce[signer];
     }
+
+    function burnNonce() external {
+        if (msg.sender != tx.origin) {
+            revert SenderMustBeTxOrigin();
+        }
+        ++nonce[msg.sender];
+    }
+
+    /* Timeboxed execution */
 
     function hashTimeboxedExecution(uint128 _counter, uint128 _deadline, address _sender, address _outputContract)
         external
@@ -112,8 +135,8 @@ contract GassyStation is EIP712 {
         );
     }
 
-    function hashBurnTimeboxedCounter(uint128 _counter) external view returns (bytes32) {
-        return _hashTypedDataV4(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter)));
+    function hashBurnTimeboxedCounter(uint128 _counter, address _sender) external view returns (bytes32) {
+        return _hashTypedDataV4(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter, _sender)));
     }
 
     function executeTimeboxed(
@@ -134,8 +157,38 @@ contract GassyStation is EIP712 {
         );
         address signer = ECDSA.recover(hash, _signature);
 
+        if (_counter != timeboxedCounter[signer][msg.sender]) {
+            revert InvalidCounter();
+        }
+
+        timeboxedCounter[signer][msg.sender]++;
         // Execute the timeboxed transaction
-        return Gassy(payable(signer)).executeTimeboxed(_counter, _outputContract, _ethAmount, _arguments);
+        return Gassy(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
+    }
+
+    function executeTimeboxed(
+        uint128 _counter,
+        uint128 _deadline,
+        address _outputContract,
+        bytes calldata _arguments,
+        bytes calldata _signature
+    ) external returns (bool, bytes memory) {
+        // Check if deadline has passed
+        if (block.timestamp > _deadline) {
+            revert DeadlineExceeded();
+        }
+
+        bytes32 hash = _hashTypedDataV4(
+            keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender, _outputContract))
+        );
+        address signer = ECDSA.recover(hash, _signature);
+
+        if (_counter != timeboxedCounter[signer][msg.sender]) {
+            revert InvalidCounter();
+        }
+        timeboxedCounter[signer][msg.sender]++;
+        // Execute the timeboxed transaction
+        return Gassy(payable(signer)).execute(_outputContract, _arguments);
     }
 
     function executeBatchTimeboxed(
@@ -159,8 +212,12 @@ contract GassyStation is EIP712 {
         );
         address signer = ECDSA.recover(hash, _signature);
 
-        for(uint8 i = 0; i < _executions.length;) {
-            if(_executions[i].outputContract != _outputContract) {
+        if (_counter != timeboxedCounter[signer][msg.sender]) {
+            revert InvalidCounter();
+        }
+
+        for (uint8 i = 0; i < _executions.length;) {
+            if (_executions[i].outputContract != _outputContract) {
                 revert InvalidOutputContract();
             }
             unchecked {
@@ -169,7 +226,7 @@ contract GassyStation is EIP712 {
         }
 
         // Execute the timeboxed transaction
-        return Gassy(payable(signer)).executeBatchTimeboxed(_counter, _executions);
+        return Gassy(payable(signer)).executeBatch(_executions);
     }
 
     function executeTimeboxedArbitrary(
@@ -190,8 +247,12 @@ contract GassyStation is EIP712 {
         );
         address signer = ECDSA.recover(hash, _signature);
 
+        if (_counter != timeboxedCounter[signer][msg.sender]) {
+            revert InvalidCounter();
+        }
+
         // Execute the timeboxed transaction
-        return Gassy(payable(signer)).executeTimeboxed(_counter, _outputContract, _ethAmount, _arguments);
+        return Gassy(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
     }
 
     function executeBatchTimeboxedArbitrary(
@@ -214,15 +275,28 @@ contract GassyStation is EIP712 {
         );
         address signer = ECDSA.recover(hash, _signature);
 
+        if (_counter != timeboxedCounter[signer][msg.sender]) {
+            revert InvalidCounter();
+        }
         // Execute the timeboxed transaction
-        return Gassy(payable(signer)).executeBatchTimeboxed(_counter, _executions);
+        return Gassy(payable(signer)).executeBatch(_executions);
     }
 
-    function burnTimeboxedCounter(uint128 _counter, bytes calldata _signature) external {
-        bytes32 hash = _hashTypedDataV4(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter)));
+    function burnTimeboxedCounter(uint128 _counter, address _sender, bytes calldata _signature) external {
+        bytes32 hash = _hashTypedDataV4(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter, _sender)));
         address signer = ECDSA.recover(hash, _signature);
 
-        Gassy(payable(signer)).burnTimeboxedCounter(_counter);
+        if (_counter != timeboxedCounter[signer][msg.sender]) {
+            revert InvalidCounter();
+        }
+        ++timeboxedCounter[signer][msg.sender];
+    }
+
+    function burnTimeboxedCounter(address _sender) external {
+        if (msg.sender != tx.origin) {
+            revert SenderMustBeTxOrigin();
+        }
+        ++timeboxedCounter[msg.sender][_sender];
     }
 
     function hashBatchExecution(uint128 _nonce, IBatchExecution.Execution[] memory _executions)
@@ -279,6 +353,11 @@ contract GassyStation is EIP712 {
         );
         address signer = ECDSA.recover(hash, _signature);
 
-        return Gassy(payable(signer)).executeBatch(_nonce, _executions);
+        if (_nonce != nonce[signer]) {
+            revert InvalidNonce();
+        }
+        nonce[signer]++;
+
+        return Gassy(payable(signer)).executeBatch(_executions);
     }
 }
