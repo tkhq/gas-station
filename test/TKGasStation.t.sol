@@ -375,6 +375,56 @@ contract TKGasStationTest is Test {
         assertEq(tkGasStation.nonce(user), nonce + 1);
     }
 
+    function testGassyExecuteBatchAttemptToChangeExecution() public {
+        mockToken.mint(user, 50 * 10 ** 18);
+        address receiver1 = makeAddr("receiver1");
+        address receiver2 = makeAddr("receiver2");
+
+        uint128 nonce = tkGasStation.nonce(user);
+
+        // Create batch execution with multiple transfers
+        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
+        executions[0] = IBatchExecution.Execution({
+            outputContract: address(mockToken),
+            ethAmount: 0,
+            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18)
+        });
+        executions[1] = IBatchExecution.Execution({
+            outputContract: address(mockToken),
+            ethAmount: 0,
+            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
+        });
+
+        // Create signature for batch execution
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, tkGasStation, nonce, executions);
+
+        IBatchExecution.Execution[] memory badExecutions = new IBatchExecution.Execution[](2);
+        badExecutions[0] = IBatchExecution.Execution({
+            outputContract: address(mockToken),
+            ethAmount: 0,
+            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 20 * 10 ** 18)
+        });
+        badExecutions[1] = IBatchExecution.Execution({
+            outputContract: address(mockToken),
+            ethAmount: 0,
+            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
+        });
+
+        bool success;
+        bytes[] memory results;
+
+        vm.prank(paymaster);
+        vm.expectRevert();
+        (success, results) = tkGasStation.executeBatch(nonce, badExecutions, signature);
+        vm.stopPrank();
+
+        // Verify no transfers occurred and nonce unchanged
+        assertEq(mockToken.balanceOf(receiver1), 0);
+        assertEq(mockToken.balanceOf(receiver2), 0);
+        assertEq(mockToken.balanceOf(user), 50 * 10 ** 18);
+        assertEq(tkGasStation.nonce(user), nonce);
+    }
+
     function _signBatch(
         uint256 _privateKey,
         TKGasStation _tkGasStation,
@@ -533,8 +583,7 @@ contract TKGasStationTest is Test {
     function testGassyDirectBurnNonce() public {
         uint128 nonce = tkGasStation.nonce(user);
 
-        // User can directly burn their own nonce without signature
-        vm.startPrank(user, user); // msg.sender = user, tx.origin = user
+        vm.startPrank(user); // msg.sender = user, tx.origin = user
         tkGasStation.burnNonce();
         vm.stopPrank();
 
@@ -840,8 +889,7 @@ contract TKGasStationTest is Test {
     }
 
     function testDirectBurnTimeboxedCounter() public {
-        // Burn timeboxed counter - user burns their own counter for paymaster
-        vm.startPrank(user, user);
+        vm.startPrank(user);
         tkGasStation.burnTimeboxedCounter(paymaster);
         vm.stopPrank();
 

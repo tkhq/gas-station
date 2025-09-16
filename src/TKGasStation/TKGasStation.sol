@@ -13,7 +13,6 @@ contract TKGasStation is EIP712 {
     error InvalidOutputContract();
     error InvalidNonce();
     error InvalidCounter();
-    error SenderMustBeTxOrigin();
 
     // EIP712 type hashes (precomputed for gas optimization)
     bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
@@ -107,9 +106,6 @@ contract TKGasStation is EIP712 {
     }
 
     function burnNonce() external {
-        if (msg.sender != tx.origin) {
-            revert SenderMustBeTxOrigin();
-        }
         ++nonce[msg.sender];
     }
 
@@ -290,9 +286,6 @@ contract TKGasStation is EIP712 {
     }
 
     function burnTimeboxedCounter(address _sender) external {
-        if (msg.sender != tx.origin) {
-            revert SenderMustBeTxOrigin();
-        }
         ++timeboxedCounter[msg.sender][_sender];
     }
 
