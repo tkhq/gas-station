@@ -67,32 +67,25 @@ contract TKGasDelegate is IERC1155Receiver, IERC721Receiver {
     }
 
     function executeBatch(IBatchExecution.Execution[] calldata _executions) external returns (bool, bytes[] memory) {
-        if (msg.sender == paymaster) {
-            bytes[] memory results = new bytes[](_executions.length);
-
-            for (uint8 i = 0; i < _executions.length;) {
-                if (_executions[i].ethAmount == 0) {
-                    (bool success, bytes memory result) = _executions[i].outputContract.call(_executions[i].arguments);
-                    results[i] = result;
-                    if (!success) {
-                        revert ExecutionFailed();
-                    }
-                } else {
-                    (bool success, bytes memory result) =
-                        _executions[i].outputContract.call{value: _executions[i].ethAmount}(_executions[i].arguments);
-                    results[i] = result;
-                    if (!success) {
-                        revert ExecutionFailed();
-                    }
-                }
-                unchecked {
-                    ++i;
-                }
-            }
-
-            return (true, results);
+        if (msg.sender != paymaster) revert NotPaymaster();
+        
+        bytes[] memory results = new bytes[](_executions.length);
+        
+        for (uint256 i = 0; i < _executions.length;) {
+            uint256 ethAmount = _executions[i].ethAmount;
+            address outputContract = _executions[i].outputContract;
+            
+            (bool success, bytes memory result) = ethAmount == 0 
+                ? outputContract.call(_executions[i].arguments)
+                : outputContract.call{value: ethAmount}(_executions[i].arguments);
+                
+            results[i] = result;
+            if (!success) revert ExecutionFailed();
+            
+            unchecked { ++i; }
         }
-        revert NotPaymaster();
+        
+        return (true, results);
     }
 
     /**

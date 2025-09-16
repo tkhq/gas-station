@@ -59,7 +59,7 @@ contract TKGasStation is EIP712 {
         version = "1";
     }
 
-    function hashExecution(uint128 _nonce, address _outputContract, uint256 _ethAmount, bytes memory _arguments)
+    function hashExecution(uint128 _nonce, address _outputContract, uint256 _ethAmount, bytes calldata _arguments)
         external
         view
         returns (bytes32)
@@ -87,8 +87,11 @@ contract TKGasStation is EIP712 {
         hash = _hashTypedData(hash);
         
         address signer = ECDSA.recover(hash, _signature);
-        if (_nonce == nonce[signer]) {
-            ++nonce[signer];
+        
+        uint128 currentNonce = nonce[signer];
+        
+        if (_nonce == currentNonce) {
+            nonce[signer] = currentNonce + 1;
             return TKGasDelegate(payable(signer)).execute(_outputContract, _arguments);
         }
         revert InvalidNonce();
@@ -115,8 +118,11 @@ contract TKGasStation is EIP712 {
         hash = _hashTypedData(hash);
         
         address signer = ECDSA.recover(hash, _signature);
-        if (_nonce == nonce[signer]) {
-            ++nonce[signer];
+        
+        uint128 currentNonce = nonce[signer];
+        
+        if (_nonce == currentNonce) {
+            nonce[signer] = currentNonce + 1;
             return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
         }
         revert InvalidNonce();
