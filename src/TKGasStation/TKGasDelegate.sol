@@ -40,46 +40,48 @@ contract TKGasDelegate is IERC1155Receiver, IERC721Receiver {
     /* External functions */
 
     function execute(address _outContract, bytes calldata _executionData) external returns (bool, bytes memory) {
-        if (msg.sender == paymaster) {
-            (bool success, bytes memory result) = _outContract.call(_executionData);
+        if (msg.sender != paymaster) revert NotPaymaster();
+        
+        (bool success, bytes memory result) = _outContract.call(_executionData);
 
-            if (success) {
-                return (success, result);
-            }
-            revert ExecutionFailed();
+        if (success) {
+            return (success, result);
         }
-        revert NotPaymaster();
+        revert ExecutionFailed();
     }
 
     function execute(address _outContract, uint256 _ethAmount, bytes calldata _executionData)
         external
         returns (bool, bytes memory)
     {
-        if (msg.sender == paymaster) {
-            (bool success, bytes memory result) = _outContract.call{value: _ethAmount}(_executionData);
+        if (msg.sender != paymaster) revert NotPaymaster();
+        
+        (bool success, bytes memory result) = _outContract.call{value: _ethAmount}(_executionData);
 
-            if (success) {
-                return (success, result);
-            }
-            revert ExecutionFailed();
+        if (success) {
+            return (success, result);
         }
-        revert NotPaymaster();
+        revert ExecutionFailed();
     }
 
     function executeBatch(IBatchExecution.Execution[] calldata _executions) external returns (bool, bytes[] memory) {
         if (msg.sender != paymaster) revert NotPaymaster();
         
-        bytes[] memory results = new bytes[](_executions.length);
+        uint256 length = _executions.length;
+        bytes[] memory results = new bytes[](length);
         
-        for (uint256 i = 0; i < _executions.length;) {
-            uint256 ethAmount = _executions[i].ethAmount;
-            address outputContract = _executions[i].outputContract;
+        // Cache array access to avoid repeated calldata reads
+        for (uint256 i = 0; i < length;) {
+            IBatchExecution.Execution calldata execution = _executions[i];
+            uint256 ethAmount = execution.ethAmount;
+            address outputContract = execution.outputContract;
             
             (bool success, bytes memory result) = ethAmount == 0 
-                ? outputContract.call(_executions[i].arguments)
-                : outputContract.call{value: ethAmount}(_executions[i].arguments);
+                ? outputContract.call(execution.arguments)
+                : outputContract.call{value: ethAmount}(execution.arguments);
                 
             results[i] = result;
+            
             if (!success) revert ExecutionFailed();
             
             unchecked { ++i; }

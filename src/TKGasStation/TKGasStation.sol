@@ -105,7 +105,7 @@ contract TKGasStation is EIP712 {
         bytes calldata _signature
     ) external returns (bool, bytes memory) {
         bytes32 argsHash = keccak256(_arguments);
-        bytes32 hash;
+        bytes32 hash; // all this assembly to avoid using abi.encode
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, EXECUTION_TYPEHASH)
@@ -142,7 +142,7 @@ contract TKGasStation is EIP712 {
     function burnNonce(uint128 _nonce, bytes calldata _signature) external {
         bytes32 hash;
         assembly {
-            let ptr := mload(0x40) // Get free memory pointer
+            let ptr := mload(0x40) 
             mstore(ptr, BURN_NONCE_TYPEHASH)
             mstore(add(ptr, 0x20), _nonce)
             hash := keccak256(ptr, 0x40)
@@ -312,7 +312,7 @@ contract TKGasStation is EIP712 {
             revert InvalidCounter();
         }
 
-        for (uint8 i = 0; i < _executions.length;) {
+        for (uint256 i = 0; i < _executions.length;) {
             if (_executions[i].outputContract != _outputContract) {
                 revert InvalidOutputContract();
             }
@@ -407,10 +407,10 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
 
-        if (_counter != timeboxedCounter[signer][msg.sender]) {
+        if (_counter != timeboxedCounter[signer][_sender]) {
             revert InvalidCounter();
         }
-        ++timeboxedCounter[signer][msg.sender];
+        ++timeboxedCounter[signer][_sender];
     }
 
     function burnTimeboxedCounter(address _sender) external {
@@ -444,7 +444,7 @@ contract TKGasStation is EIP712 {
         if (_nonce != nonce[signer]) {
             revert InvalidNonce();
         }
-        nonce[signer]++;
+        ++nonce[signer];
 
         return TKGasDelegate(payable(signer)).executeBatch(_executions);
     }
