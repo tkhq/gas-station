@@ -73,9 +73,19 @@ contract TKGasStation is EIP712 {
         external
         returns (bool, bytes memory)
     {
-        bytes32 hash = _hashTypedData(
-            keccak256(abi.encode(EXECUTION_TYPEHASH, _nonce, _outputContract, 0, keccak256(_arguments)))
-        );
+        bytes32 argsHash = keccak256(_arguments);
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            mstore(add(ptr, 0x40), _outputContract)
+            mstore(add(ptr, 0x60), 0) // ethAmount = 0
+            mstore(add(ptr, 0x80), argsHash)
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+        
         address signer = ECDSA.recover(hash, _signature);
         if (_nonce == nonce[signer]) {
             nonce[signer]++;
@@ -91,9 +101,19 @@ contract TKGasStation is EIP712 {
         bytes calldata _arguments,
         bytes calldata _signature
     ) external returns (bool, bytes memory) {
-        bytes32 hash = _hashTypedData(
-            keccak256(abi.encode(EXECUTION_TYPEHASH, _nonce, _outputContract, _ethAmount, keccak256(_arguments)))
-        );
+        bytes32 argsHash = keccak256(_arguments);
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            mstore(add(ptr, 0x40), _outputContract)
+            mstore(add(ptr, 0x60), _ethAmount)
+            mstore(add(ptr, 0x80), argsHash)
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+        
         address signer = ECDSA.recover(hash, _signature);
         if (_nonce == nonce[signer]) {
             nonce[signer]++;
@@ -103,11 +123,26 @@ contract TKGasStation is EIP712 {
     }
 
     function hashBurnNonce(uint128 _nonce) external view returns (bytes32) {
-        return _hashTypedData(keccak256(abi.encode(BURN_NONCE_TYPEHASH, _nonce)));
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, BURN_NONCE_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            hash := keccak256(ptr, 0x40)
+        }
+        return _hashTypedData(hash);
     }
 
     function burnNonce(uint128 _nonce, bytes calldata _signature) external {
-        bytes32 hash = _hashTypedData(keccak256(abi.encode(BURN_NONCE_TYPEHASH, _nonce)));
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, BURN_NONCE_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            hash := keccak256(ptr, 0x40)
+        }
+        hash = _hashTypedData(hash);
+        
         address signer = ECDSA.recover(hash, _signature);
         if (_nonce != nonce[signer]) {
             revert InvalidNonce();
@@ -126,9 +161,17 @@ contract TKGasStation is EIP712 {
         view
         returns (bytes32)
     {
-        return _hashTypedData(
-            keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, _sender, _outputContract))
-        );
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _deadline)
+            mstore(add(ptr, 0x60), _sender)
+            mstore(add(ptr, 0x80), _outputContract)
+            hash := keccak256(ptr, 0xa0)
+        }
+        return _hashTypedData(hash);
     }
 
     function hashArbitraryTimeboxedExecution(uint128 _counter, uint128 _deadline, address _sender)
@@ -136,13 +179,28 @@ contract TKGasStation is EIP712 {
         view
         returns (bytes32)
     {
-        return _hashTypedData(
-            keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, _sender))
-        );
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _deadline)
+            mstore(add(ptr, 0x60), _sender)
+            hash := keccak256(ptr, 0x80)
+        }
+        return _hashTypedData(hash);
     }
 
     function hashBurnTimeboxedCounter(uint128 _counter, address _sender) external view returns (bytes32) {
-        return _hashTypedData(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter, _sender)));
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, BURN_TIMEBOXED_COUNTER_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _sender)
+            hash := keccak256(ptr, 0x60)
+        }
+        return _hashTypedData(hash);
     }
 
     function executeTimeboxed(
@@ -158,9 +216,19 @@ contract TKGasStation is EIP712 {
             revert DeadlineExceeded();
         }
 
-        bytes32 hash = _hashTypedData(
-            keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender, _outputContract))
-        );
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _deadline)
+            mstore(add(ptr, 0x60), sender)
+            mstore(add(ptr, 0x80), _outputContract)
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+        
         address signer = ECDSA.recover(hash, _signature);
 
         if (_counter != timeboxedCounter[signer][msg.sender]) {
@@ -182,9 +250,19 @@ contract TKGasStation is EIP712 {
             revert DeadlineExceeded();
         }
 
-        bytes32 hash = _hashTypedData(
-            keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender, _outputContract))
-        );
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _deadline)
+            mstore(add(ptr, 0x60), sender)
+            mstore(add(ptr, 0x80), _outputContract)
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+        
         address signer = ECDSA.recover(hash, _signature);
 
         if (_counter != timeboxedCounter[signer][msg.sender]) {
@@ -210,9 +288,18 @@ contract TKGasStation is EIP712 {
             revert BatchSizeExceeded();
         }
 
-        bytes32 hash = _hashTypedData(
-            keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender, _outputContract))
-        );
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _deadline)
+            mstore(add(ptr, 0x60), sender)
+            mstore(add(ptr, 0x80), _outputContract)
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
         address signer = ECDSA.recover(hash, _signature);
 
         if (_counter != timeboxedCounter[signer][msg.sender]) {
@@ -245,9 +332,17 @@ contract TKGasStation is EIP712 {
             revert DeadlineExceeded();
         }
 
-        bytes32 hash = _hashTypedData(
-            keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender))
-        );
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _deadline)
+            mstore(add(ptr, 0x60), sender)
+            hash := keccak256(ptr, 0x80)
+        }
+        hash = _hashTypedData(hash);
         address signer = ECDSA.recover(hash, _signature);
 
         if (_counter != timeboxedCounter[signer][msg.sender]) {
@@ -273,9 +368,17 @@ contract TKGasStation is EIP712 {
             revert BatchSizeExceeded();
         }
 
-        bytes32 hash = _hashTypedData(
-            keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender))
-        );
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _deadline)
+            mstore(add(ptr, 0x60), sender)
+            hash := keccak256(ptr, 0x80)
+        }
+        hash = _hashTypedData(hash);
         address signer = ECDSA.recover(hash, _signature);
 
         if (_counter != timeboxedCounter[signer][msg.sender]) {
@@ -286,7 +389,16 @@ contract TKGasStation is EIP712 {
     }
 
     function burnTimeboxedCounter(uint128 _counter, address _sender, bytes calldata _signature) external {
-        bytes32 hash = _hashTypedData(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter, _sender)));
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, BURN_TIMEBOXED_COUNTER_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _sender)
+            hash := keccak256(ptr, 0x60)
+        }
+        hash = _hashTypedData(hash);
+        
         address signer = ECDSA.recover(hash, _signature);
 
         if (_counter != timeboxedCounter[signer][msg.sender]) {
