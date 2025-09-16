@@ -88,7 +88,7 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
         if (_nonce == nonce[signer]) {
-            nonce[signer]++;
+            ++nonce[signer];
             return TKGasDelegate(payable(signer)).execute(_outputContract, _arguments);
         }
         revert InvalidNonce();
@@ -116,7 +116,7 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
         if (_nonce == nonce[signer]) {
-            nonce[signer]++;
+            ++nonce[signer];
             return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
         }
         revert InvalidNonce();
