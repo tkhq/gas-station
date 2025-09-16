@@ -665,13 +665,16 @@ contract TKGasStationTest is Test {
         return signature;
     }
 
-    function _signBurnTimeboxedCounter(uint256 _privateKey, TKGasStation _tkGasStation, uint128 _counter, address _sender)
-        internal
-        returns (bytes memory)
-    {
+    function _signBurnTimeboxedCounter(
+        uint256 _privateKey,
+        TKGasStation _tkGasStation,
+        uint128 _counter,
+        address _sender
+    ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, _tkGasStation.hashBurnTimeboxedCounter(_counter, _sender));
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(_privateKey, _tkGasStation.hashBurnTimeboxedCounter(_counter, _sender));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
