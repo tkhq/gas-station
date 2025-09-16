@@ -304,23 +304,8 @@ contract TKGasStation is EIP712 {
         view
         returns (bytes32)
     {
-        bytes32[] memory executionHashes = new bytes32[](_executions.length);
-        for (uint8 i = 0; i < _executions.length;) {
-            executionHashes[i] = keccak256(
-                abi.encode(
-                    EXECUTION_TYPEHASH,
-                    _executions[i].outputContract,
-                    _executions[i].ethAmount,
-                    keccak256(_executions[i].arguments)
-                )
-            );
-            unchecked {
-                ++i;
-            }
-        }
-
         return _hashTypedData(
-            keccak256(abi.encode(BATCH_EXECUTION_TYPEHASH, _nonce, keccak256(abi.encodePacked(executionHashes))))
+            keccak256(abi.encode(BATCH_EXECUTION_TYPEHASH, _nonce, keccak256(abi.encode(_executions))))
         );
     }
 
@@ -333,23 +318,8 @@ contract TKGasStation is EIP712 {
             revert BatchSizeExceeded();
         }
 
-        bytes32[] memory executionHashes = new bytes32[](_executions.length);
-        for (uint8 i = 0; i < _executions.length;) {
-            executionHashes[i] = keccak256(
-                abi.encode(
-                    EXECUTION_TYPEHASH,
-                    _executions[i].outputContract,
-                    _executions[i].ethAmount,
-                    keccak256(_executions[i].arguments)
-                )
-            );
-            unchecked {
-                ++i;
-            }
-        }
-
         bytes32 hash = _hashTypedData(
-            keccak256(abi.encode(BATCH_EXECUTION_TYPEHASH, _nonce, keccak256(abi.encodePacked(executionHashes))))
+            keccak256(abi.encode(BATCH_EXECUTION_TYPEHASH, _nonce, keccak256(abi.encode(_executions))))
         );
         address signer = ECDSA.recover(hash, _signature);
 
