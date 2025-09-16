@@ -2,6 +2,10 @@
 
 TK Gas Station lets a user have all their gas paid for by another party using metatransactions.
 
+### Deployments
+- Base Mainnet: `0xf3b3F3e918745C6E20AC187b62F51Ae2A17CbB38` (verified on Basescan)
+  - Link: https://basescan.org/address/0xf3b3f3e918745c6e20ac187b62f51ae2a17cbb38
+
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
 2. The user then signs a metatransaction (EIP-712) to give permissions to the paymaster to initiate a transaction on behalf of the user
@@ -25,3 +29,4 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 * Burning a nonce or a counter only burns the current nonce/counter. Ones that are premade will be valid
 * Nonces and timeboxed counters are sequential and can only be used sequentially
 * A user can burn their own counter or nonce without a 712
+* The gas delegate implements recievers for ERC-721 and ERC-1155
