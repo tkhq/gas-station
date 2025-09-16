@@ -15,15 +15,15 @@ contract TKGasStation is EIP712 {
     error InvalidCounter();
 
     // EIP712 type hashes (precomputed for gas optimization)
-    bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
-    // Original: keccak256("Execution(uint128 nonce,address outputContract,uint256 ethAmount,bytes arguments)")
+    bytes32 private constant EXECUTION_TYPEHASH = 0xc7deb0df5ad588824bf0996cb781fd274b4eee76898f919f348ecc59cc18e0e1;
+    // Original: keccak256("Execution(uint256 nonce,address outputContract,uint256 ethAmount,bytes arguments)")
 
     bytes32 private constant BATCH_EXECUTION_TYPEHASH =
-        0xf73c9911df56a9710eecfac385726c4fd80b78c1f52622e0a468473af71dccc8;
-    // Original: keccak256("BatchExecution(uint128 nonce,Execution[] executions)Execution(address outputContract,uint256 ethAmount,bytes arguments)")
+        0xd85d05c04cabb2317dceb76fa66d4255c03f39a8feb95370f173520c44b7181f;
+    // Original: keccak256("BatchExecution(uint256 nonce,Execution[] executions)Execution(address outputContract,uint256 ethAmount,bytes arguments)")
 
-    bytes32 private constant BURN_NONCE_TYPEHASH = 0x1abb8920e48045adda3ed0ce4be4357be95d4aa21af287280f532fc031584bda;
-    // Original: keccak256("BurnNonce(uint128 nonce)")
+    bytes32 private constant BURN_NONCE_TYPEHASH = 0x4850dd989ccc5177bbe92de67c630ed29a206d9da5f1da7d2f562d1a43ee21d0;
+    // Original: keccak256("BurnNonce(uint256 nonce)")
 
     bytes32 private constant TIMEBOXED_EXECUTION_TYPEHASH =
         0x572542ff5f8730cc3585cab0d01b4696eadf4bd390c1dbbaa4467a76cb6f95bf;
@@ -42,7 +42,7 @@ contract TKGasStation is EIP712 {
 
     TKGasDelegate public immutable TKGlobalGasDelegate; // exact delegate instance for this station
 
-    mapping(address => uint128) public nonce; //sequentional nonce for each address
+    mapping(address => uint256) public nonce; //sequentional nonce for each address
     mapping(address => mapping(address => uint128)) public timeboxedCounter; //timeboxed counter for each address + sender combination to enable blocking a sender
 
     constructor() EIP712() {
@@ -59,7 +59,7 @@ contract TKGasStation is EIP712 {
         version = "1";
     }
 
-    function hashExecution(uint128 _nonce, address _outputContract, uint256 _ethAmount, bytes calldata _arguments)
+    function hashExecution(uint256 _nonce, address _outputContract, uint256 _ethAmount, bytes calldata _arguments)
         external
         view
         returns (bytes32)
@@ -69,7 +69,7 @@ contract TKGasStation is EIP712 {
         );
     }
 
-    function execute(uint128 _nonce, address _outputContract, bytes calldata _arguments, bytes calldata _signature)
+    function execute(uint256 _nonce, address _outputContract, bytes calldata _arguments, bytes calldata _signature)
         external
         returns (bool, bytes memory)
     {
@@ -88,17 +88,19 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
         
-        uint128 currentNonce = nonce[signer];
+        uint256 currentNonce = nonce[signer];
         
         if (_nonce == currentNonce) {
-            nonce[signer] = currentNonce + 1;
+            unchecked {
+                nonce[signer] = currentNonce + 1;
+            }
             return TKGasDelegate(payable(signer)).execute(_outputContract, _arguments);
         }
         revert InvalidNonce();
     }
 
     function execute(
-        uint128 _nonce,
+        uint256 _nonce,
         address _outputContract,
         uint256 _ethAmount,
         bytes calldata _arguments,
@@ -119,16 +121,18 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
         
-        uint128 currentNonce = nonce[signer];
+        uint256 currentNonce = nonce[signer];
         
         if (_nonce == currentNonce) {
-            nonce[signer] = currentNonce + 1;
+            unchecked {
+                nonce[signer] = currentNonce + 1;
+            }
             return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
         }
         revert InvalidNonce();
     }
 
-    function hashBurnNonce(uint128 _nonce) external view returns (bytes32) {
+    function hashBurnNonce(uint256 _nonce) external view returns (bytes32) {
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
@@ -139,7 +143,7 @@ contract TKGasStation is EIP712 {
         return _hashTypedData(hash);
     }
 
-    function burnNonce(uint128 _nonce, bytes calldata _signature) external {
+    function burnNonce(uint256 _nonce, bytes calldata _signature) external {
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) 
@@ -153,11 +157,15 @@ contract TKGasStation is EIP712 {
         if (_nonce != nonce[signer]) {
             revert InvalidNonce();
         }
-        ++nonce[signer];
+        unchecked {
+            ++nonce[signer];
+        }
     }
 
     function burnNonce() external {
-        ++nonce[msg.sender];
+        unchecked {
+            ++nonce[msg.sender];
+        }
     }
 
     /* Timeboxed execution */
@@ -410,14 +418,18 @@ contract TKGasStation is EIP712 {
         if (_counter != timeboxedCounter[signer][_sender]) {
             revert InvalidCounter();
         }
-        ++timeboxedCounter[signer][_sender];
+        unchecked {
+            ++timeboxedCounter[signer][_sender];
+        }
     }
 
     function burnTimeboxedCounter(address _sender) external {
-        ++timeboxedCounter[msg.sender][_sender];
+        unchecked {
+            ++timeboxedCounter[msg.sender][_sender];
+        }
     }
 
-    function hashBatchExecution(uint128 _nonce, IBatchExecution.Execution[] memory _executions)
+    function hashBatchExecution(uint256 _nonce, IBatchExecution.Execution[] memory _executions)
         external
         view
         returns (bytes32)
@@ -427,7 +439,7 @@ contract TKGasStation is EIP712 {
         );
     }
 
-    function executeBatch(uint128 _nonce, IBatchExecution.Execution[] calldata _executions, bytes calldata _signature)
+    function executeBatch(uint256 _nonce, IBatchExecution.Execution[] calldata _executions, bytes calldata _signature)
         external
         returns (bool, bytes[] memory)
     {
@@ -444,7 +456,9 @@ contract TKGasStation is EIP712 {
         if (_nonce != nonce[signer]) {
             revert InvalidNonce();
         }
-        ++nonce[signer];
+        unchecked {
+            ++nonce[signer];
+        }
 
         return TKGasDelegate(payable(signer)).executeBatch(_executions);
     }

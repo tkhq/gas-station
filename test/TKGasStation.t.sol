@@ -53,7 +53,7 @@ contract TKGasStationTest is Test {
     function _sign(
         uint256 _privateKey,
         TKGasStation _tkGasStation,
-        uint128 _nonce,
+        uint256 _nonce,
         address _outputContract,
         uint256 _ethAmount,
         bytes memory _arguments
@@ -79,7 +79,7 @@ contract TKGasStationTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             tkGasStation,
@@ -107,7 +107,7 @@ contract TKGasStationTest is Test {
 
     function testGassyExecuteCheckReturnValue() public {
         mockToken.mint(user, 20 * 10 ** 18);
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             tkGasStation,
@@ -140,7 +140,7 @@ contract TKGasStationTest is Test {
         vm.deal(user, 2 ether);
         assertEq(address(receiver).balance, 0 ether);
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
         bytes memory signature = _sign(USER_PRIVATE_KEY, tkGasStation, nonce, receiver, 1 ether, "");
 
         bool success;
@@ -163,7 +163,7 @@ contract TKGasStationTest is Test {
     function testGassyExecuteRevertsInvalidNonce() public {
         mockToken.mint(user, 20 * 10 ** 18);
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             tkGasStation,
@@ -203,7 +203,7 @@ contract TKGasStationTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             tkGasStation,
@@ -230,7 +230,7 @@ contract TKGasStationTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             tkGasStation,
@@ -260,8 +260,8 @@ contract TKGasStationTest is Test {
 
         _delegateGassy(user2PrivateKey);
 
-        uint128 nonce = tkGasStation.nonce(user);
-        uint128 nonce2 = tkGasStation.nonce(user2);
+        uint256 nonce = tkGasStation.nonce(user);
+        uint256 nonce2 = tkGasStation.nonce(user2);
         assertEq(nonce, 0);
         assertEq(nonce2, 0);
 
@@ -293,7 +293,7 @@ contract TKGasStationTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // Create signature for first execution
         bytes memory signature = _sign(
@@ -338,7 +338,7 @@ contract TKGasStationTest is Test {
         address receiver1 = makeAddr("receiver1");
         address receiver2 = makeAddr("receiver2");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // Create batch execution with multiple transfers
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
@@ -380,7 +380,7 @@ contract TKGasStationTest is Test {
         address receiver1 = makeAddr("receiver1");
         address receiver2 = makeAddr("receiver2");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // Create batch execution with multiple transfers
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
@@ -428,7 +428,7 @@ contract TKGasStationTest is Test {
     function _signBatch(
         uint256 _privateKey,
         TKGasStation _tkGasStation,
-        uint128 _nonce,
+        uint256 _nonce,
         IBatchExecution.Execution[] memory _executions
     ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
@@ -443,7 +443,7 @@ contract TKGasStationTest is Test {
         mockToken.mint(user, 1000 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // Create batch execution with 51 transactions (exceeds MAX_BATCH_SIZE of 50)
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](51);
@@ -469,7 +469,7 @@ contract TKGasStationTest is Test {
         mockToken.mint(user, 1000 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // Create batch execution with exactly 50 transactions (MAX_BATCH_SIZE)
         IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](50);
@@ -504,7 +504,7 @@ contract TKGasStationTest is Test {
     }
 
     function testGassyBurnNonce() public {
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // Create signature for burning nonce
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, tkGasStation, nonce);
@@ -519,7 +519,7 @@ contract TKGasStationTest is Test {
     }
 
     function testGassyBurnNonceRevertsInvalidNonce() public {
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // Create signature for burning wrong nonce
         bytes memory signature = _signBurnNonce(
@@ -542,7 +542,7 @@ contract TKGasStationTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // Burn the nonce first
         bytes memory burnSignature = _signBurnNonce(USER_PRIVATE_KEY, tkGasStation, nonce);
@@ -581,7 +581,7 @@ contract TKGasStationTest is Test {
     }
 
     function testGassyDirectBurnNonce() public {
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         vm.startPrank(user); // msg.sender = user, tx.origin = user
         tkGasStation.burnNonce();
@@ -592,7 +592,7 @@ contract TKGasStationTest is Test {
     }
 
     function testGassyDirectBurnNonceRevertsInvalidNonce() public {
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // User burns their own nonce
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
@@ -607,7 +607,7 @@ contract TKGasStationTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // User directly burns their own nonce
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
@@ -644,32 +644,32 @@ contract TKGasStationTest is Test {
     }
 
     function testGassyDirectBurnNonceVsSignatureBurn() public {
-        uint128 nonce = tkGasStation.nonce(user);
+        uint256 nonce = tkGasStation.nonce(user);
 
         // Method 1: Direct burn (user calls their own contract)
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
         tkGasStation.burnNonce();
         vm.stopPrank();
 
-        uint128 nonceAfterDirect = tkGasStation.nonce(user);
+        uint256 nonceAfterDirect = tkGasStation.nonce(user);
         assertEq(nonceAfterDirect, nonce + 1);
 
         // Method 2: Signature burn (through TKGasStation)
-        uint128 newNonce = tkGasStation.nonce(user);
+        uint256 newNonce = tkGasStation.nonce(user);
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, tkGasStation, newNonce);
 
         vm.prank(paymaster);
         tkGasStation.burnNonce(newNonce, signature);
         vm.stopPrank();
 
-        uint128 nonceAfterSignature = tkGasStation.nonce(user);
+        uint256 nonceAfterSignature = tkGasStation.nonce(user);
         assertEq(nonceAfterSignature, newNonce + 1);
 
         // Both methods should work and increment nonce
         assertEq(nonceAfterSignature, nonceAfterDirect + 1);
     }
 
-    function _signBurnNonce(uint256 _privateKey, TKGasStation _tkGasStation, uint128 _nonce)
+    function _signBurnNonce(uint256 _privateKey, TKGasStation _tkGasStation, uint256 _nonce)
         internal
         returns (bytes memory)
     {
