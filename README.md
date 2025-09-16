@@ -3,8 +3,23 @@
 TK Gas Station lets a user have all their gas paid for by another party using metatransactions.
 
 ### Deployments
-- Base Mainnet: `0xf3b3F3e918745C6E20AC187b62F51Ae2A17CbB38` (verified on Basescan)
-  - Link: https://basescan.org/address/0xf3b3f3e918745c6e20ac187b62f51ae2a17cbb38
+- Base Mainnet
+  - TKGasStation: `0xAdba385555515D1d7E22FD89cF97FA80B0f6db04`
+    - Link: https://basescan.org/address/0xadba385555515d1d7e22fd89cf97fa80b0f6db04
+  - TKGasDelegate: `0xDC5e18Db8f530756B9D539C6A09e84F4572A774B`
+    - Link: https://basescan.org/address/0xdc5e18db8f530756b9d539c6a09e84f4572a774b
+
+- Polygon Mainnet
+  - TKGasStation: `0xAdba385555515D1d7E22FD89cF97FA80B0f6db04`
+    - Link: https://polygonscan.com/address/0xadba385555515d1d7e22fd89cf97fa80b0f6db04
+  - TKGasDelegate: `0xDC5e18Db8f530756B9D539C6A09e84F4572A774B`
+    - Link: https://polygonscan.com/address/0xdc5e18db8f530756b9d539c6a09e84f4572a774b
+
+- Ethereum Mainnet
+  - TKGasStation: `0xAdba385555515D1d7E22FD89cF97FA80B0f6db04`
+    - Link: https://etherscan.io/address/0xadba385555515d1d7e22fd89cf97fa80b0f6db04
+  - TKGasDelegate: `0xDC5e18Db8f530756B9D539C6A09e84F4572A774B`
+    - Link: https://etherscan.io/address/0xdc5e18db8f530756b9d539c6a09e84f4572a774b
 
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster

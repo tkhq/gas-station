@@ -46,7 +46,7 @@ contract TKGasStation is EIP712 {
     mapping(address => mapping(address => uint128)) public timeboxedCounter; //timeboxed counter for each address + sender combination to enable blocking a sender
 
     constructor() EIP712("TKGasStation", "1") {
-        TKGlobalGasDelegate = new TKGasDelegate(address(this));
+        TKGlobalGasDelegate = new TKGasDelegate{salt: keccak256(abi.encodePacked(address(this)))}(address(this));
     }
 
     function hashExecution(uint128 _nonce, address _outputContract, uint256 _ethAmount, bytes memory _arguments)
