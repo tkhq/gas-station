@@ -2,8 +2,8 @@
 pragma solidity ^0.8.30;
 
 import {TKGasDelegate} from "./TKGasDelegate.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol";
+import {EIP712} from "solady/utils/EIP712.sol";
 import {IBatchExecution} from "./IBatchExecution.sol";
 
 contract TKGasStation is EIP712 {
@@ -45,8 +45,18 @@ contract TKGasStation is EIP712 {
     mapping(address => uint128) public nonce; //sequentional nonce for each address
     mapping(address => mapping(address => uint128)) public timeboxedCounter; //timeboxed counter for each address + sender combination to enable blocking a sender
 
-    constructor() EIP712("TKGasStation", "1") {
+    constructor() EIP712() {
         TKGlobalGasDelegate = new TKGasDelegate{salt: keccak256(abi.encodePacked(address(this)))}(address(this));
+    }
+
+    function _domainNameAndVersion()
+        internal
+        pure
+        override
+        returns (string memory name, string memory version)
+    {
+        name = "TKGasStation";
+        version = "1";
     }
 
     function hashExecution(uint128 _nonce, address _outputContract, uint256 _ethAmount, bytes memory _arguments)
@@ -54,7 +64,7 @@ contract TKGasStation is EIP712 {
         view
         returns (bytes32)
     {
-        return _hashTypedDataV4(
+        return _hashTypedData(
             keccak256(abi.encode(EXECUTION_TYPEHASH, _nonce, _outputContract, _ethAmount, keccak256(_arguments)))
         );
     }
@@ -63,7 +73,7 @@ contract TKGasStation is EIP712 {
         external
         returns (bool, bytes memory)
     {
-        bytes32 hash = _hashTypedDataV4(
+        bytes32 hash = _hashTypedData(
             keccak256(abi.encode(EXECUTION_TYPEHASH, _nonce, _outputContract, 0, keccak256(_arguments)))
         );
         address signer = ECDSA.recover(hash, _signature);
@@ -81,7 +91,7 @@ contract TKGasStation is EIP712 {
         bytes calldata _arguments,
         bytes calldata _signature
     ) external returns (bool, bytes memory) {
-        bytes32 hash = _hashTypedDataV4(
+        bytes32 hash = _hashTypedData(
             keccak256(abi.encode(EXECUTION_TYPEHASH, _nonce, _outputContract, _ethAmount, keccak256(_arguments)))
         );
         address signer = ECDSA.recover(hash, _signature);
@@ -93,11 +103,11 @@ contract TKGasStation is EIP712 {
     }
 
     function hashBurnNonce(uint128 _nonce) external view returns (bytes32) {
-        return _hashTypedDataV4(keccak256(abi.encode(BURN_NONCE_TYPEHASH, _nonce)));
+        return _hashTypedData(keccak256(abi.encode(BURN_NONCE_TYPEHASH, _nonce)));
     }
 
     function burnNonce(uint128 _nonce, bytes calldata _signature) external {
-        bytes32 hash = _hashTypedDataV4(keccak256(abi.encode(BURN_NONCE_TYPEHASH, _nonce)));
+        bytes32 hash = _hashTypedData(keccak256(abi.encode(BURN_NONCE_TYPEHASH, _nonce)));
         address signer = ECDSA.recover(hash, _signature);
         if (_nonce != nonce[signer]) {
             revert InvalidNonce();
@@ -116,7 +126,7 @@ contract TKGasStation is EIP712 {
         view
         returns (bytes32)
     {
-        return _hashTypedDataV4(
+        return _hashTypedData(
             keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, _sender, _outputContract))
         );
     }
@@ -126,13 +136,13 @@ contract TKGasStation is EIP712 {
         view
         returns (bytes32)
     {
-        return _hashTypedDataV4(
+        return _hashTypedData(
             keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, _sender))
         );
     }
 
     function hashBurnTimeboxedCounter(uint128 _counter, address _sender) external view returns (bytes32) {
-        return _hashTypedDataV4(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter, _sender)));
+        return _hashTypedData(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter, _sender)));
     }
 
     function executeTimeboxed(
@@ -148,7 +158,7 @@ contract TKGasStation is EIP712 {
             revert DeadlineExceeded();
         }
 
-        bytes32 hash = _hashTypedDataV4(
+        bytes32 hash = _hashTypedData(
             keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender, _outputContract))
         );
         address signer = ECDSA.recover(hash, _signature);
@@ -172,7 +182,7 @@ contract TKGasStation is EIP712 {
             revert DeadlineExceeded();
         }
 
-        bytes32 hash = _hashTypedDataV4(
+        bytes32 hash = _hashTypedData(
             keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender, _outputContract))
         );
         address signer = ECDSA.recover(hash, _signature);
@@ -200,7 +210,7 @@ contract TKGasStation is EIP712 {
             revert BatchSizeExceeded();
         }
 
-        bytes32 hash = _hashTypedDataV4(
+        bytes32 hash = _hashTypedData(
             keccak256(abi.encode(TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender, _outputContract))
         );
         address signer = ECDSA.recover(hash, _signature);
@@ -235,7 +245,7 @@ contract TKGasStation is EIP712 {
             revert DeadlineExceeded();
         }
 
-        bytes32 hash = _hashTypedDataV4(
+        bytes32 hash = _hashTypedData(
             keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender))
         );
         address signer = ECDSA.recover(hash, _signature);
@@ -263,7 +273,7 @@ contract TKGasStation is EIP712 {
             revert BatchSizeExceeded();
         }
 
-        bytes32 hash = _hashTypedDataV4(
+        bytes32 hash = _hashTypedData(
             keccak256(abi.encode(ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH, _counter, _deadline, msg.sender))
         );
         address signer = ECDSA.recover(hash, _signature);
@@ -276,7 +286,7 @@ contract TKGasStation is EIP712 {
     }
 
     function burnTimeboxedCounter(uint128 _counter, address _sender, bytes calldata _signature) external {
-        bytes32 hash = _hashTypedDataV4(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter, _sender)));
+        bytes32 hash = _hashTypedData(keccak256(abi.encode(BURN_TIMEBOXED_COUNTER_TYPEHASH, _counter, _sender)));
         address signer = ECDSA.recover(hash, _signature);
 
         if (_counter != timeboxedCounter[signer][msg.sender]) {
@@ -309,7 +319,7 @@ contract TKGasStation is EIP712 {
             }
         }
 
-        return _hashTypedDataV4(
+        return _hashTypedData(
             keccak256(abi.encode(BATCH_EXECUTION_TYPEHASH, _nonce, keccak256(abi.encodePacked(executionHashes))))
         );
     }
@@ -338,7 +348,7 @@ contract TKGasStation is EIP712 {
             }
         }
 
-        bytes32 hash = _hashTypedDataV4(
+        bytes32 hash = _hashTypedData(
             keccak256(abi.encode(BATCH_EXECUTION_TYPEHASH, _nonce, keccak256(abi.encodePacked(executionHashes))))
         );
         address signer = ECDSA.recover(hash, _signature);
