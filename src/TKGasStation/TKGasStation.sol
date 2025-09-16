@@ -41,7 +41,7 @@ contract TKGasStation is EIP712 {
     // Maximum batch size to prevent griefing attacks
     uint256 public constant MAX_BATCH_SIZE = 50;
 
-    TKGasDelegate public immutable TKGlobalGasDelegate; // just to have the exact gassy instance for this station
+    TKGasDelegate public immutable TKGlobalGasDelegate; // exact delegate instance for this station
 
     mapping(address => uint128) public nonce; //sequentional nonce for each address
     mapping(address => mapping(address => uint128)) public timeboxedCounter; //timeboxed counter for each address + sender combination to enable blocking a sender
