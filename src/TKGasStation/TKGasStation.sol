@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {Gassy} from "./Gassy.sol";
+import {TKGasDelegate} from "./TKGasDelegate.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {IBatchExecution} from "./IBatchExecution.sol";
 
-contract GassyStation is EIP712 {
+contract TKGasStation is EIP712 {
     // Custom errors
     error BatchSizeExceeded();
     error DeadlineExceeded();
@@ -41,13 +41,13 @@ contract GassyStation is EIP712 {
     // Maximum batch size to prevent griefing attacks
     uint256 public constant MAX_BATCH_SIZE = 50;
 
-    Gassy public immutable gassy; // just to have the exact gassy instance for this station
+    TKGasDelegate public immutable TKGlobalGasDelegate; // just to have the exact gassy instance for this station
 
     mapping(address => uint128) public nonce; //sequentional nonce for each address
     mapping(address => mapping(address => uint128)) public timeboxedCounter; //timeboxed counter for each address + sender combination to enable blocking a sender
 
-    constructor() EIP712("GassyStation", "1") {
-        gassy = new Gassy(address(this));
+    constructor() EIP712("TKGasStation", "1") {
+        TKGlobalGasDelegate = new TKGasDelegate(address(this));
     }
 
     function hashExecution(uint128 _nonce, address _outputContract, uint256 _ethAmount, bytes memory _arguments)
@@ -70,7 +70,7 @@ contract GassyStation is EIP712 {
         address signer = ECDSA.recover(hash, _signature);
         if (_nonce == nonce[signer]) {
             nonce[signer]++;
-            return Gassy(payable(signer)).execute(_outputContract, _arguments);
+            return TKGasDelegate(payable(signer)).execute(_outputContract, _arguments);
         }
         revert InvalidNonce();
     }
@@ -88,7 +88,7 @@ contract GassyStation is EIP712 {
         address signer = ECDSA.recover(hash, _signature);
         if (_nonce == nonce[signer]) {
             nonce[signer]++;
-            return Gassy(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
+            return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
         }
         revert InvalidNonce();
     }
@@ -161,7 +161,7 @@ contract GassyStation is EIP712 {
             revert InvalidCounter();
         }
 
-        return Gassy(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
+        return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
     }
 
     function executeTimeboxed(
@@ -185,7 +185,7 @@ contract GassyStation is EIP712 {
             revert InvalidCounter();
         }
         // Execute the timeboxed transaction (counter does NOT increment for timeboxed)
-        return Gassy(payable(signer)).execute(_outputContract, _arguments);
+        return TKGasDelegate(payable(signer)).execute(_outputContract, _arguments);
     }
 
     function executeBatchTimeboxed(
@@ -223,7 +223,7 @@ contract GassyStation is EIP712 {
         }
 
         // Execute the timeboxed transaction
-        return Gassy(payable(signer)).executeBatch(_executions);
+        return TKGasDelegate(payable(signer)).executeBatch(_executions);
     }
 
     function executeTimeboxedArbitrary(
@@ -249,7 +249,7 @@ contract GassyStation is EIP712 {
         }
 
         // Execute the timeboxed transaction
-        return Gassy(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
+        return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
     }
 
     function executeBatchTimeboxedArbitrary(
@@ -276,7 +276,7 @@ contract GassyStation is EIP712 {
             revert InvalidCounter();
         }
         // Execute the timeboxed transaction
-        return Gassy(payable(signer)).executeBatch(_executions);
+        return TKGasDelegate(payable(signer)).executeBatch(_executions);
     }
 
     function burnTimeboxedCounter(uint128 _counter, address _sender, bytes calldata _signature) external {
@@ -355,6 +355,6 @@ contract GassyStation is EIP712 {
         }
         nonce[signer]++;
 
-        return Gassy(payable(signer)).executeBatch(_executions);
+        return TKGasDelegate(payable(signer)).executeBatch(_executions);
     }
 }

@@ -25,7 +25,7 @@ interface IERC1155Receiver {
     ) external pure returns (bytes4);
 }
 
-contract Gassy is IERC1155Receiver, IERC721Receiver {
+contract TKGasDelegate is IERC1155Receiver, IERC721Receiver {
     // Custom errors
     error ExecutionFailed();
     error NotPaymaster();

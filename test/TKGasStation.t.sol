@@ -2,14 +2,14 @@
 pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
-import "../src/Gassy/Gassy.sol";
-import "../src/Gassy/GassyStation.sol";
-import "../src/Gassy/IBatchExecution.sol";
+import "../src/TKGasStation/TKGasDelegate.sol";
+import "../src/TKGasStation/TKGasStation.sol";
+import "../src/TKGasStation/IBatchExecution.sol";
 import "../test/Mocks/MockERC20.sol";
 
-contract GassyTest is Test {
-    GassyStation public gassyStation;
-    Gassy public gassy;
+contract TKGasStationTest is Test {
+    TKGasStation public gassyStation;
+    TKGasDelegate public gassy;
     MockERC20 public mockToken;
 
     address public paymaster = makeAddr("paymaster");
@@ -19,7 +19,7 @@ contract GassyTest is Test {
 
     function setUp() public {
         // Deploy GassyStation
-        gassyStation = new GassyStation();
+        gassyStation = new TKGasStation();
         user = payable(vm.addr(USER_PRIVATE_KEY)); // 0x3545A2F3928d5b21E71a790FB458F4AE03306C55
 
         // Deploy Mock ERC20
@@ -27,7 +27,7 @@ contract GassyTest is Test {
 
         vm.deal(paymaster, 10 ether);
 
-        gassy = gassyStation.gassy();
+        gassy = gassyStation.TKGlobalGasDelegate();
 
         // Delegate gassy for the user
         _delegateGassy(USER_PRIVATE_KEY);
@@ -52,7 +52,7 @@ contract GassyTest is Test {
 
     function _sign(
         uint256 _privateKey,
-        GassyStation _gassyStation,
+        TKGasStation _gassyStation,
         uint128 _nonce,
         address _outputContract,
         uint256 _ethAmount,
@@ -70,7 +70,7 @@ contract GassyTest is Test {
     function testGassyDelegationInit() public view {
         bytes memory code = address(user).code;
         assertGt(code.length, 0);
-        assertEq(Gassy(user).paymaster(), address(gassyStation));
+        assertEq(TKGasDelegate(user).paymaster(), address(gassyStation));
         assertEq(gassyStation.nonce(user), 0);
         assertEq(gassyStation.timeboxedCounter(user, paymaster), 0);
     }
@@ -193,7 +193,7 @@ contract GassyTest is Test {
         bytes memory result;
         vm.prank(makeAddr("notPaymaster"));
         vm.expectRevert();
-        (success, result) = Gassy(user).execute(
+        (success, result) = TKGasDelegate(user).execute(
             address(mockToken), 0, abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18)
         );
         vm.stopPrank();
@@ -377,7 +377,7 @@ contract GassyTest is Test {
 
     function _signBatch(
         uint256 _privateKey,
-        GassyStation _gassyStation,
+        TKGasStation _gassyStation,
         uint128 _nonce,
         IBatchExecution.Execution[] memory _executions
     ) internal returns (bytes memory) {
@@ -620,7 +620,7 @@ contract GassyTest is Test {
         assertEq(nonceAfterSignature, nonceAfterDirect + 1);
     }
 
-    function _signBurnNonce(uint256 _privateKey, GassyStation _gassyStation, uint128 _nonce)
+    function _signBurnNonce(uint256 _privateKey, TKGasStation _gassyStation, uint128 _nonce)
         internal
         returns (bytes memory)
     {
@@ -634,7 +634,7 @@ contract GassyTest is Test {
 
     function _signTimeboxed(
         uint256 _privateKey,
-        GassyStation _gassyStation,
+        TKGasStation _gassyStation,
         uint128 _counter,
         uint128 _deadline,
         address _sender,
@@ -651,7 +651,7 @@ contract GassyTest is Test {
 
     function _signTimeboxedArbitrary(
         uint256 _privateKey,
-        GassyStation _gassyStation,
+        TKGasStation _gassyStation,
         uint128 _counter,
         uint128 _deadline,
         address _sender
@@ -665,7 +665,7 @@ contract GassyTest is Test {
         return signature;
     }
 
-    function _signBurnTimeboxedCounter(uint256 _privateKey, GassyStation _gassyStation, uint128 _counter, address _sender)
+    function _signBurnTimeboxedCounter(uint256 _privateKey, TKGasStation _gassyStation, uint128 _counter, address _sender)
         internal
         returns (bytes memory)
     {
@@ -754,7 +754,7 @@ contract GassyTest is Test {
             signature
         );
         vm.warp(deadline + 1);
-        vm.expectRevert(GassyStation.DeadlineExceeded.selector); //deadline exceeded
+        vm.expectRevert(TKGasStation.DeadlineExceeded.selector); //deadline exceeded
         gassyStation.executeTimeboxedArbitrary(counter, deadline, reciever, ethAmount, executionData, signature);
         vm.stopPrank();
     }

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Deploy and verify GassyStation on Base and Mainnet
+# Deploy and verify TKGasStation on Base and Mainnet
 # Usage: ./scripts/deploy-and-verify.sh
 
 set -e
 
-echo "🚀 Starting GassyStation deployment and verification..."
+echo "🚀 Starting TKGasStation deployment and verification..."
 
 # Check if .env file exists
 if [ ! -f .env ]; then
@@ -39,10 +39,10 @@ echo "🔍 Testing contracts..."
 forge test
 
 echo "🌉 Deploying to Base..."
-forge script script/DeployGassyStation.s.sol:DeployGassyStation --rpc-url base --broadcast --verify -vvvv
+forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url base --broadcast --verify -vvvv
 
 echo "⛓️ Deploying to Ethereum Mainnet..."
-forge script script/DeployGassyStation.s.sol:DeployGassyStation --rpc-url ethereum --broadcast --verify -vvvv
+forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url ethereum --broadcast --verify -vvvv
 
 echo "✅ Deployment and verification complete!"
 echo ""
