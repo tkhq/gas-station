@@ -89,6 +89,9 @@ contract TKGasStationTest is Test {
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
 
+        // Measure gas usage
+        uint256 gasBefore = gasleft();
+        
         bool success;
         bytes memory result;
         vm.prank(paymaster);
@@ -99,10 +102,17 @@ contract TKGasStationTest is Test {
             signature
         );
         vm.stopPrank();
+        
+        uint256 gasUsed = gasBefore - gasleft();
+        
         uint256 recieverBalance = mockToken.balanceOf(receiver);
         assertEq(recieverBalance, 10 * 10 ** 18);
         assertEq(success, true);
         assertEq(tkGasStation.nonce(user), nonce + 1);
+        
+        // Log gas analysis
+        console.log("=== TKGasStation ERC20 Transfer Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
     }
 
     function testGassyExecuteCheckReturnValue() public {
@@ -901,5 +911,46 @@ contract TKGasStationTest is Test {
         vm.stopPrank();
 
         assertEq(tkGasStation.timeboxedCounter(user, paymaster), 2); // Counter should increment again
+    }
+
+    function testDetailedGasAnalysis() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        uint256 nonce = tkGasStation.nonce(user);
+        bytes memory signature = _sign(
+            USER_PRIVATE_KEY,
+            tkGasStation,
+            nonce,
+            address(mockToken),
+            0,
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+        );
+
+        // Measure gas usage
+        uint256 gasBefore = gasleft();
+        
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        (success, result) = tkGasStation.execute(
+            nonce,
+            address(mockToken),
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
+            signature
+        );
+        vm.stopPrank();
+        
+        uint256 gasUsed = gasBefore - gasleft();
+        
+        // Verify execution
+        uint256 recieverBalance = mockToken.balanceOf(receiver);
+        assertEq(recieverBalance, 10 * 10 ** 18);
+        assertEq(success, true);
+        assertEq(tkGasStation.nonce(user), nonce + 1);
+        
+        // Gas analysis
+        console.log("=== TKGasStation Detailed Gas Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
     }
 }

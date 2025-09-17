@@ -2,9 +2,7 @@
 pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
-import "../src/TKGasStation2/TKGasDelegate.sol";
 import "../src/TKGasStation2/TKGasStation.sol";
-import "../src/TKGasStation2/IBatchExecution.sol";
 import "../test/Mocks/MockERC20.sol";
 
 contract TKGasStationTest is Test {
@@ -85,6 +83,9 @@ contract TKGasStationTest is Test {
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
 
+        // Measure gas usage
+        uint256 gasBefore = gasleft();
+        
         bool success;
         bytes memory result;
         vm.prank(paymaster);
@@ -95,10 +96,17 @@ contract TKGasStationTest is Test {
             signature
         );
         vm.stopPrank();
+        
+        uint256 gasUsed = gasBefore - gasleft();
+        
         uint256 recieverBalance = mockToken.balanceOf(receiver);
         assertEq(recieverBalance, 10 * 10 ** 18);
         assertEq(success, true);
         assertEq(TKGasStation(user).nonce(), nonce + 1);
+        
+        // Log gas analysis
+        console.log("=== TKGasStation2 ERC20 Transfer Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
     }
 
     function testGassyExecuteCheckReturnValue() public {
@@ -581,7 +589,7 @@ contract TKGasStationTest is Test {
     function testGassyDirectBurnNonce() public {
         uint128 nonce = TKGasStation(user).nonce();
 
-        vm.startPrank(user); // msg.sender = user, tx.origin = user
+        vm.startPrank(user, user); // msg.sender = user, tx.origin = user
         TKGasStation(user).burnNonce();
         vm.stopPrank();
 
@@ -887,17 +895,141 @@ contract TKGasStationTest is Test {
     }
 
     function testDirectBurnTimeboxedCounter() public {
-        vm.startPrank(user);
-        TKGasStation(user).burnTimeboxedCounter(paymaster);
+        vm.startPrank(user, user);
+        TKGasStation(user).burnTimeboxedCounter();
         vm.stopPrank();
 
         assertEq(TKGasStation(user).timeboxedCounter(), 1); // Counter should increment
 
         // Burn timeboxed counter again
         vm.startPrank(user, user);
-        TKGasStation(user).burnTimeboxedCounter(paymaster);
+        TKGasStation(user).burnTimeboxedCounter();
         vm.stopPrank();
 
         assertEq(TKGasStation(user).timeboxedCounter(), 2); // Counter should increment again
+    }
+
+    function testDetailedGasAnalysis() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        uint128 nonce = TKGasStation(user).nonce();
+        bytes memory signature = _sign(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            address(mockToken),
+            0,
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+        );
+
+        // Measure gas usage
+        uint256 gasBefore = gasleft();
+        
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        (success, result) = TKGasStation(user).execute(
+            nonce,
+            address(mockToken),
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
+            signature
+        );
+        vm.stopPrank();
+        
+        uint256 gasUsed = gasBefore - gasleft();
+        
+        // Verify execution
+        uint256 recieverBalance = mockToken.balanceOf(receiver);
+        assertEq(recieverBalance, 10 * 10 ** 18);
+        assertEq(success, true);
+        assertEq(TKGasStation(user).nonce(), nonce + 1);
+        
+        // Gas analysis
+        console.log("=== TKGasStation2 Detailed Gas Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testGasAnalysisETHTransfer() public {
+        // Give user some ETH
+        vm.deal(user, 5 ether);
+        address receiver = makeAddr("receiver");
+        uint256 transferAmount = 1 ether;
+
+        uint128 nonce = TKGasStation(user).nonce();
+        bytes memory signature = _sign(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            receiver,
+            transferAmount,
+            ""
+        );
+
+        // Measure gas usage
+        uint256 gasBefore = gasleft();
+        
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        (success, result) = TKGasStation(user).execute(
+            nonce,
+            receiver,
+            transferAmount,
+            "",
+            signature
+        );
+        vm.stopPrank();
+        
+        uint256 gasUsed = gasBefore - gasleft();
+        
+        assertEq(receiver.balance, transferAmount);
+        assertEq(success, true);
+        assertEq(TKGasStation(user).nonce(), nonce + 1);
+        
+        // Log gas analysis
+        console.log("=== TKGasStation2 ETH Transfer Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
+        console.log("Transfer Amount: %s ETH", transferAmount / 1e18);
+    }
+
+    function testGasAnalysisWithReturnValue() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+
+        uint128 nonce = TKGasStation(user).nonce();
+        bytes memory signature = _sign(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            address(mockToken),
+            0,
+            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 100)
+        );
+
+        // Measure gas usage
+        uint256 gasBefore = gasleft();
+        
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        (success, result) = TKGasStation(user).execute(
+            nonce,
+            address(mockToken),
+            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 100),
+            signature
+        );
+        vm.stopPrank();
+        
+        uint256 gasUsed = gasBefore - gasleft();
+        
+        uint256 returnValue = abi.decode(result, (uint256));
+        assertEq(returnValue, 20 * 10 ** 18 + 100);
+        assertEq(success, true);
+        assertEq(TKGasStation(user).nonce(), nonce + 1);
+        
+        // Log gas analysis
+        console.log("=== TKGasStation2 Function with Return Value Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
+        console.log("Return Value: %s", returnValue);
     }
 }
