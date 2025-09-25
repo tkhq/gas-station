@@ -1,30 +1,52 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {TKGasDelegate} from "./TKGasDelegate.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
-import {IBatchExecution} from "./IBatchExecution.sol";
+import {IBatchExecution} from "../TKGasStation/IBatchExecution.sol";
 
-contract TKGasStation is EIP712 {
+// Minimal interfaces defined inline to save gas
+interface IERC721Receiver {
+    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
+        external
+        pure
+        returns (bytes4);
+}
+
+interface IERC1155Receiver {
+    function onERC1155Received(address operator, address from, uint256 id, uint256 value, bytes calldata data)
+        external
+        pure
+        returns (bytes4);
+    function onERC1155BatchReceived(
+        address operator,
+        address from,
+        uint256[] calldata ids,
+        uint256[] calldata values,
+        bytes calldata data
+    ) external pure returns (bytes4);
+}
+
+contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver {
     // Custom errors
     error BatchSizeExceeded();
     error DeadlineExceeded();
     error InvalidOutputContract();
     error InvalidNonce();
     error InvalidCounter();
-    error NotDelegated();
+    error NotSelf();
+    error ExecutionFailed(); 
 
     // EIP712 type hashes (precomputed for gas optimization)
-    bytes32 private constant EXECUTION_TYPEHASH = 0xc7deb0df5ad588824bf0996cb781fd274b4eee76898f919f348ecc59cc18e0e1;
-    // Original: keccak256("Execution(uint256 nonce,address outputContract,uint256 ethAmount,bytes arguments)")
+    bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
+    // Original: keccak256("Execution(uint128 nonce,address outputContract,uint256 ethAmount,bytes arguments)")
 
     bytes32 private constant BATCH_EXECUTION_TYPEHASH =
-        0xd85d05c04cabb2317dceb76fa66d4255c03f39a8feb95370f173520c44b7181f;
-    // Original: keccak256("BatchExecution(uint256 nonce,Execution[] executions)Execution(address outputContract,uint256 ethAmount,bytes arguments)")
+        0xf73c9911df56a9710eecfac385726c4fd80b78c1f52622e0a468473af71dccc8;
+    // Original: keccak256("BatchExecution(uint128 nonce,Execution[] executions)Execution(address outputContract,uint256 ethAmount,bytes arguments)")
 
-    bytes32 private constant BURN_NONCE_TYPEHASH = 0x4850dd989ccc5177bbe92de67c630ed29a206d9da5f1da7d2f562d1a43ee21d0;
-    // Original: keccak256("BurnNonce(uint256 nonce)")
+    bytes32 private constant BURN_NONCE_TYPEHASH = 0x1abb8920e48045adda3ed0ce4be4357be95d4aa21af287280f532fc031584bda;
+    // Original: keccak256("BurnNonce(uint128 nonce)")
 
     bytes32 private constant TIMEBOXED_EXECUTION_TYPEHASH =
         0x572542ff5f8730cc3585cab0d01b4696eadf4bd390c1dbbaa4467a76cb6f95bf;
@@ -41,17 +63,12 @@ contract TKGasStation is EIP712 {
     // Maximum batch size to prevent griefing attacks
     uint256 public constant MAX_BATCH_SIZE = 50;
 
-    TKGasDelegate public immutable TKGlobalGasDelegate; // exact delegate instance for this station
-
-    struct State {
-        uint128 nonce;
-        uint128 timeboxedCounter;
-    }
-    mapping(address => State) public state;
+    uint128 public timeboxedCounter;
+    uint128 public nonce;
 
     constructor() EIP712() {
-        TKGlobalGasDelegate = new TKGasDelegate{salt: keccak256(abi.encodePacked(address(this)))}(address(this));
     }
+
 
     function _domainNameAndVersion()
         internal
@@ -59,21 +76,30 @@ contract TKGasStation is EIP712 {
         override
         returns (string memory name, string memory version)
     {
-        name = "TKGasStation";
+        name = "TKGasDelegate";
         version = "1";
     }
 
-    function hashExecution(uint256 _nonce, address _outputContract, uint256 _ethAmount, bytes calldata _arguments)
+    function hashExecution(uint128 _nonce, address _outputContract, uint256 _ethAmount, bytes calldata _arguments)
         external
         view
         returns (bytes32)
     {
-        return _hashTypedData(
-            keccak256(abi.encode(EXECUTION_TYPEHASH, _nonce, _outputContract, _ethAmount, keccak256(_arguments)))
-        );
+        bytes32 argsHash = keccak256(_arguments);
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            mstore(add(ptr, 0x40), _outputContract)
+            mstore(add(ptr, 0x60), _ethAmount)
+            mstore(add(ptr, 0x80), argsHash)
+            hash := keccak256(ptr, 0xa0)
+        }
+        return _hashTypedData(hash);
     }
 
-    function execute(uint256 _nonce, address _outputContract, bytes calldata _arguments, bytes calldata _signature)
+    function execute(uint128 _nonce, address _outputContract, bytes calldata _arguments, bytes calldata _signature)
         external
         returns (bool, bytes memory)
     {
@@ -90,24 +116,26 @@ contract TKGasStation is EIP712 {
         }
         hash = _hashTypedData(hash);
         
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
         }
-        
-        uint256 currentNonce = state[signer].nonce;
-        
-        if (_nonce == currentNonce) {
+
+        if (_nonce == nonce) {
             unchecked {
-                state[signer].nonce = uint128(currentNonce + 1);
+                nonce = nonce + 1;
             }
-            return TKGasDelegate(payable(signer)).execute(_outputContract, _arguments);
+            (bool success, bytes memory result) = _outputContract.call(_arguments);
+
+            if (success) {
+                return (success, result);
+            }
+            revert ExecutionFailed();
         }
         revert InvalidNonce();
     }
 
     function execute(
-        uint256 _nonce,
+        uint128 _nonce,
         address _outputContract,
         uint256 _ethAmount,
         bytes calldata _arguments,
@@ -126,22 +154,27 @@ contract TKGasStation is EIP712 {
         }
         hash = _hashTypedData(hash);
         
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
         }
-        uint256 currentNonce = state[signer].nonce;
+        
+        uint128 currentNonce = nonce;
         
         if (_nonce == currentNonce) {
             unchecked {
-                state[signer].nonce = uint128(currentNonce + 1);
+                nonce = currentNonce + 1;
             }
-            return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
+            (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
+
+            if (success) {
+                return (success, result);
+            }
+            revert ExecutionFailed();
         }
         revert InvalidNonce();
     }
 
-    function hashBurnNonce(uint256 _nonce) external view returns (bytes32) {
+    function hashBurnNonce(uint128 _nonce) external view returns (bytes32) {
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
@@ -152,7 +185,7 @@ contract TKGasStation is EIP712 {
         return _hashTypedData(hash);
     }
 
-    function burnNonce(uint256 _nonce, bytes calldata _signature) external {
+    function burnNonce(uint128 _nonce, bytes calldata _signature) external {
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) 
@@ -162,21 +195,23 @@ contract TKGasStation is EIP712 {
         }
         hash = _hashTypedData(hash);
         
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
-        }
-        if (_nonce != state[signer].nonce) {
+        if (_nonce != nonce) {
             revert InvalidNonce();
         }
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
+        }
         unchecked {
-            ++state[signer].nonce;
+            ++nonce;
         }
     }
 
     function burnNonce() external {
+        if (msg.sender != address(this) || msg.sender != tx.origin) {
+            revert NotSelf();
+        }
         unchecked {
-            ++state[msg.sender].nonce;
+            ++nonce;
         }
     }
 
@@ -255,15 +290,19 @@ contract TKGasStation is EIP712 {
         }
         hash = _hashTypedData(hash);
         
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
-        }
-        if (_counter != state[signer].timeboxedCounter) {
+        if (_counter != timeboxedCounter) {
             revert InvalidCounter();
         }
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
+        }
 
-        return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
+        (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
+
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 
     function executeTimeboxed(
@@ -291,15 +330,19 @@ contract TKGasStation is EIP712 {
         }
         hash = _hashTypedData(hash);
         
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
-        }
-        if (_counter != state[signer].timeboxedCounter) {
+        if (_counter != timeboxedCounter) {
             revert InvalidCounter();
         }
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
+        }
         // Execute the timeboxed transaction (counter does NOT increment for timeboxed)
-        return TKGasDelegate(payable(signer)).execute(_outputContract, _arguments);
+        (bool success, bytes memory result) = _outputContract.call(_arguments);
+
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 
     function executeBatchTimeboxed(
@@ -330,14 +373,12 @@ contract TKGasStation is EIP712 {
             hash := keccak256(ptr, 0xa0)
         }
         hash = _hashTypedData(hash);
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
-        }
-        if (_counter != state[signer].timeboxedCounter) {
+        if (_counter != timeboxedCounter) {
             revert InvalidCounter();
         }
-
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
+        }
         for (uint256 i = 0; i < _executions.length;) {
             if (_executions[i].outputContract != _outputContract) {
                 revert InvalidOutputContract();
@@ -348,7 +389,65 @@ contract TKGasStation is EIP712 {
         }
 
         // Execute the timeboxed transaction
-        return TKGasDelegate(payable(signer)).executeBatch(_executions);
+        uint256 length = _executions.length;
+        bytes[] memory results = new bytes[](length);
+        
+        // Cache array access to avoid repeated calldata reads
+        for (uint256 i = 0; i < length;) {
+            IBatchExecution.Execution calldata execution = _executions[i];
+            uint256 ethAmount = execution.ethAmount;
+            address outputContract = execution.outputContract;
+            
+            (bool success, bytes memory result) = ethAmount == 0 
+                ? outputContract.call(execution.arguments)
+                : outputContract.call{value: ethAmount}(execution.arguments);
+                
+            results[i] = result;
+            
+            if (!success) revert ExecutionFailed();
+            
+            unchecked { ++i; }
+        }
+        
+        return (true, results);
+    }
+
+    function executeTimeboxedArbitrary(
+        uint128 _counter,
+        uint128 _deadline,
+        address _outputContract,
+        bytes calldata _arguments,
+        bytes calldata _signature
+    ) external returns (bool, bytes memory) {
+        // Check if deadline has passed
+        if (block.timestamp > _deadline) {
+            revert DeadlineExceeded();
+        }
+
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _counter)
+            mstore(add(ptr, 0x40), _deadline)
+            mstore(add(ptr, 0x60), sender)
+            hash := keccak256(ptr, 0x80)
+        }
+        hash = _hashTypedData(hash);
+        if (_counter != timeboxedCounter) {
+            revert InvalidCounter();
+        }
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
+        }
+        // Execute the timeboxed transaction
+        (bool success, bytes memory result) = _outputContract.call(_arguments);
+
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 
     function executeTimeboxedArbitrary(
@@ -375,16 +474,19 @@ contract TKGasStation is EIP712 {
             hash := keccak256(ptr, 0x80)
         }
         hash = _hashTypedData(hash);
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
-        }
-        if (_counter != state[signer].timeboxedCounter) {
+        if (_counter != timeboxedCounter) {
             revert InvalidCounter();
         }
-
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
+        }
         // Execute the timeboxed transaction
-        return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
+        (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
+
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 
     function executeBatchTimeboxedArbitrary(
@@ -413,15 +515,34 @@ contract TKGasStation is EIP712 {
             hash := keccak256(ptr, 0x80)
         }
         hash = _hashTypedData(hash);
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
-        }
-        if (_counter != state[signer].timeboxedCounter) {
+        if (_counter != timeboxedCounter) {
             revert InvalidCounter();
         }
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
+        }
         // Execute the timeboxed transaction
-        return TKGasDelegate(payable(signer)).executeBatch(_executions);
+        uint256 length = _executions.length;
+        bytes[] memory results = new bytes[](length);
+        
+        // Cache array access to avoid repeated calldata reads
+        for (uint256 i = 0; i < length;) {
+            IBatchExecution.Execution calldata execution = _executions[i];
+            uint256 ethAmount = execution.ethAmount;
+            address outputContract = execution.outputContract;
+            
+            (bool success, bytes memory result) = ethAmount == 0 
+                ? outputContract.call(execution.arguments)
+                : outputContract.call{value: ethAmount}(execution.arguments);
+                
+            results[i] = result;
+            
+            if (!success) revert ExecutionFailed();
+            
+            unchecked { ++i; }
+        }
+        
+        return (true, results);
     }
 
     function burnTimeboxedCounter(uint128 _counter, address _sender, bytes calldata _signature) external {
@@ -435,35 +556,44 @@ contract TKGasStation is EIP712 {
         }
         hash = _hashTypedData(hash);
         
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
-        }   
-        if (_counter != state[signer].timeboxedCounter) {
+        if (_counter != timeboxedCounter) {
             revert InvalidCounter();
         }
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
+        }
         unchecked {
-            ++state[signer].timeboxedCounter;
+            ++timeboxedCounter;
         }
     }
 
-    function burnTimeboxedCounter(address _sender) external {
+    function burnTimeboxedCounter() external {
+        if (msg.sender != address(this) || msg.sender != tx.origin) {
+            revert NotSelf();
+        }
         unchecked {
-            ++state[msg.sender].timeboxedCounter;
+            ++timeboxedCounter;
         }
     }
 
-    function hashBatchExecution(uint256 _nonce, IBatchExecution.Execution[] memory _executions)
+    function hashBatchExecution(uint128 _nonce, IBatchExecution.Execution[] calldata _executions)
         external
         view
         returns (bytes32)
     {
-        return _hashTypedData(
-            keccak256(abi.encode(BATCH_EXECUTION_TYPEHASH, _nonce, keccak256(abi.encode(_executions))))
-        );
+        bytes32 executionsHash = keccak256(abi.encode(_executions));
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            mstore(add(ptr, 0x40), executionsHash)
+            hash := keccak256(ptr, 0x60)
+        }
+        return _hashTypedData(hash);
     }
 
-    function executeBatch(uint256 _nonce, IBatchExecution.Execution[] calldata _executions, bytes calldata _signature)
+    function executeBatch(uint128 _nonce, IBatchExecution.Execution[] calldata _executions, bytes calldata _signature)
         external
         returns (bool, bytes[] memory)
     {
@@ -472,48 +602,85 @@ contract TKGasStation is EIP712 {
             revert BatchSizeExceeded();
         }
 
-        bytes32 hash = _hashTypedData(
-            keccak256(abi.encode(BATCH_EXECUTION_TYPEHASH, _nonce, keccak256(abi.encode(_executions))))
-        );
-        address signer = ECDSA.recover(hash, _signature);
-        if (!_isDelegated(signer)) {
-            revert NotDelegated();
+        bytes32 executionsHash = keccak256(abi.encode(_executions));
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            mstore(add(ptr, 0x40), executionsHash)
+            hash := keccak256(ptr, 0x60)
         }
-        if (_nonce != state[signer].nonce) {
+        hash = _hashTypedData(hash);
+        if (_nonce != nonce) {
             revert InvalidNonce();
         }
+        if (ECDSA.recover(hash, _signature) != address(this)) {
+            revert NotSelf();
+        }
         unchecked {
-            ++state[signer].nonce;
+            ++nonce;
         }
 
-        return TKGasDelegate(payable(signer)).executeBatch(_executions);
-    }
-    function _isDelegated(address _targetEoA) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(_targetEoA)
-        }
-        if (size != 23) {
-            return false;
-        }
-
-        bytes memory code = new bytes(23);
-        assembly {
-            extcodecopy(_targetEoA, add(code, 0x20), 0, 23)
-        }
-        // prefix is 0xef0100
-        if (code[0] != 0xef || code[1] != 0x01 || code[2] != 0x00) {
-            return false;
-        }
-
-        address delegatedTo;
+        uint256 length = _executions.length;
+        bytes[] memory results = new bytes[](length);
         
-        assembly {
-            // Load the 20-byte address from bytes 3-22
-            delegatedTo := shr(96, mload(add(code, 0x23)))
+        // Cache array access to avoid repeated calldata reads
+        for (uint256 i = 0; i < length;) {
+            IBatchExecution.Execution calldata execution = _executions[i];
+            uint256 ethAmount = execution.ethAmount;
+            address outputContract = execution.outputContract;
+            // Do not cash arguments to save on copy costs
+            (bool success, bytes memory result) = ethAmount == 0 
+                ? outputContract.call(execution.arguments)
+                : outputContract.call{value: ethAmount}(execution.arguments);
+                
+            results[i] = result;
+            
+            if (!success) revert ExecutionFailed();
+            
+            unchecked { ++i; }
         }
         
-        return delegatedTo == address(TKGlobalGasDelegate);
+        return (true, results);
     }
 
+    /**
+     * @dev Needed to allow the smart wallet to receive ETH and ERC1155/721 tokens
+     */
+    receive() external payable {
+        // Allow receiving ETH
+    }
+
+    // ERC721 Receiver function
+    function onERC721Received(
+        address, /* operator */
+        address, /* from */
+        uint256, /* tokenId */
+        bytes calldata /* data */
+    ) external pure override returns (bytes4) {
+        return 0x150b7a02;
+    }
+
+    // ERC1155 Receiver function
+    function onERC1155Received(
+        address, /* operator */
+        address, /* from */
+        uint256, /* id */
+        uint256, /* value */
+        bytes calldata /* data */
+    ) external pure override returns (bytes4) {
+        return 0xf23a6e61;
+    }
+
+    // ERC1155 Batch Receiver function
+    function onERC1155BatchReceived(
+        address, /* operator */
+        address, /* from */
+        uint256[] calldata, /* ids */
+        uint256[] calldata, /* values */
+        bytes calldata /* data */
+    ) external pure override returns (bytes4) {
+        return 0xbc197c81;
+    }
 }
