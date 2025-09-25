@@ -4,7 +4,7 @@ pragma solidity ^0.8.30;
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 import {TKGasStation as TKGasStationV1} from "../src/TKGasStation/TKGasStation.sol";
-import {TKGasStation as TKGasStationV2} from "../src/TKGasStation2/TKGasStation.sol";
+import {TKGasDelegate as TKGasStationV2} from "../src/TKGasStation2/TKGasDelegate.sol";
 
 contract DeployTKGasStation is Script {
     function run() external {
