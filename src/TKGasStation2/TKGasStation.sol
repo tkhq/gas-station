@@ -71,14 +71,10 @@ contract TKGasStation is EIP712, IERC1155Receiver, IERC721Receiver {
     // Maximum batch size to prevent griefing attacks
     uint256 public constant MAX_BATCH_SIZE = 50;
 
-    //TKGasDelegate public immutable TKGlobalGasDelegate; // exact delegate instance for this station
     uint128 public timeboxedCounter;
     uint128 public nonce;
-    //mapping(address => uint256) public nonce; //sequentional nonce for each address
-    //mapping(address => mapping(address => uint128)) public timeboxedCounter; //timeboxed counter for each address + sender combination to enable blocking a sender
 
     constructor() EIP712() {
-        //TKGlobalGasDelegate = new TKGasDelegate{salt: keccak256(abi.encodePacked(address(this)))}(address(this));
     }
 
 
@@ -604,7 +600,7 @@ contract TKGasStation is EIP712, IERC1155Receiver, IERC721Receiver {
             IBatchExecution.Execution calldata execution = _executions[i];
             uint256 ethAmount = execution.ethAmount;
             address outputContract = execution.outputContract;
-            
+            // Do not cash arguments to save on copy costs
             (bool success, bytes memory result) = ethAmount == 0 
                 ? outputContract.call(execution.arguments)
                 : outputContract.call{value: ethAmount}(execution.arguments);

@@ -42,8 +42,11 @@ contract TKGasStation is EIP712 {
 
     TKGasDelegate public immutable TKGlobalGasDelegate; // exact delegate instance for this station
 
-    mapping(address => uint256) public nonce; //sequentional nonce for each address
-    mapping(address => mapping(address => uint128)) public timeboxedCounter; //timeboxed counter for each address + sender combination to enable blocking a sender
+    struct State {
+        uint128 nonce;
+        uint128 timeboxedCounter;
+    }
+    mapping(address => State) public state;
 
     constructor() EIP712() {
         TKGlobalGasDelegate = new TKGasDelegate{salt: keccak256(abi.encodePacked(address(this)))}(address(this));
@@ -88,11 +91,11 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
         
-        uint256 currentNonce = nonce[signer];
+        uint256 currentNonce = state[signer].nonce;
         
         if (_nonce == currentNonce) {
             unchecked {
-                nonce[signer] = currentNonce + 1;
+                state[signer].nonce = uint128(currentNonce + 1);
             }
             return TKGasDelegate(payable(signer)).execute(_outputContract, _arguments);
         }
@@ -121,11 +124,11 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
         
-        uint256 currentNonce = nonce[signer];
+        uint256 currentNonce = state[signer].nonce;
         
         if (_nonce == currentNonce) {
             unchecked {
-                nonce[signer] = currentNonce + 1;
+                state[signer].nonce = uint128(currentNonce + 1);
             }
             return TKGasDelegate(payable(signer)).execute(_outputContract, _ethAmount, _arguments);
         }
@@ -154,17 +157,17 @@ contract TKGasStation is EIP712 {
         hash = _hashTypedData(hash);
         
         address signer = ECDSA.recover(hash, _signature);
-        if (_nonce != nonce[signer]) {
+        if (_nonce != state[signer].nonce) {
             revert InvalidNonce();
         }
         unchecked {
-            ++nonce[signer];
+            ++state[signer].nonce;
         }
     }
 
     function burnNonce() external {
         unchecked {
-            ++nonce[msg.sender];
+            ++state[msg.sender].nonce;
         }
     }
 
@@ -245,7 +248,7 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
 
-        if (_counter != timeboxedCounter[signer][msg.sender]) {
+        if (_counter != state[signer].timeboxedCounter) {
             revert InvalidCounter();
         }
 
@@ -279,7 +282,7 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
 
-        if (_counter != timeboxedCounter[signer][msg.sender]) {
+        if (_counter != state[signer].timeboxedCounter) {
             revert InvalidCounter();
         }
         // Execute the timeboxed transaction (counter does NOT increment for timeboxed)
@@ -316,7 +319,7 @@ contract TKGasStation is EIP712 {
         hash = _hashTypedData(hash);
         address signer = ECDSA.recover(hash, _signature);
 
-        if (_counter != timeboxedCounter[signer][msg.sender]) {
+        if (_counter != state[signer].timeboxedCounter) {
             revert InvalidCounter();
         }
 
@@ -359,7 +362,7 @@ contract TKGasStation is EIP712 {
         hash = _hashTypedData(hash);
         address signer = ECDSA.recover(hash, _signature);
 
-        if (_counter != timeboxedCounter[signer][msg.sender]) {
+        if (_counter != state[signer].timeboxedCounter) {
             revert InvalidCounter();
         }
 
@@ -395,7 +398,7 @@ contract TKGasStation is EIP712 {
         hash = _hashTypedData(hash);
         address signer = ECDSA.recover(hash, _signature);
 
-        if (_counter != timeboxedCounter[signer][msg.sender]) {
+        if (_counter != state[signer].timeboxedCounter) {
             revert InvalidCounter();
         }
         // Execute the timeboxed transaction
@@ -415,17 +418,17 @@ contract TKGasStation is EIP712 {
         
         address signer = ECDSA.recover(hash, _signature);
 
-        if (_counter != timeboxedCounter[signer][_sender]) {
+        if (_counter != state[signer].timeboxedCounter) {
             revert InvalidCounter();
         }
         unchecked {
-            ++timeboxedCounter[signer][_sender];
+            ++state[signer].timeboxedCounter;
         }
     }
 
     function burnTimeboxedCounter(address _sender) external {
         unchecked {
-            ++timeboxedCounter[msg.sender][_sender];
+            ++state[msg.sender].timeboxedCounter;
         }
     }
 
@@ -453,11 +456,11 @@ contract TKGasStation is EIP712 {
         );
         address signer = ECDSA.recover(hash, _signature);
 
-        if (_nonce != nonce[signer]) {
+        if (_nonce != state[signer].nonce) {
             revert InvalidNonce();
         }
         unchecked {
-            ++nonce[signer];
+            ++state[signer].nonce;
         }
 
         return TKGasDelegate(payable(signer)).executeBatch(_executions);
