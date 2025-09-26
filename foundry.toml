@@ -4,6 +4,8 @@ out = "out"
 libs = ["lib"]
 evm_version = "prague"
 viaIR = true
+optimizer = true
+optimizer_runs = 1000000
 remappings = ["solady/=lib/solady/src/"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
