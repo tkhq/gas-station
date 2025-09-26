@@ -85,7 +85,7 @@ contract TKGasStationTest is Test {
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
 
-        (bool success, bytes memory result) = tkGasStation.execute(
+        (bool success,) = tkGasStation.execute(
             user,
             nonce,
             address(mockToken),
@@ -100,12 +100,9 @@ contract TKGasStationTest is Test {
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
 
         console.log("TKGasStation ERC20 transfer gas: %s", gasUsed);
-        console.log("");
     }
 
     function testETHTransfer() public {
-        console.log("=== TKGasStation ETH TRANSFER TEST ===");
-
         address payable receiver = payable(makeAddr("receiver"));
         uint256 transferAmount = 1 ether;
 
@@ -130,15 +127,13 @@ contract TKGasStationTest is Test {
         assertEq(address(receiver).balance, transferAmount);
 
         console.log("TKGasStation ETH transfer gas: %s", gasUsed);
-        console.log("");
     }
-    
+
     function testNotDelegatedRevert() public {
-        
         // Create a new user that is NOT delegated
         uint256 newUserPrivateKey = 0xBBBBBB;
         address payable newUser = payable(vm.addr(newUserPrivateKey));
-        
+
         mockToken.mint(newUser, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
@@ -162,6 +157,5 @@ contract TKGasStationTest is Test {
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18),
             signature
         );
-
     }
 }
