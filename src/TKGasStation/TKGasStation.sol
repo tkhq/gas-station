@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {TKGasDelegate} from "./TKGasDelegate.sol";
-import {IBatchExecution} from "../TKGasStation/IBatchExecution.sol";
+import {ITKGasDelegate} from "./ITKGasDelegate.sol";
+import {IBatchExecution} from "./IBatchExecution.sol";
 
 contract TKGasStation {
     error NotDelegated();
@@ -49,77 +49,77 @@ contract TKGasStation {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).execute(_nonce, _outputContract, _arguments, _signature);
+        return ITKGasDelegate(payable(_targetEoA)).execute(_nonce, _outputContract, _arguments, _signature);
     }
 
     function execute(address _targetEoA, uint128 _nonce, address _outputContract, uint256 _ethAmount, bytes calldata _arguments, bytes calldata _signature) external returns (bool, bytes memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).execute(_nonce, _outputContract, _ethAmount, _arguments, _signature);
+        return ITKGasDelegate(payable(_targetEoA)).execute(_nonce, _outputContract, _ethAmount, _arguments, _signature);
     }
 
     function executeTimeboxed(address _targetEoA, uint128 _counter, uint128 _deadline, address _outputContract, bytes calldata _arguments, bytes calldata _signature) external returns (bool, bytes memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).executeTimeboxed(_counter, _deadline, _outputContract, _arguments, _signature);
+        return ITKGasDelegate(payable(_targetEoA)).executeTimeboxed(_counter, _deadline, _outputContract, _arguments, _signature);
     }
 
     function executeTimeboxed(address _targetEoA, uint128 _counter, uint128 _deadline, address _outputContract, uint256 _ethAmount, bytes calldata _arguments, bytes calldata _signature) external returns (bool, bytes memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).executeTimeboxed(_counter, _deadline, _outputContract, _ethAmount, _arguments, _signature);
+        return ITKGasDelegate(payable(_targetEoA)).executeTimeboxed(_counter, _deadline, _outputContract, _ethAmount, _arguments, _signature);
     }
 
     function executeBatchTimeboxed(address _targetEoA, uint128 _counter, uint128 _deadline, address _sender, IBatchExecution.Execution[] calldata _executions, bytes calldata _signature) external returns (bool, bytes[] memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).executeBatchTimeboxed(_counter, _deadline, _sender, _executions, _signature);
+        return ITKGasDelegate(payable(_targetEoA)).executeBatchTimeboxed(_counter, _deadline, _sender, _executions, _signature);
     }
 
     function executeTimeboxedArbitrary(address _targetEoA, uint128 _counter, uint128 _deadline, address _outputContract, uint256 _ethAmount, bytes calldata _arguments, bytes calldata _signature) external returns (bool, bytes memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).executeTimeboxedArbitrary(_counter, _deadline, _outputContract, _ethAmount, _arguments, _signature);
+        return ITKGasDelegate(payable(_targetEoA)).executeTimeboxedArbitrary(_counter, _deadline, _outputContract, _ethAmount, _arguments, _signature);
     }
 
     function executeTimeboxedArbitrary(address _targetEoA, uint128 _counter, uint128 _deadline, address _outputContract, bytes calldata _arguments, bytes calldata _signature) external returns (bool, bytes memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).executeTimeboxedArbitrary(_counter, _deadline, _outputContract, _arguments, _signature);
+        return ITKGasDelegate(payable(_targetEoA)).executeTimeboxedArbitrary(_counter, _deadline, _outputContract, _arguments, _signature);
     }
 
     function executeBatchTimeboxedArbitrary(address _targetEoA, uint128 _counter, uint128 _deadline, IBatchExecution.Execution[] calldata _executions, bytes calldata _signature) external returns (bool, bytes[] memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).executeBatchTimeboxedArbitrary(_counter, _deadline, _executions, _signature);
+        return ITKGasDelegate(payable(_targetEoA)).executeBatchTimeboxedArbitrary(_counter, _deadline, _executions, _signature);
     }
 
     function executeBatch(address _targetEoA, uint128 _nonce, IBatchExecution.Execution[] calldata _executions, bytes calldata _signature) external returns (bool, bytes[] memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).executeBatch(_nonce, _executions, _signature);
+        return ITKGasDelegate(payable(_targetEoA)).executeBatch(_nonce, _executions, _signature);
     }
 
     function burnNonce(address _targetEoA, uint128 _nonce, bytes calldata _signature) external {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        TKGasDelegate(payable(_targetEoA)).burnNonce(_nonce, _signature);
+        ITKGasDelegate(payable(_targetEoA)).burnNonce(_nonce, _signature);
     }
 
     function burnTimeboxedCounter(address _targetEoA, uint128 _counter, address _sender, bytes calldata _signature) external {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        TKGasDelegate(payable(_targetEoA)).burnTimeboxedCounter(_counter, _sender, _signature);
+        ITKGasDelegate(payable(_targetEoA)).burnTimeboxedCounter(_counter, _sender, _signature);
     }
 
     /* Lense Functions */ 
@@ -128,13 +128,13 @@ contract TKGasStation {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).nonce();
+        return ITKGasDelegate(payable(_targetEoA)).nonce();
     }
 
     function getTimeboxedCounter(address _targetEoA) external view returns (uint128) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return TKGasDelegate(payable(_targetEoA)).timeboxedCounter();
+        return ITKGasDelegate(payable(_targetEoA)).timeboxedCounter();
     }
 }

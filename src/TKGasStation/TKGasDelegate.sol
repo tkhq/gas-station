@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 import {IBatchExecution} from "./IBatchExecution.sol";
+import {ITKGasDelegate} from "./ITKGasDelegate.sol";
 
 // Minimal interfaces defined inline to save gas
 interface IERC721Receiver {
@@ -27,7 +28,7 @@ interface IERC1155Receiver {
     ) external pure returns (bytes4);
 }
 
-contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver {
+contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDelegate {
     // Custom errors
     error BatchSizeExceeded();
     error DeadlineExceeded();
