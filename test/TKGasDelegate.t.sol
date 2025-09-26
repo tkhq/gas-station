@@ -2,11 +2,11 @@
 pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
-import {TKGasDelegate} from "../src/TKGasStation2/TKGasDelegate.sol";
+import {TKGasDelegate} from "../src/TKGasStation/TKGasDelegate.sol";
 import {IBatchExecution} from "../src/TKGasStation/IBatchExecution.sol";
 import "../test/Mocks/MockERC20.sol";
 
-contract TKGasDelegate2Test is Test {
+contract TKGasDelegateTest is Test {
     TKGasDelegate public tkGasStation;
     MockERC20 public mockToken;
 
@@ -106,7 +106,7 @@ contract TKGasDelegate2Test is Test {
         assertEq(TKGasDelegate(user).nonce(), nonce + 1);
         
         // Log gas analysis
-        console.log("=== TKGasStation2 ERC20 Transfer Analysis ===");
+        console.log("=== TKGasStation ERC20 Transfer Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
     }
 
@@ -947,7 +947,7 @@ contract TKGasDelegate2Test is Test {
         assertEq(TKGasDelegate(user).nonce(), nonce + 1);
         
         // Gas analysis
-        console.log("=== TKGasStation2 Detailed Gas Analysis ===");
+        console.log("=== TKGasStation Detailed Gas Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
     }
 
@@ -989,7 +989,7 @@ contract TKGasDelegate2Test is Test {
         assertEq(TKGasDelegate(user).nonce(), nonce + 1);
         
         // Log gas analysis
-        console.log("=== TKGasStation2 ETH Transfer Analysis ===");
+        console.log("=== TKGasStation ETH Transfer Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
         console.log("Transfer Amount: %s ETH", transferAmount / 1e18);
     }
@@ -1029,7 +1029,7 @@ contract TKGasDelegate2Test is Test {
         assertEq(TKGasDelegate(user).nonce(), nonce + 1);
         
         // Log gas analysis
-        console.log("=== TKGasStation2 Function with Return Value Analysis ===");
+        console.log("=== TKGasStation Function with Return Value Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
         console.log("Return Value: %s", returnValue);
     }
