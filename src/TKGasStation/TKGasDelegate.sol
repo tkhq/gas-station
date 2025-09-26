@@ -36,7 +36,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     error InvalidNonce();
     error InvalidCounter();
     error NotSelf();
-    error ExecutionFailed(); 
+    error ExecutionFailed();
 
     // EIP712 type hashes (precomputed for gas optimization)
     bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
@@ -67,16 +67,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     uint128 public timeboxedCounter;
     uint128 public nonce;
 
-    constructor() EIP712() {
-    }
+    constructor() EIP712() {}
 
-
-    function _domainNameAndVersion()
-        internal
-        pure
-        override
-        returns (string memory name, string memory version)
-    {
+    function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "TKGasDelegate";
         version = "1";
     }
@@ -116,7 +109,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             hash := keccak256(ptr, 0xa0)
         }
         hash = _hashTypedData(hash);
-        
+
         if (ECDSA.recover(hash, _signature) != address(this)) {
             revert NotSelf();
         }
@@ -154,13 +147,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             hash := keccak256(ptr, 0xa0)
         }
         hash = _hashTypedData(hash);
-        
+
         if (ECDSA.recover(hash, _signature) != address(this)) {
             revert NotSelf();
         }
-        
+
         uint128 currentNonce = nonce;
-        
+
         if (_nonce == currentNonce) {
             unchecked {
                 nonce = currentNonce + 1;
@@ -189,13 +182,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     function burnNonce(uint128 _nonce, bytes calldata _signature) external {
         bytes32 hash;
         assembly {
-            let ptr := mload(0x40) 
+            let ptr := mload(0x40)
             mstore(ptr, BURN_NONCE_TYPEHASH)
             mstore(add(ptr, 0x20), _nonce)
             hash := keccak256(ptr, 0x40)
         }
         hash = _hashTypedData(hash);
-        
+
         if (_nonce != nonce) {
             revert InvalidNonce();
         }
@@ -290,7 +283,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             hash := keccak256(ptr, 0xa0)
         }
         hash = _hashTypedData(hash);
-        
+
         if (_counter != timeboxedCounter) {
             revert InvalidCounter();
         }
@@ -330,7 +323,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             hash := keccak256(ptr, 0xa0)
         }
         hash = _hashTypedData(hash);
-        
+
         if (_counter != timeboxedCounter) {
             revert InvalidCounter();
         }
@@ -392,24 +385,26 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         // Execute the timeboxed transaction
         uint256 length = _executions.length;
         bytes[] memory results = new bytes[](length);
-        
+
         // Cache array access to avoid repeated calldata reads
         for (uint256 i = 0; i < length;) {
             IBatchExecution.Execution calldata execution = _executions[i];
             uint256 ethAmount = execution.ethAmount;
             address outputContract = execution.outputContract;
-            
-            (bool success, bytes memory result) = ethAmount == 0 
+
+            (bool success, bytes memory result) = ethAmount == 0
                 ? outputContract.call(execution.arguments)
                 : outputContract.call{value: ethAmount}(execution.arguments);
-                
+
             results[i] = result;
-            
+
             if (!success) revert ExecutionFailed();
-            
-            unchecked { ++i; }
+
+            unchecked {
+                ++i;
+            }
         }
-        
+
         return (true, results);
     }
 
@@ -525,24 +520,26 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         // Execute the timeboxed transaction
         uint256 length = _executions.length;
         bytes[] memory results = new bytes[](length);
-        
+
         // Cache array access to avoid repeated calldata reads
         for (uint256 i = 0; i < length;) {
             IBatchExecution.Execution calldata execution = _executions[i];
             uint256 ethAmount = execution.ethAmount;
             address outputContract = execution.outputContract;
-            
-            (bool success, bytes memory result) = ethAmount == 0 
+
+            (bool success, bytes memory result) = ethAmount == 0
                 ? outputContract.call(execution.arguments)
                 : outputContract.call{value: ethAmount}(execution.arguments);
-                
+
             results[i] = result;
-            
+
             if (!success) revert ExecutionFailed();
-            
-            unchecked { ++i; }
+
+            unchecked {
+                ++i;
+            }
         }
-        
+
         return (true, results);
     }
 
@@ -556,7 +553,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             hash := keccak256(ptr, 0x60)
         }
         hash = _hashTypedData(hash);
-        
+
         if (_counter != timeboxedCounter) {
             revert InvalidCounter();
         }
@@ -625,24 +622,26 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
         uint256 length = _executions.length;
         bytes[] memory results = new bytes[](length);
-        
+
         // Cache array access to avoid repeated calldata reads
         for (uint256 i = 0; i < length;) {
             IBatchExecution.Execution calldata execution = _executions[i];
             uint256 ethAmount = execution.ethAmount;
             address outputContract = execution.outputContract;
             // Do not cash arguments to save on copy costs
-            (bool success, bytes memory result) = ethAmount == 0 
+            (bool success, bytes memory result) = ethAmount == 0
                 ? outputContract.call(execution.arguments)
                 : outputContract.call{value: ethAmount}(execution.arguments);
-                
+
             results[i] = result;
-            
+
             if (!success) revert ExecutionFailed();
-            
-            unchecked { ++i; }
+
+            unchecked {
+                ++i;
+            }
         }
-        
+
         return (true, results);
     }
 
