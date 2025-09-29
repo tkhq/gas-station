@@ -4,7 +4,7 @@ pragma solidity ^0.8.30;
 import "forge-std/Test.sol";
 import {TKGasDelegate} from "../src/TKGasStation/TKGasDelegate.sol";
 import {IBatchExecution} from "../src/TKGasStation/interfaces/IBatchExecution.sol";
-import "../test/Mocks/MockERC20.sol";
+import "../test/mocks/MockERC20.sol";
 
 contract TKGasDelegateTest is Test {
     TKGasDelegate public tkGasStation;
