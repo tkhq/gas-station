@@ -3,33 +3,12 @@ pragma solidity ^0.8.30;
 
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
-import {IBatchExecution} from "./IBatchExecution.sol";
-import {ITKGasDelegate} from "./ITKGasDelegate.sol";
-
-// Minimal interfaces defined inline to save gas
-interface IERC721Receiver {
-    function onERC721Received(address operator, address from, uint256 tokenId, bytes calldata data)
-        external
-        pure
-        returns (bytes4);
-}
-
-interface IERC1155Receiver {
-    function onERC1155Received(address operator, address from, uint256 id, uint256 value, bytes calldata data)
-        external
-        pure
-        returns (bytes4);
-    function onERC1155BatchReceived(
-        address operator,
-        address from,
-        uint256[] calldata ids,
-        uint256[] calldata values,
-        bytes calldata data
-    ) external pure returns (bytes4);
-}
+import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
+import {ITKGasDelegate} from "./interfaces/ITKGasDelegate.sol";
+import {IERC721Receiver} from "./interfaces/IERC721Receiver.sol";
+import {IERC1155Receiver} from "./interfaces/IERC1155Receiver.sol";
 
 contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDelegate {
-    // Custom errors
     error BatchSizeExceeded();
     error DeadlineExceeded();
     error InvalidOutputContract();
@@ -38,7 +17,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     error NotSelf();
     error ExecutionFailed();
 
-    // EIP712 type hashes (precomputed for gas optimization)
     bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
     // Original: keccak256("Execution(uint128 nonce,address outputContract,uint256 ethAmount,bytes arguments)")
 

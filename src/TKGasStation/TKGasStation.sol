@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {ITKGasDelegate} from "./ITKGasDelegate.sol";
-import {IBatchExecution} from "./IBatchExecution.sol";
+import {ITKGasDelegate} from "./interfaces/ITKGasDelegate.sol";
+import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
 
 contract TKGasStation {
     error NotDelegated();
