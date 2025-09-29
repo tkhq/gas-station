@@ -68,7 +68,7 @@ contract TKGasDelegateTest is Test {
         assertGt(code.length, 0);
         //assertEq(TKGasDelegate(user).paymaster(), payable(address(tkGasStation)));
         assertEq(TKGasDelegate(user).nonce(), 0);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0);
+        assertEq(TKGasDelegate(user).sessionCounter(), 0);
     }
 
     function testGassyExecuteSendERC20() public {
@@ -84,8 +84,6 @@ contract TKGasDelegateTest is Test {
             0,
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
-
-        // Measure gas usa= gasleft();
 
         bool success;
         bytes memory result;
@@ -689,7 +687,7 @@ contract TKGasDelegateTest is Test {
         return signature;
     }
 
-    function _signTimeboxed(
+    function _signSession(
         uint256 _privateKey,
         address payable _publicKey,
         uint128 _counter,
@@ -700,14 +698,14 @@ contract TKGasDelegateTest is Test {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, TKGasDelegate(_publicKey).hashTimeboxedExecution(_counter, _deadline, _sender, _outputContract)
+            _privateKey, TKGasDelegate(_publicKey).hashSessionExecution(_counter, _deadline, _sender, _outputContract)
         );
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
     }
 
-    function _signTimeboxedArbitrary(
+    function _signSessionArbitrary(
         uint256 _privateKey,
         address payable _publicKey,
         uint128 _counter,
@@ -716,33 +714,30 @@ contract TKGasDelegateTest is Test {
     ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, TKGasDelegate(_publicKey).hashArbitraryTimeboxedExecution(_counter, _deadline, _sender)
-        );
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashArbitrarySessionExecution(_counter, _deadline, _sender));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
     }
 
-    function _signBurnTimeboxedCounter(
-        uint256 _privateKey,
-        address payable _publicKey,
-        uint128 _counter,
-        address _sender
-    ) internal returns (bytes memory) {
+    function _signBurnSessionCounter(uint256 _privateKey, address payable _publicKey, uint128 _counter, address _sender)
+        internal
+        returns (bytes memory)
+    {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBurnTimeboxedCounter(_counter, _sender));
+            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBurnSessionCounter(_counter, _sender));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
     }
 
-    // ============ TIMEBOXED EXECUTION TESTS ============
+    // ============ SESSION EXECUTION TESTS ============
 
-    function testExecuteTimeboxed() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteSession() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -751,23 +746,23 @@ contract TKGasDelegateTest is Test {
         // Fund the user contract
         vm.deal(user, 1 ether);
 
-        // Sign the timeboxed execution
-        bytes memory signature = _signTimeboxed(USER_PRIVATE_KEY, user, counter, deadline, paymaster, reciever);
+        // Sign the session execution
+        bytes memory signature = _signSession(USER_PRIVATE_KEY, user, counter, deadline, paymaster, reciever);
 
-        // Execute timeboxed transaction
+        // Execute session transaction
         vm.startPrank(paymaster);
         (bool success,) =
-            TKGasDelegate(user).executeTimeboxed(counter, deadline, reciever, ethAmount, executionData, signature);
+            TKGasDelegate(user).executeSession(counter, deadline, reciever, ethAmount, executionData, signature);
         vm.stopPrank();
 
         assertTrue(success);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
         assertEq(reciever.balance, ethAmount);
         assertEq(user.balance, 1 ether - ethAmount);
     }
 
-    function testExecuteTimeboxedArbitrary() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteSessionArbitrary() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -776,24 +771,24 @@ contract TKGasDelegateTest is Test {
         // Fund the user contract
         vm.deal(user, 1 ether);
 
-        // Sign the timeboxed execution
-        bytes memory signature = _signTimeboxedArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
+        // Sign the session execution
+        bytes memory signature = _signSessionArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
 
-        // Execute timeboxed transaction
+        // Execute session transaction
         vm.startPrank(paymaster);
-        (bool success,) = TKGasDelegate(user).executeTimeboxedArbitrary(
+        (bool success,) = TKGasDelegate(user).executeSessionArbitrary(
             counter, deadline, reciever, ethAmount, executionData, signature
         );
         vm.stopPrank();
 
         assertTrue(success);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
         assertEq(reciever.balance, ethAmount);
         assertEq(user.balance, 1 ether - ethAmount);
     }
 
-    function testExecuteTimeboxedArbitraryRevertsDeadlineExceeded() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteSessionArbitraryRevertsDeadlineExceeded() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -802,13 +797,13 @@ contract TKGasDelegateTest is Test {
         // Fund the user contract
         vm.deal(user, 1 ether);
 
-        // Sign the timeboxed execution
-        bytes memory signature = _signTimeboxedArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
+        // Sign the session execution
+        bytes memory signature = _signSessionArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
 
-        // Execute timeboxed transaction
+        // Execute session transaction
         vm.startPrank(paymaster);
         vm.expectRevert(); //invalid signature
-        TKGasDelegate(user).executeTimeboxedArbitrary(
+        TKGasDelegate(user).executeSessionArbitrary(
             counter,
             deadline + 1, // makes the signature unable to be validated
             reciever,
@@ -818,12 +813,12 @@ contract TKGasDelegateTest is Test {
         );
         vm.warp(deadline + 1);
         vm.expectRevert(TKGasDelegate.DeadlineExceeded.selector); //deadline exceeded
-        TKGasDelegate(user).executeTimeboxedArbitrary(counter, deadline, reciever, ethAmount, executionData, signature);
+        TKGasDelegate(user).executeSessionArbitrary(counter, deadline, reciever, ethAmount, executionData, signature);
         vm.stopPrank();
     }
 
-    function testExecuteBatchTimeboxedArbitrary() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteBatchSessionArbitrary() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
 
         // Fund the user contract
@@ -837,25 +832,25 @@ contract TKGasDelegateTest is Test {
         executions[0] = IBatchExecution.Execution({outputContract: receiver1, ethAmount: 0.05 ether, arguments: ""});
         executions[1] = IBatchExecution.Execution({outputContract: receiver2, ethAmount: 0.05 ether, arguments: ""});
 
-        // Sign the arbitrary timeboxed execution
-        bytes memory signature = _signTimeboxedArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
+        // Sign the arbitrary session execution
+        bytes memory signature = _signSessionArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
 
-        // Execute batch timeboxed transaction
+        // Execute batch session transaction
         vm.startPrank(paymaster);
         (bool success, bytes[] memory results) =
-            TKGasDelegate(user).executeBatchTimeboxedArbitrary(counter, deadline, executions, signature);
+            TKGasDelegate(user).executeBatchSessionArbitrary(counter, deadline, executions, signature);
         vm.stopPrank();
 
         assertTrue(success);
         assertEq(results.length, 2);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
         assertEq(receiver1.balance, 0.05 ether);
         assertEq(receiver2.balance, 0.05 ether);
         assertEq(user.balance, 1 ether - 0.1 ether);
     }
 
-    function testExecuteBatchTimeboxed() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteBatchSession() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
 
         // Fund the user contract
@@ -869,49 +864,49 @@ contract TKGasDelegateTest is Test {
         executions[1] = IBatchExecution.Execution({outputContract: receiver, ethAmount: 0.2 ether, arguments: ""});
         executions[2] = IBatchExecution.Execution({outputContract: receiver, ethAmount: 0.3 ether, arguments: ""});
 
-        // Sign the timeboxed execution
-        bytes memory signature = _signTimeboxed(USER_PRIVATE_KEY, user, counter, deadline, paymaster, receiver);
+        // Sign the session execution
+        bytes memory signature = _signSession(USER_PRIVATE_KEY, user, counter, deadline, paymaster, receiver);
 
-        // Execute batch timeboxed transaction
+        // Execute batch session transaction
         vm.startPrank(paymaster);
         (bool success, bytes[] memory results) =
-            TKGasDelegate(user).executeBatchTimeboxed(counter, deadline, receiver, executions, signature);
+            TKGasDelegate(user).executeBatchSession(counter, deadline, receiver, executions, signature);
         vm.stopPrank();
 
         assertTrue(success);
         assertEq(results.length, 3);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
         assertEq(receiver.balance, 0.6 ether); // 0.1 + 0.2 + 0.3
         assertEq(user.balance, 1 ether - 0.6 ether);
     }
 
-    function testBurnTimeboxedCounter() public {
+    function testBurnSessionCounter() public {
         uint128 counter = 0;
 
-        // Sign the burn timeboxed counter
-        bytes memory signature = _signBurnTimeboxedCounter(USER_PRIVATE_KEY, user, counter, paymaster);
+        // Sign the burn session counter
+        bytes memory signature = _signBurnSessionCounter(USER_PRIVATE_KEY, user, counter, paymaster);
 
-        // Burn timeboxed counter
+        // Burn session counter
         vm.startPrank(paymaster);
-        TKGasDelegate(user).burnTimeboxedCounter(counter, paymaster, signature);
+        TKGasDelegate(user).burnSessionCounter(counter, paymaster, signature);
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 1); // Counter should increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 1); // Counter should increment
     }
 
-    function testDirectBurnTimeboxedCounter() public {
+    function testDirectBurnSessionCounter() public {
         vm.startPrank(user, user);
-        TKGasDelegate(user).burnTimeboxedCounter();
+        TKGasDelegate(user).burnSessionCounter();
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 1); // Counter should increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 1); // Counter should increment
 
-        // Burn timeboxed counter again
+        // Burn session counter again
         vm.startPrank(user, user);
-        TKGasDelegate(user).burnTimeboxedCounter();
+        TKGasDelegate(user).burnSessionCounter();
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 2); // Counter should increment again
+        assertEq(TKGasDelegate(user).sessionCounter(), 2); // Counter should increment again
     }
 
     function testDetailedGasAnalysis() public {

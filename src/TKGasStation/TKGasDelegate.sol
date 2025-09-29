@@ -27,25 +27,72 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     bytes32 private constant BURN_NONCE_TYPEHASH = 0x1abb8920e48045adda3ed0ce4be4357be95d4aa21af287280f532fc031584bda;
     // Original: keccak256("BurnNonce(uint128 nonce)")
 
-    bytes32 private constant TIMEBOXED_EXECUTION_TYPEHASH =
-        0x572542ff5f8730cc3585cab0d01b4696eadf4bd390c1dbbaa4467a76cb6f95bf;
-    // Original: keccak256("TimeboxedExecution(uint128 counter,uint128 deadline,address sender,address outputContract)")
+    bytes32 private constant SESSION_EXECUTION_TYPEHASH =
+        0x201d4aaf5ff3955fc1d5d6b55f97c35e43833bc3500f8bd2d83a9e43b36a67d9;
+    // Original: keccak256("SessionExecution(uint128 counter,uint128 deadline,address sender,address outputContract)")
 
-    bytes32 private constant ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH =
-        0xc0d6acc328e7656b4ab6234f5efb8bc56b83d5b67d829ae64ea7ebe07f0968ee;
-    // Original: keccak256("ArbitraryTimeboxedExecution(uint128 counter,uint128 deadline,address sender)")
+    bytes32 private constant ARBITRARY_SESSION_EXECUTION_TYPEHASH =
+        0x8529aa3645658aca043e9bb16844886a22b47f90b0f2ca58ad6a5c0e4e427fd7;
+    // Original: keccak256("ArbitrarySessionExecution(uint128 counter,uint128 deadline,address sender)")
 
-    bytes32 private constant BURN_TIMEBOXED_COUNTER_TYPEHASH =
-        0x96d439a73c6f9c1949a24d89d523289f8d4857543fa33be656cc2a3037807baa;
-    // Original: keccak256("BurnTimeboxedCounter(uint128 counter,address sender)")
+    bytes32 private constant BURN_SESSION_COUNTER_TYPEHASH =
+        0x9e83fc2d99981f8f5e9cca6e9253e48163b75f85c9f1e80235a9380203430d4f;
+    // Original: keccak256("BurnSessionCounter(uint128 counter,address sender)")
 
     // Maximum batch size to prevent griefing attacks
     uint256 public constant MAX_BATCH_SIZE = 50;
 
-    uint128 public timeboxedCounter;
+    uint128 public sessionCounter;
     uint128 public nonce;
 
     constructor() EIP712() {}
+
+    // Internal helpers to centralize common validation logic
+    function _requireSelf(bytes32 _hash, bytes calldata _signature, address _expected) internal view {
+        if (ECDSA.recover(_hash, _signature) != _expected) {
+            revert NotSelf();
+        }
+    }
+
+    function _consumeNonce(uint128 _nonce) internal {
+        if (_nonce != nonce) {
+            revert InvalidNonce();
+        }
+        unchecked {
+            ++nonce;
+        }
+    }
+
+    function _requireCounter(uint128 _counter) internal view {
+        if (_counter != sessionCounter) {
+            revert InvalidCounter();
+        }
+    }
+
+    function _performCall(address _outputContract, bytes calldata _arguments) internal returns (bool, bytes memory) {
+        (bool success, bytes memory result) = _outputContract.call(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
+    }
+
+    function _performCallWithValue(address _outputContract, uint256 _ethAmount, bytes calldata _arguments)
+        internal
+        returns (bool, bytes memory)
+    {
+        (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
+    }
+
+    function _iterateNonce(uint128 _currentNonce) internal {
+        unchecked {
+            nonce = _currentNonce + 1;
+        }
+    }
 
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "TKGasDelegate";
@@ -88,22 +135,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
 
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
-
-        if (_nonce == nonce) {
-            unchecked {
-                nonce = nonce + 1;
-            }
-            (bool success, bytes memory result) = _outputContract.call(_arguments);
-
-            if (success) {
-                return (success, result);
-            }
-            revert ExecutionFailed();
-        }
-        revert InvalidNonce();
+        _requireSelf(hash, _signature, address(this));
+        _consumeNonce(_nonce);
+        return _performCall(_outputContract, _arguments);
     }
 
     function execute(
@@ -126,24 +160,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
 
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
-
-        uint128 currentNonce = nonce;
-
-        if (_nonce == currentNonce) {
-            unchecked {
-                nonce = currentNonce + 1;
-            }
-            (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
-
-            if (success) {
-                return (success, result);
-            }
-            revert ExecutionFailed();
-        }
-        revert InvalidNonce();
+        _requireSelf(hash, _signature, address(this));
+        _consumeNonce(_nonce);
+        return _performCallWithValue(_outputContract, _ethAmount, _arguments);
     }
 
     function hashBurnNonce(uint128 _nonce) external view returns (bytes32) {
@@ -167,15 +186,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
 
-        if (_nonce != nonce) {
-            revert InvalidNonce();
-        }
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
-        unchecked {
-            ++nonce;
-        }
+        _requireSelf(hash, _signature, address(this));
+        _consumeNonce(_nonce);
     }
 
     function burnNonce() external {
@@ -187,9 +199,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
     }
 
-    /* Timeboxed execution */
+    /* Session execution */
 
-    function hashTimeboxedExecution(uint128 _counter, uint128 _deadline, address _sender, address _outputContract)
+    function hashSessionExecution(uint128 _counter, uint128 _deadline, address _sender, address _outputContract)
         external
         view
         returns (bytes32)
@@ -197,7 +209,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), _sender)
@@ -207,7 +219,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _hashTypedData(hash);
     }
 
-    function hashArbitraryTimeboxedExecution(uint128 _counter, uint128 _deadline, address _sender)
+    function hashArbitrarySessionExecution(uint128 _counter, uint128 _deadline, address _sender)
         external
         view
         returns (bytes32)
@@ -215,7 +227,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), _sender)
@@ -224,11 +236,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _hashTypedData(hash);
     }
 
-    function hashBurnTimeboxedCounter(uint128 _counter, address _sender) external view returns (bytes32) {
+    function hashBurnSessionCounter(uint128 _counter, address _sender) external view returns (bytes32) {
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, BURN_TIMEBOXED_COUNTER_TYPEHASH)
+            mstore(ptr, BURN_SESSION_COUNTER_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _sender)
             hash := keccak256(ptr, 0x60)
@@ -236,7 +248,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _hashTypedData(hash);
     }
 
-    function executeTimeboxed(
+    function executeSession(
         uint128 _counter,
         uint128 _deadline,
         address _outputContract,
@@ -253,7 +265,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), sender)
@@ -262,12 +274,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
 
-        if (_counter != timeboxedCounter) {
-            revert InvalidCounter();
-        }
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
+        _requireCounter(_counter);
+        _requireSelf(hash, _signature, address(this));
 
         (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
 
@@ -277,7 +285,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         revert ExecutionFailed();
     }
 
-    function executeTimeboxed(
+    function executeSession(
         uint128 _counter,
         uint128 _deadline,
         address _outputContract,
@@ -293,7 +301,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), sender)
@@ -302,22 +310,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
 
-        if (_counter != timeboxedCounter) {
-            revert InvalidCounter();
-        }
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
-        // Execute the timeboxed transaction (counter does NOT increment for timeboxed)
-        (bool success, bytes memory result) = _outputContract.call(_arguments);
-
-        if (success) {
-            return (success, result);
-        }
-        revert ExecutionFailed();
+        _requireCounter(_counter);
+        _requireSelf(hash, _signature, address(this));
+        // Execute the session transaction (counter does NOT increment for session)
+        return _performCall(_outputContract, _arguments);
     }
 
-    function executeBatchTimeboxed(
+    function executeBatchSession(
         uint128 _counter,
         uint128 _deadline,
         address _outputContract,
@@ -328,7 +327,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         if (block.timestamp > _deadline) {
             revert DeadlineExceeded();
         }
-        // Prevent griefing attacks by limiting batch size
         if (_executions.length > MAX_BATCH_SIZE) {
             revert BatchSizeExceeded();
         }
@@ -337,7 +335,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), sender)
@@ -345,12 +343,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             hash := keccak256(ptr, 0xa0)
         }
         hash = _hashTypedData(hash);
-        if (_counter != timeboxedCounter) {
-            revert InvalidCounter();
-        }
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
+        _requireCounter(_counter);
+        _requireSelf(hash, _signature, address(this));
         for (uint256 i = 0; i < _executions.length;) {
             if (_executions[i].outputContract != _outputContract) {
                 revert InvalidOutputContract();
@@ -360,7 +354,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             }
         }
 
-        // Execute the timeboxed transaction
+        // Execute the session transaction
         uint256 length = _executions.length;
         bytes[] memory results = new bytes[](length);
 
@@ -371,8 +365,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             address outputContract = execution.outputContract;
 
             (bool success, bytes memory result) = ethAmount == 0
-                ? outputContract.call(execution.arguments)
-                : outputContract.call{value: ethAmount}(execution.arguments);
+                ? _performCall(outputContract, execution.arguments)
+                : _performCallWithValue(outputContract, ethAmount, execution.arguments);
 
             results[i] = result;
 
@@ -386,7 +380,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return (true, results);
     }
 
-    function executeTimeboxedArbitrary(
+    function executeSessionArbitrary(
         uint128 _counter,
         uint128 _deadline,
         address _outputContract,
@@ -402,29 +396,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
         }
         hash = _hashTypedData(hash);
-        if (_counter != timeboxedCounter) {
-            revert InvalidCounter();
-        }
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
-        // Execute the timeboxed transaction
-        (bool success, bytes memory result) = _outputContract.call(_arguments);
-
-        if (success) {
-            return (success, result);
-        }
-        revert ExecutionFailed();
+        _requireCounter(_counter);
+        _requireSelf(hash, _signature, address(this));
+        // Execute the session transaction
+        return _performCall(_outputContract, _arguments);
     }
 
-    function executeTimeboxedArbitrary(
+    function executeSessionArbitrary(
         uint128 _counter,
         uint128 _deadline,
         address _outputContract,
@@ -441,29 +426,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
         }
         hash = _hashTypedData(hash);
-        if (_counter != timeboxedCounter) {
-            revert InvalidCounter();
-        }
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
-        // Execute the timeboxed transaction
-        (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
-
-        if (success) {
-            return (success, result);
-        }
-        revert ExecutionFailed();
+        _requireCounter(_counter);
+        _requireSelf(hash, _signature, address(this));
+        // Execute the session transaction
+        return _performCallWithValue(_outputContract, _ethAmount, _arguments);
     }
 
-    function executeBatchTimeboxedArbitrary(
+    function executeBatchSessionArbitrary(
         uint128 _counter,
         uint128 _deadline,
         IBatchExecution.Execution[] calldata _executions,
@@ -482,20 +458,16 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, ARBITRARY_TIMEBOXED_EXECUTION_TYPEHASH)
+            mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
         }
         hash = _hashTypedData(hash);
-        if (_counter != timeboxedCounter) {
-            revert InvalidCounter();
-        }
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
-        // Execute the timeboxed transaction
+        _requireCounter(_counter);
+        _requireSelf(hash, _signature, address(this));
+        // Execute the session transaction
         uint256 length = _executions.length;
         bytes[] memory results = new bytes[](length);
 
@@ -506,8 +478,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             address outputContract = execution.outputContract;
 
             (bool success, bytes memory result) = ethAmount == 0
-                ? outputContract.call(execution.arguments)
-                : outputContract.call{value: ethAmount}(execution.arguments);
+                ? _performCall(outputContract, execution.arguments)
+                : _performCallWithValue(outputContract, ethAmount, execution.arguments);
 
             results[i] = result;
 
@@ -521,34 +493,32 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return (true, results);
     }
 
-    function burnTimeboxedCounter(uint128 _counter, address _sender, bytes calldata _signature) external {
+    function burnSessionCounter(uint128 _counter, address _sender, bytes calldata _signature) external {
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, BURN_TIMEBOXED_COUNTER_TYPEHASH)
+            mstore(ptr, BURN_SESSION_COUNTER_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _sender)
             hash := keccak256(ptr, 0x60)
         }
         hash = _hashTypedData(hash);
 
-        if (_counter != timeboxedCounter) {
-            revert InvalidCounter();
-        }
+        _requireCounter(_counter);
         if (ECDSA.recover(hash, _signature) != address(this)) {
             revert NotSelf();
         }
         unchecked {
-            ++timeboxedCounter;
+            ++sessionCounter;
         }
     }
 
-    function burnTimeboxedCounter() external {
+    function burnSessionCounter() external {
         if (msg.sender != address(this) || msg.sender != tx.origin) {
             revert NotSelf();
         }
         unchecked {
-            ++timeboxedCounter;
+            ++sessionCounter;
         }
     }
 
@@ -588,15 +558,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             hash := keccak256(ptr, 0x60)
         }
         hash = _hashTypedData(hash);
-        if (_nonce != nonce) {
-            revert InvalidNonce();
-        }
-        if (ECDSA.recover(hash, _signature) != address(this)) {
-            revert NotSelf();
-        }
-        unchecked {
-            ++nonce;
-        }
+        _consumeNonce(_nonce);
+        _requireSelf(hash, _signature, address(this));
 
         uint256 length = _executions.length;
         bytes[] memory results = new bytes[](length);
@@ -606,7 +569,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             IBatchExecution.Execution calldata execution = _executions[i];
             uint256 ethAmount = execution.ethAmount;
             address outputContract = execution.outputContract;
-            // Do not cash arguments to save on copy costs
+            // Do not cache arguments to save on copy costs
             (bool success, bytes memory result) = ethAmount == 0
                 ? outputContract.call(execution.arguments)
                 : outputContract.call{value: ethAmount}(execution.arguments);

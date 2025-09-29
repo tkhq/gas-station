@@ -16,15 +16,15 @@ interface ITKGasDelegate {
         bytes calldata _signature
     ) external returns (bool, bytes memory);
 
-    // Timeboxed execute functions
-    function executeTimeboxed(
+    // Session execute functions
+    function executeSession(
         uint128 _counter,
         uint128 _deadline,
         address _outputContract,
         bytes calldata _arguments,
         bytes calldata _signature
     ) external returns (bool, bytes memory);
-    function executeTimeboxed(
+    function executeSession(
         uint128 _counter,
         uint128 _deadline,
         address _outputContract,
@@ -34,7 +34,7 @@ interface ITKGasDelegate {
     ) external returns (bool, bytes memory);
 
     // Batch execute functions
-    function executeBatchTimeboxed(
+    function executeBatchSession(
         uint128 _counter,
         uint128 _deadline,
         address _sender,
@@ -46,7 +46,7 @@ interface ITKGasDelegate {
         returns (bool, bytes[] memory);
 
     // Arbitrary execute functions
-    function executeTimeboxedArbitrary(
+    function executeSessionArbitrary(
         uint128 _counter,
         uint128 _deadline,
         address _outputContract,
@@ -54,14 +54,14 @@ interface ITKGasDelegate {
         bytes calldata _arguments,
         bytes calldata _signature
     ) external returns (bool, bytes memory);
-    function executeTimeboxedArbitrary(
+    function executeSessionArbitrary(
         uint128 _counter,
         uint128 _deadline,
         address _outputContract,
         bytes calldata _arguments,
         bytes calldata _signature
     ) external returns (bool, bytes memory);
-    function executeBatchTimeboxedArbitrary(
+    function executeBatchSessionArbitrary(
         uint128 _counter,
         uint128 _deadline,
         IBatchExecution.Execution[] calldata _executions,
@@ -70,9 +70,9 @@ interface ITKGasDelegate {
 
     // Burn functions
     function burnNonce(uint128 _nonce, bytes calldata _signature) external;
-    function burnTimeboxedCounter(uint128 _counter, address _sender, bytes calldata _signature) external;
+    function burnSessionCounter(uint128 _counter, address _sender, bytes calldata _signature) external;
 
     // Lense functions
     function nonce() external view returns (uint128);
-    function timeboxedCounter() external view returns (uint128);
+    function sessionCounter() external view returns (uint128);
 }
