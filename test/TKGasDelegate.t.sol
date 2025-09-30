@@ -149,18 +149,19 @@ contract TKGasDelegateTest is Test {
         bool success;
         bytes memory result;
         vm.startPrank(paymaster);
+        uint256 gasBefore = gasleft();
         (success, result) = TKGasDelegate(user).execute(signature, nonce, receiver, 1 ether, "");
+        uint256 gasUsed = gasBefore - gasleft();
 
         assertEq(success, true);
         assertEq(result.length, 0); // returns 0x00
-
         vm.stopPrank();
 
         assertEq(address(receiver).balance, 1 ether);
         assertEq(TKGasDelegate(user).nonce(), nonce + 1);
 
-        // Note: In tests, the test contract pays gas, not the pranked address
-        // The paymaster is just the msg.sender, but gas comes from the test contract
+        console.log("=== TKGasDelegate ETH Transfer Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
     }
 
     function testGassyExecuteRevertsInvalidNonce() public {
@@ -1076,32 +1077,34 @@ contract TKGasDelegateTest is Test {
     ) internal pure returns (bytes memory) {
         // Convert nonce to bytes (1 byte for small nonce values)
         bytes memory nonceBytes = abi.encodePacked(uint8(_nonce));
-        
+
         // Calculate nonce length (0-15, where 0 means 1 byte)
         // For 1 byte, we need length = 0 (since 0 means 1 byte)
         uint8 nonceLength = uint8(nonceBytes.length) - 1;
-        
+
         // Construct the second byte: function selector (0x00) + nonce length
         bytes1 secondByte = bytes1(uint8(0x00) | nonceLength);
-        
+
         // Construct calldata:
         // [0x00][secondByte][signature][nonce][outputContract][arguments]
         bytes memory fallbackCalldata = abi.encodePacked(
-            bytes1(0x00),           // Prefix
-            secondByte,              // Function selector + nonce length
-            _signature,              // 65 bytes signature
-            nonceBytes,              // Nonce data
-            _outputContract,         // 20 bytes output contract
-            _arguments               // Function arguments
+            bytes1(0x00), // Prefix
+            secondByte, // Function selector + nonce length
+            _signature, // 65 bytes signature
+            nonceBytes, // Nonce data
+            _outputContract, // 20 bytes output contract
+            _arguments // Function arguments
         );
-        
+
         return fallbackCalldata;
     }
 
     function _bytesToHexString(bytes memory _bytes) internal pure returns (string memory) {
         string memory result = "";
         for (uint256 i = 0; i < _bytes.length; i++) {
-            result = string(abi.encodePacked(result, "0x", _toHexString(uint8(_bytes[i])), i < _bytes.length - 1 ? ", " : ""));
+            result = string(
+                abi.encodePacked(result, "0x", _toHexString(uint8(_bytes[i])), i < _bytes.length - 1 ? ", " : "")
+            );
         }
         return result;
     }
@@ -1126,9 +1129,101 @@ contract TKGasDelegateTest is Test {
 
     function _toHexChar(uint8 _value) internal pure returns (bytes1) {
         if (_value < 10) {
-            return bytes1(uint8(bytes1('0')) + _value);
+            return bytes1(uint8(bytes1("0")) + _value);
         } else {
-            return bytes1(uint8(bytes1('a')) + _value - 10);
+            return bytes1(uint8(bytes1("a")) + _value - 10);
         }
+    }
+
+    function testFallbackExecuteSendETH() public {
+        address receiver = makeAddr("receiver");
+        uint256 ethAmount = 1 ether;
+
+        // Give the user some ETH to transfer
+        vm.deal(user, 2 ether);
+        assertEq(address(receiver).balance, 0 ether);
+
+        uint128 nonce = TKGasDelegate(user).nonce();
+        bytes memory signature = _sign(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            receiver, // ETH transfer to receiver
+            ethAmount,
+            "" // Empty data for ETH transfer
+        );
+
+        console.log("=== ETH Transfer Test ===");
+        console.log("Nonce: %s", nonce);
+        console.log("Signature: %s", vm.toString(signature));
+        console.log("ETH Amount: %s", ethAmount);
+        console.log("Receiver: %s", receiver);
+
+        // Construct calldata for fallback function with ETH
+        bytes memory fallbackData = _constructFallbackCalldataWithETH(
+            nonce,
+            signature,
+            receiver, // ETH transfer to receiver
+            ethAmount,
+            "" // Empty data for ETH transfer
+        );
+
+        console.log("=== Fallback Function Calldata (ETH Transfer) ===");
+        console.log("Calldata length: %s bytes", fallbackData.length);
+        console.log("Calldata (hex): %s", vm.toString(fallbackData));
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = user.call(fallbackData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        uint256 receiverBalance = receiver.balance;
+        assertEq(receiverBalance, ethAmount);
+        assertEq(success, true);
+        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+
+        // Log gas analysis
+        console.log("=== Fallback Function ETH Transfer Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
+        console.log("ETH Amount: %s", ethAmount);
+    }
+
+    function _constructFallbackCalldataWithETH(
+        uint128 _nonce,
+        bytes memory _signature,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes memory _arguments
+    ) internal pure returns (bytes memory) {
+        // Convert nonce to bytes (1 byte for small nonce values)
+        bytes memory nonceBytes = abi.encodePacked(uint8(_nonce));
+
+        // Calculate nonce length (0-15, where 0 means 1 byte)
+        uint8 nonceLength = uint8(nonceBytes.length) - 1;
+
+        // Construct the second byte: function selector (0x01 for executeWithValue) + nonce length
+        bytes1 secondByte = bytes1(uint8(0x10) | nonceLength); // 0x10 = executeWithValue
+
+        // Convert ETH amount to exactly 10 bytes
+        // Use uint80 which fits in 10 bytes (2^80 - 1 is much larger than any reasonable ETH amount)
+        uint80 ethAmount80 = uint80(_ethAmount);
+        bytes memory ethBytes = abi.encodePacked(ethAmount80);
+
+        // Construct calldata:
+        // [0x00][secondByte][signature][nonce][outputContract][ethAmount][arguments]
+        bytes memory fallbackCalldata = abi.encodePacked(
+            bytes1(0x00), // Prefix
+            secondByte, // Function selector + nonce length
+            _signature, // 65 bytes signature
+            nonceBytes, // Nonce data
+            _outputContract, // 20 bytes output contract
+            ethBytes, // ETH amount
+            _arguments // Function arguments
+        );
+
+        return fallbackCalldata;
     }
 }

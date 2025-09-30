@@ -42,7 +42,7 @@ interface ITKGasDelegate {
         address _sender,
         IBatchExecution.Call[] calldata _calls
     ) external returns (bool, bytes[] memory);
-    
+
     function executeBatch(bytes calldata _signature, uint128 _nonce, IBatchExecution.Call[] calldata _calls)
         external
         returns (bool, bytes[] memory);
