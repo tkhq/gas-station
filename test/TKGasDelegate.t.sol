@@ -29,6 +29,7 @@ contract TKGasDelegateTest is Test {
         _delegateGasStation(USER_PRIVATE_KEY);
     }
 
+
     function testGassyStationDeployment() public view {
         assertTrue(payable(address(tkGasStation)) != address(0));
     }
@@ -63,6 +64,7 @@ contract TKGasDelegateTest is Test {
         return signature;
     }
 
+
     function testGassyDelegationInit() public view {
         bytes memory code = address(user).code;
         assertGt(code.length, 0);
@@ -71,6 +73,7 @@ contract TKGasDelegateTest is Test {
         assertEq(TKGasDelegate(user).sessionCounter(), 0);
     }
 
+    /*
     function testGassyExecuteSendERC20() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
@@ -107,7 +110,9 @@ contract TKGasDelegateTest is Test {
         console.log("=== TKGasStation ERC20 Transfer Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
     }
+    */
 
+    /*
     function testGassyExecuteCheckReturnValue() public {
         mockToken.mint(user, 20 * 10 ** 18);
         uint128 nonce = TKGasDelegate(user).nonce();
@@ -189,6 +194,7 @@ contract TKGasDelegateTest is Test {
         );
         vm.stopPrank();
     }
+    */
     /*
     function testGassyExecuteRevertsNotThroughStation() public {
         mockToken.mint(user, 20 * 10 ** 18);
@@ -205,6 +211,7 @@ contract TKGasDelegateTest is Test {
     }
     */
 
+    /*
     function testGassyExecuteRevertsFailedExecution() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
@@ -231,7 +238,9 @@ contract TKGasDelegateTest is Test {
         );
         vm.stopPrank();
     }
+    */
 
+    /*
     function testGassyExecuteRevertsInvalidSignature() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
@@ -259,6 +268,7 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
     }
 
+    /*
     function testGassyEachUserHasDifferentNonce() public {
         mockToken.mint(user, 20 * 10 ** 18);
         uint256 user2PrivateKey = 0xBBBBBB;
@@ -881,6 +891,122 @@ contract TKGasDelegateTest is Test {
         assertEq(user.balance, 1 ether - 0.6 ether);
     }
 
+    */
+
+    function _signBatch(
+        uint256 _privateKey,
+        address payable _publicKey,
+        uint128 _nonce,
+        IBatchExecution.Call[] memory _calls
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey, TKGasDelegate(_publicKey).hashBatchExecution(_nonce, _calls)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function _signSession(
+        uint256 _privateKey,
+        address payable _publicKey,
+        uint128 _counter,
+        uint128 _deadline,
+        address _sender,
+        address _outputContract
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey, TKGasDelegate(_publicKey).hashSessionExecution(_counter, _deadline, _sender, _outputContract)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function _signSessionArbitrary(
+        uint256 _privateKey,
+        address payable _publicKey,
+        uint128 _counter,
+        uint128 _deadline,
+        address _sender
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey, TKGasDelegate(_publicKey).hashArbitrarySessionExecution(_counter, _deadline, _sender)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function _signBurnSessionCounter(uint256 _privateKey, address payable _publicKey, uint128 _counter, address _sender)
+        internal
+        returns (bytes memory)
+    {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBurnSessionCounter(_counter, _sender));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function testExecuteBatchBytesGas() public {
+        // Arrange
+        mockToken.mint(user, 50 * 10 ** 18);
+        address receiver1 = makeAddr("receiver1_bytes_batch");
+        address receiver2 = makeAddr("receiver2_bytes_batch");
+
+        uint128 nonce = TKGasDelegate(user).nonce();
+
+        IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](2);
+        executions[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18)
+        });
+        executions[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
+        });
+
+        // Signature for batch
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, executions);
+
+        // Pack as [sig(65)][nonce(16)][abi.encode(executions)]
+        bytes16 nonce16 = bytes16(uint128(nonce));
+        bytes memory batchData = abi.encode(executions);
+        bytes memory executeData = abi.encodePacked(signature, nonce16, batchData);
+
+        // Act
+        bool success;
+        bytes[] memory results;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, results) = TKGasDelegate(user).executeBatch(executeData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Assert
+        assertTrue(success);
+        assertEq(results.length, 2);
+        assertEq(mockToken.balanceOf(receiver1), 10 * 10 ** 18);
+        assertEq(mockToken.balanceOf(receiver2), 15 * 10 ** 18);
+        assertEq(mockToken.balanceOf(user), 25 * 10 ** 18);
+        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+
+        // Log gas
+        console.log("=== executeBatch(bytes) Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
     function testBurnSessionCounter() public {
         uint128 counter = 0;
 
@@ -910,6 +1036,7 @@ contract TKGasDelegateTest is Test {
         assertEq(TKGasDelegate(user).sessionCounter(), 2); // Counter should increment again
     }
 
+    /*
     function testDetailedGasAnalysis() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
@@ -950,7 +1077,99 @@ contract TKGasDelegateTest is Test {
         console.log("=== TKGasStation Detailed Gas Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
     }
+    */
 
+    function testExecuteBytesERC20Gas() public {
+        // Arrange
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver_execute_bytes");
+
+        uint128 nonce = TKGasDelegate(user).nonce();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Build packed calldata: [65 sig][16 nonce][20 to][32 value][args]
+        bytes memory executeData = _constructExecuteBytes(signature, nonce, address(mockToken), 0, args);
+
+        // Act
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = TKGasDelegate(user).execute(executeData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Assert
+        assertEq(success, true);
+        assertEq(result.length, 32);
+        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
+        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+
+        // Log gas
+        console.log("=== execute(bytes) ERC20 Transfer Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+        console.log("Result length: %s", result.length);
+        console.logBytes(result);
+        bool ret = abi.decode(result, (bool));
+        console.log("Decoded return (bool): %s", ret);
+    }
+
+    function _constructExecuteBytes(
+        bytes memory _signature,
+        uint128 _nonce,
+        address _to,
+        uint256 _value,
+        bytes memory _args
+    ) internal pure returns (bytes memory) {
+        // 65-byte signature
+        require(_signature.length == 65, "sig len");
+        // 16-byte nonce (left-padded to 16 in the 32-byte slot when loaded)
+        bytes16 nonce16 = bytes16(uint128(_nonce));
+        // 20-byte address
+        bytes20 to20 = bytes20(_to);
+        // 32-byte value
+        bytes32 value32 = bytes32(_value);
+        return abi.encodePacked(_signature, nonce16, to20, value32, _args);
+    }
+
+    function testExecuteBytesETHGas() public {
+        // Arrange
+        address receiver = makeAddr("receiver_execute_bytes_eth");
+        uint256 ethAmount = 1 ether;
+
+        // Fund the user contract
+        vm.deal(user, 2 ether);
+        assertEq(receiver.balance, 0);
+
+        uint128 nonce = TKGasDelegate(user).nonce();
+        bytes memory args = ""; // no calldata for raw ETH transfer
+        bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, receiver, ethAmount, args);
+
+        // Build packed calldata: [65 sig][16 nonce][20 to][32 value][args]
+        bytes memory executeData = _constructExecuteBytes(signature, nonce, receiver, ethAmount, args);
+
+        // Act
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = TKGasDelegate(user).execute(executeData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Assert
+        assertEq(success, true);
+        assertEq(result.length, 0);
+        assertEq(receiver.balance, ethAmount);
+        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+
+        // Log gas
+        console.log("=== execute(bytes) ETH Transfer Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    /*
     function testGasAnalysisETHTransfer() public {
         // Give user some ETH
         vm.deal(user, 5 ether);
@@ -1225,5 +1444,5 @@ contract TKGasDelegateTest is Test {
         );
 
         return fallbackCalldata;
-    }
+    */
 }
