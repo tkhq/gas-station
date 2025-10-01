@@ -2,7 +2,6 @@
 pragma solidity ^0.8.30;
 
 import {ITKGasDelegate} from "./interfaces/ITKGasDelegate.sol";
-import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
 
 contract TKGasStation {
     error NotDelegated();
@@ -103,7 +102,8 @@ contract TKGasStation {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(payable(_targetEoA)).nonce();
+        (, uint128 nonce) = ITKGasDelegate(payable(_targetEoA)).state();
+        return nonce;
     }
 
     function isDelegated(address _targetEoA) external view returns (bool) {

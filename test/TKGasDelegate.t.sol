@@ -67,8 +67,9 @@ contract TKGasDelegateTest is Test {
         bytes memory code = address(user).code;
         assertGt(code.length, 0);
         //assertEq(TKGasDelegate(user).paymaster(), payable(address(tkGasStation)));
-        assertEq(TKGasDelegate(user).nonce(), 0);
-        assertEq(TKGasDelegate(user).sessionCounter(), 0);
+        (uint128 sessionCounter, uint128 nonce) = TKGasDelegate(user).state();
+        assertEq(nonce, 0);
+        assertEq(sessionCounter, 0);
     }
 
     /*
@@ -76,7 +77,7 @@ contract TKGasDelegateTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             user,
@@ -102,7 +103,8 @@ contract TKGasDelegateTest is Test {
         uint256 recieverBalance = mockToken.balanceOf(receiver);
         assertEq(recieverBalance, 10 * 10 ** 18);
         assertEq(success, true);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         // Log gas analysis
         console.log("=== TKGasStation ERC20 Transfer Analysis ===");
@@ -113,7 +115,7 @@ contract TKGasDelegateTest is Test {
     /*
     function testGassyExecuteCheckReturnValue() public {
         mockToken.mint(user, 20 * 10 ** 18);
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             user,
@@ -136,7 +138,8 @@ contract TKGasDelegateTest is Test {
         assertEq(success, true);
         assertEq(result.length, 32);
         assertEq(abi.decode(result, (uint256)), 30 * 10 ** 18);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
     }
 
     function testGassyExecuteSendETH() public {
@@ -146,7 +149,7 @@ contract TKGasDelegateTest is Test {
         vm.deal(user, 2 ether);
         assertEq(address(receiver).balance, 0 ether);
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, receiver, 1 ether, "");
 
         bool success;
@@ -161,7 +164,8 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
 
         assertEq(address(receiver).balance, 1 ether);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         console.log("=== TKGasDelegate ETH Transfer Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
@@ -170,7 +174,7 @@ contract TKGasDelegateTest is Test {
     function testGassyExecuteRevertsInvalidNonce() public {
         mockToken.mint(user, 20 * 10 ** 18);
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             user,
@@ -214,7 +218,7 @@ contract TKGasDelegateTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             user,
@@ -243,7 +247,7 @@ contract TKGasDelegateTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             user,
@@ -274,7 +278,7 @@ contract TKGasDelegateTest is Test {
 
         _delegateGasStation(user2PrivateKey);
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         uint128 nonce2 = TKGasDelegate(user).nonce();
         assertEq(nonce, 0);
         assertEq(nonce2, 0);
@@ -299,7 +303,8 @@ contract TKGasDelegateTest is Test {
         );
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
         assertEq(TKGasDelegate(user2).nonce(), nonce2);
     }
 
@@ -307,7 +312,7 @@ contract TKGasDelegateTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Create signature for first execution
         bytes memory signature = _sign(
@@ -333,7 +338,8 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
 
         assertEq(success, true);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         // Second execution with same nonce should revert
         vm.prank(paymaster);
@@ -352,7 +358,7 @@ contract TKGasDelegateTest is Test {
         address receiver1 = makeAddr("receiver1");
         address receiver2 = makeAddr("receiver2");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Create batch execution with multiple transfers
         IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](2);
@@ -386,7 +392,8 @@ contract TKGasDelegateTest is Test {
         assertEq(mockToken.balanceOf(user), 25 * 10 ** 18); // 50 - 10 - 15
 
         // Verify nonce incremented
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
     }
 
     function testGassyExecuteBatchAttemptToChangeExecution() public {
@@ -394,7 +401,7 @@ contract TKGasDelegateTest is Test {
         address receiver1 = makeAddr("receiver1");
         address receiver2 = makeAddr("receiver2");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Create batch execution with multiple transfers
         IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](2);
@@ -436,7 +443,8 @@ contract TKGasDelegateTest is Test {
         assertEq(mockToken.balanceOf(receiver1), 0);
         assertEq(mockToken.balanceOf(receiver2), 0);
         assertEq(mockToken.balanceOf(user), 50 * 10 ** 18);
-        assertEq(TKGasDelegate(user).nonce(), nonce);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce);
     }
 
     function _signBatch(
@@ -458,7 +466,7 @@ contract TKGasDelegateTest is Test {
         mockToken.mint(user, 1000 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Create batch execution with 51 transactions (exceeds MAX_BATCH_SIZE of 50)
         IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](51);
@@ -484,7 +492,7 @@ contract TKGasDelegateTest is Test {
         mockToken.mint(user, 1000 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Create batch execution with exactly 50 transactions (MAX_BATCH_SIZE)
         IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](50);
@@ -515,11 +523,12 @@ contract TKGasDelegateTest is Test {
         assertEq(mockToken.balanceOf(user), 950 * 10 ** 18); // 1000 - 50
 
         // Verify nonce incremented
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
     }
 
     function testGassyBurnNonce() public {
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Create signature for burning nonce
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, user, nonce);
@@ -530,11 +539,12 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
 
         // Verify nonce was incremented
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
     }
 
     function testGassyBurnNonceRevertsInvalidNonce() public {
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Create signature for burning wrong nonce
         bytes memory signature = _signBurnNonce(
@@ -550,14 +560,15 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
 
         // Verify nonce was not changed
-        assertEq(TKGasDelegate(user).nonce(), nonce);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce);
     }
 
     function testGassyBurnNonceThenExecute() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Burn the nonce first
         bytes memory burnSignature = _signBurnNonce(USER_PRIVATE_KEY, user, nonce);
@@ -567,7 +578,8 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
 
         // Verify nonce was incremented
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         // Now try to execute with the burned nonce - should fail
         bytes memory executeSignature = _sign(
@@ -596,18 +608,19 @@ contract TKGasDelegateTest is Test {
     }
 
     function testGassyDirectBurnNonce() public {
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
         TKGasDelegate(user).burnNonce();
         vm.stopPrank();
 
         // Verify nonce was incremented
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
     }
 
     function testGassyDirectBurnNonceRevertsInvalidNonce() public {
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // User burns their own nonce
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
@@ -615,14 +628,15 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
 
         // Verify nonce was incremented
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
     }
 
     function testGassyDirectBurnNonceThenExecute() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // User directly burns their own nonce
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
@@ -630,7 +644,8 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
 
         // Verify nonce was incremented
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         // Now try to execute with the burned nonce - should fail
         bytes memory executeSignature = _sign(
@@ -659,7 +674,7 @@ contract TKGasDelegateTest is Test {
     }
 
     function testGassyDirectBurnNonceVsSignatureBurn() public {
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Method 1: Direct burn (user calls their own contract)
         vm.startPrank(user, user); // msg.sender = user, tx.origin = user
@@ -746,7 +761,7 @@ contract TKGasDelegateTest is Test {
     // ============ SESSION EXECUTION TESTS ============
 
     function testExecuteSession() public {
-        uint128 counter = TKGasDelegate(user).sessionCounter();
+        (uint128 sessionCounter,) = TKGasDelegate(user).state();
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -765,13 +780,14 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
 
         assertTrue(success);
-        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
+        (uint128 sessionCounter0,) = TKGasDelegate(user).state();
+        assertEq(sessionCounter0, 0); // Counter should NOT increment
         assertEq(reciever.balance, ethAmount);
         assertEq(user.balance, 1 ether - ethAmount);
     }
 
     function testExecuteSessionArbitrary() public {
-        uint128 counter = TKGasDelegate(user).sessionCounter();
+        (uint128 sessionCounter,) = TKGasDelegate(user).state();
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -791,13 +807,14 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
 
         assertTrue(success);
-        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
+        (uint128 sessionCounter0,) = TKGasDelegate(user).state();
+        assertEq(sessionCounter0, 0); // Counter should NOT increment
         assertEq(reciever.balance, ethAmount);
         assertEq(user.balance, 1 ether - ethAmount);
     }
 
     function testExecuteSessionArbitraryRevertsDeadlineExceeded() public {
-        uint128 counter = TKGasDelegate(user).sessionCounter();
+        (uint128 sessionCounter,) = TKGasDelegate(user).state();
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -827,7 +844,7 @@ contract TKGasDelegateTest is Test {
     }
 
     function testExecuteBatchSessionArbitrary() public {
-        uint128 counter = TKGasDelegate(user).sessionCounter();
+        (uint128 sessionCounter,) = TKGasDelegate(user).state();
         uint128 deadline = uint128(block.timestamp + 1 hours);
 
         // Fund the user contract
@@ -852,14 +869,15 @@ contract TKGasDelegateTest is Test {
 
         assertTrue(success);
         assertEq(results.length, 2);
-        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
+        (uint128 sessionCounter0,) = TKGasDelegate(user).state();
+        assertEq(sessionCounter0, 0); // Counter should NOT increment
         assertEq(receiver1.balance, 0.05 ether);
         assertEq(receiver2.balance, 0.05 ether);
         assertEq(user.balance, 1 ether - 0.1 ether);
     }
 
     function testExecuteBatchSession() public {
-        uint128 counter = TKGasDelegate(user).sessionCounter();
+        (uint128 sessionCounter,) = TKGasDelegate(user).state();
         uint128 deadline = uint128(block.timestamp + 1 hours);
 
         // Fund the user contract
@@ -884,7 +902,8 @@ contract TKGasDelegateTest is Test {
 
         assertTrue(success);
         assertEq(results.length, 3);
-        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
+        (uint128 sessionCounter0,) = TKGasDelegate(user).state();
+        assertEq(sessionCounter0, 0); // Counter should NOT increment
         assertEq(receiver.balance, 0.6 ether); // 0.1 + 0.2 + 0.3
         assertEq(user.balance, 1 ether - 0.6 ether);
     }
@@ -959,7 +978,7 @@ contract TKGasDelegateTest is Test {
         address receiver1 = makeAddr("receiver1_bytes_batch");
         address receiver2 = makeAddr("receiver2_bytes_batch");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](2);
         executions[0] = IBatchExecution.Call({
@@ -996,7 +1015,8 @@ contract TKGasDelegateTest is Test {
         assertEq(mockToken.balanceOf(receiver1), 10 * 10 ** 18);
         assertEq(mockToken.balanceOf(receiver2), 15 * 10 ** 18);
         assertEq(mockToken.balanceOf(user), 25 * 10 ** 18);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         // Log gas
         console.log("=== executeBatch(bytes) Gas ===");
@@ -1014,7 +1034,8 @@ contract TKGasDelegateTest is Test {
         TKGasDelegate(user).burnSessionCounter(signature, counter, paymaster);
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).sessionCounter(), 1); // Counter should increment
+        (uint128 sessionCounter1,) = TKGasDelegate(user).state();
+        assertEq(sessionCounter1, 1); // Counter should increment
     }
 
     function testDirectBurnSessionCounter() public {
@@ -1022,14 +1043,34 @@ contract TKGasDelegateTest is Test {
         TKGasDelegate(user).burnSessionCounter();
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).sessionCounter(), 1); // Counter should increment
+        (uint128 sessionCounter1a,) = TKGasDelegate(user).state();
+        assertEq(sessionCounter1a, 1); // Counter should increment
 
         // Burn session counter again
         vm.startPrank(user, user);
         TKGasDelegate(user).burnSessionCounter();
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).sessionCounter(), 2); // Counter should increment again
+        (uint128 sessionCounter2,) = TKGasDelegate(user).state();
+        assertEq(sessionCounter2, 2); // Counter should increment again
+    }
+
+    function testDirectERC20TransferGas() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        // Direct ERC20 transfer without any gas station or fallback
+        vm.prank(user);
+        uint256 gasBefore = gasleft();
+        bool success = mockToken.transfer(receiver, 10 * 10 ** 18);
+        uint256 gasUsed = gasBefore - gasleft();
+
+        assertTrue(success);
+        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
+
+        // Log gas analysis
+        console.log("=== Direct ERC20 Transfer Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
     }
 
     function testExecuteBytesERC20Gas() public {
@@ -1037,7 +1078,7 @@ contract TKGasDelegateTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver_execute_bytes");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
         bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
 
@@ -1057,7 +1098,8 @@ contract TKGasDelegateTest is Test {
         assertEq(success, true);
         assertEq(result.length, 32);
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         // Log gas
         console.log("=== execute(bytes) ERC20 Transfer Gas ===");
@@ -1067,6 +1109,59 @@ contract TKGasDelegateTest is Test {
         bool ret = abi.decode(result, (bool));
         console.log("Decoded return (bool): %s", ret);
     }
+
+    function testExecuteBytesERC20GasNoValue() public {
+        // Arrange
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver_execute_bytes");
+
+        (, uint128 nonce) = TKGasDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Build packed calldata: [65 sig][16 nonce][20 to][args]
+        bytes memory executeData = _constructExecuteBytesNoValue(signature, nonce, address(mockToken), args);
+
+        // Act
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = TKGasDelegate(user).executeNoValue(executeData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Assert
+        assertEq(success, true);
+        assertEq(result.length, 32);
+        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
+
+        // Log gas
+        console.log("=== execute(bytes) ERC20 Transfer Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+        console.log("Result length: %s", result.length);
+        console.logBytes(result);
+        bool ret = abi.decode(result, (bool));
+        console.log("Decoded return (bool): %s", ret);
+    }
+
+    function _constructExecuteBytesNoValue(
+        bytes memory _signature,
+        uint128 _nonce,
+        address _to,
+        bytes memory _args
+    ) internal pure returns (bytes memory) {
+        // 65-byte signature
+        require(_signature.length == 65, "sig len");
+        // 16-byte nonce (left-padded to 16 in the 32-byte slot when loaded)
+        bytes16 nonce16 = bytes16(uint128(_nonce));
+        // 20-byte address
+        bytes20 to20 = bytes20(_to);
+        return abi.encodePacked(_signature, nonce16, to20, _args);
+    }
+
 
     function _constructExecuteBytes(
         bytes memory _signature,
@@ -1095,7 +1190,7 @@ contract TKGasDelegateTest is Test {
         vm.deal(user, 2 ether);
         assertEq(receiver.balance, 0);
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory args = ""; // no calldata for raw ETH transfer
         bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, receiver, ethAmount, args);
 
@@ -1115,7 +1210,8 @@ contract TKGasDelegateTest is Test {
         assertEq(success, true);
         assertEq(result.length, 0);
         assertEq(receiver.balance, ethAmount);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         // Log gas
         console.log("=== execute(bytes) ETH Transfer Gas ===");
@@ -1126,7 +1222,7 @@ contract TKGasDelegateTest is Test {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             user,
@@ -1165,7 +1261,8 @@ contract TKGasDelegateTest is Test {
         uint256 receiverBalance = mockToken.balanceOf(receiver);
         assertEq(receiverBalance, 10 * 10 ** 18);
         assertEq(success, true);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         // Log gas analysis
         console.log("=== Fallback Function ERC20 Transfer Analysis ===");
@@ -1247,7 +1344,7 @@ contract TKGasDelegateTest is Test {
         vm.deal(user, 2 ether);
         assertEq(address(receiver).balance, 0 ether);
 
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
         bytes memory signature = _sign(
             USER_PRIVATE_KEY,
             user,
@@ -1287,7 +1384,8 @@ contract TKGasDelegateTest is Test {
         uint256 receiverBalance = receiver.balance;
         assertEq(receiverBalance, ethAmount);
         assertEq(success, true);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
 
         // Log gas analysis
         console.log("=== Fallback Function ETH Transfer Analysis ===");
@@ -1324,7 +1422,7 @@ contract TKGasDelegateTest is Test {
             _signature, // 65 bytes signature
             nonceBytes, // Nonce data
             _outputContract, // 20 bytes output contract
-            ethBytes, // ETH amount
+            ethBytes, // ETH amount (10 bytes)
             _arguments // Function arguments
         );
 

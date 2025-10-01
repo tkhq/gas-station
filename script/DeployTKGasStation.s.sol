@@ -13,16 +13,16 @@ contract DeployTKGasStation is Script {
         vm.startBroadcast(_deployerPrivateKey);
 
         // Deploy TKGasDelegate first with deterministic deployment
-        // TKGasDelegate _delegate = new TKGasDelegate{salt: keccak256("Gassy")}();
+        TKGasDelegate _delegate = new TKGasDelegate{salt: keccak256("Gassy")}();
         // console2.log("TKGasDelegate deployed at:", address(_delegate));
 
         // Use existing TKGasDelegate address
-        address _delegate = 0xfA5a20d173801C9762C5DdA2157e0133ed9ca32a;
-        console2.log("Using existing TKGasDelegate at:", _delegate);
+        //address _delegate = 0xfA5a20d173801C9762C5DdA2157e0133ed9ca32a;
+        //console2.log("Using existing TKGasDelegate at:", _delegate);
 
         // Deploy TKGasStation with mined salt for 2 null bytes
         TKGasStation _station =
-            new TKGasStation{salt: 0x5f08d20233ea8fbaf44d4a5ddd4562dbeb897f1c0b0452912129206c7a40eae5}(_delegate);
+            new TKGasStation{salt: keccak256("Gassy")}(address(_delegate));
         console2.log("TKGasStation deployed at:", address(_station));
 
         vm.stopBroadcast();

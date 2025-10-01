@@ -16,6 +16,6 @@ baseSepolia = "https://sepolia.base.org"
 ethereum = "https://ethereum.publicnode.com"
 
 [etherscan]
-baseSepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
-base = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }
+baseSepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
+base = { key = "${ETHERSCAN_API_KEY}", url = "https://api.basescan.org/api" }
 ethereum = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/api" }
