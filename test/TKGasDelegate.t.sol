@@ -1036,49 +1036,6 @@ contract TKGasDelegateTest is Test {
         assertEq(TKGasDelegate(user).sessionCounter(), 2); // Counter should increment again
     }
 
-    /*
-    function testDetailedGasAnalysis() public {
-        mockToken.mint(user, 20 * 10 ** 18);
-        address receiver = makeAddr("receiver");
-
-        uint128 nonce = TKGasDelegate(user).nonce();
-        bytes memory signature = _sign(
-            USER_PRIVATE_KEY,
-            user,
-            nonce,
-            address(mockToken),
-            0,
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
-        );
-
-        // Measure gas usage
-        uint256 gasBefore = gasleft();
-
-        bool success;
-        bytes memory result;
-        vm.prank(paymaster);
-        (success, result) = TKGasDelegate(user).execute(
-            signature,
-            nonce,
-            address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
-        );
-        vm.stopPrank();
-
-        uint256 gasUsed = gasBefore - gasleft();
-
-        // Verify execution
-        uint256 recieverBalance = mockToken.balanceOf(receiver);
-        assertEq(recieverBalance, 10 * 10 ** 18);
-        assertEq(success, true);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
-
-        // Gas analysis
-        console.log("=== TKGasStation Detailed Gas Analysis ===");
-        console.log("Total Gas Used: %s", gasUsed);
-    }
-    */
-
     function testExecuteBytesERC20Gas() public {
         // Arrange
         mockToken.mint(user, 20 * 10 ** 18);
@@ -1167,74 +1124,6 @@ contract TKGasDelegateTest is Test {
         // Log gas
         console.log("=== execute(bytes) ETH Transfer Gas ===");
         console.log("Total Gas Used: %s", gasUsed);
-    }
-
-    /*
-    function testGasAnalysisETHTransfer() public {
-        // Give user some ETH
-        vm.deal(user, 5 ether);
-        address receiver = makeAddr("receiver");
-        uint256 transferAmount = 1 ether;
-
-        uint128 nonce = TKGasDelegate(user).nonce();
-        bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, receiver, transferAmount, "");
-
-        // Measure gas usage
-        uint256 gasBefore = gasleft();
-
-        bool success;
-        bytes memory result;
-        vm.prank(paymaster);
-        (success, result) = TKGasDelegate(user).execute(signature, nonce, receiver, transferAmount, "");
-        vm.stopPrank();
-
-        uint256 gasUsed = gasBefore - gasleft();
-
-        assertEq(receiver.balance, transferAmount);
-        assertEq(success, true);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
-
-        // Log gas analysis
-        console.log("=== TKGasStation ETH Transfer Analysis ===");
-        console.log("Total Gas Used: %s", gasUsed);
-        console.log("Transfer Amount: %s ETH", transferAmount / 1e18);
-    }
-
-    function testGasAnalysisWithReturnValue() public {
-        mockToken.mint(user, 20 * 10 ** 18);
-
-        uint128 nonce = TKGasDelegate(user).nonce();
-        bytes memory signature = _sign(
-            USER_PRIVATE_KEY,
-            user,
-            nonce,
-            address(mockToken),
-            0,
-            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 100)
-        );
-
-        // Measure gas usage
-        uint256 gasBefore = gasleft();
-
-        bool success;
-        bytes memory result;
-        vm.prank(paymaster);
-        (success, result) = TKGasDelegate(user).execute(
-            signature, nonce, address(mockToken), abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 100)
-        );
-        vm.stopPrank();
-
-        uint256 gasUsed = gasBefore - gasleft();
-
-        uint256 returnValue = abi.decode(result, (uint256));
-        assertEq(returnValue, 20 * 10 ** 18 + 100);
-        assertEq(success, true);
-        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
-
-        // Log gas analysis
-        console.log("=== TKGasStation Function with Return Value Analysis ===");
-        console.log("Total Gas Used: %s", gasUsed);
-        console.log("Return Value: %s", returnValue);
     }
 
     function testFallbackExecuteSendERC20() public {
@@ -1444,5 +1333,5 @@ contract TKGasDelegateTest is Test {
         );
 
         return fallbackCalldata;
-    */
+    }
 }
