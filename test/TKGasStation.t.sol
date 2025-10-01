@@ -87,10 +87,10 @@ contract TKGasStationTest is Test {
 
         (bool success,) = tkGasStation.execute(
             user,
+            signature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
 
         uint256 gasAfter = gasleft();
@@ -117,7 +117,7 @@ contract TKGasStationTest is Test {
         // Execute ETH transfer through TKGasStation
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (bool success, bytes memory result) = tkGasStation.execute(user, nonce, receiver, transferAmount, "", signature);
+        (bool success, bytes memory result) = tkGasStation.execute(user, signature, nonce, receiver, transferAmount, "");
 
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
@@ -152,10 +152,10 @@ contract TKGasStationTest is Test {
         vm.expectRevert(TKGasStation.NotDelegated.selector);
         tkGasStation.execute(
             newUser,
+            signature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18)
         );
     }
 }

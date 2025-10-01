@@ -16,6 +16,8 @@ TKGasStationV2: 0xBbb7F4d7758aD153f4C37F1c89948A656736643B
 
 ## Security Design Decisions
 * There are no re-entry protections by design. Re-entrancy should be guarded by the contracts the user is interacting with (as in a normal EoA)
+    - The nonce for execute and batch execute will naturally protect against re-entrancy
+    - There is no built in re-entrancy protection 
 * Both the delegate and the gas station are not using DRY to avoid doing internal calls. This is a purpsoseful design choice to save gas during run time
 * Paymasters (and anyone else) can only interact with TKGasDelegate through the TKGasStation
 * The gas station has helper external functions for hashing for the type hash. This is just to help for external development and testing, and are not used during execution

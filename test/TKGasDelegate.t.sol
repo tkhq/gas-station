@@ -68,7 +68,7 @@ contract TKGasDelegateTest is Test {
         assertGt(code.length, 0);
         //assertEq(TKGasDelegate(user).paymaster(), payable(address(tkGasStation)));
         assertEq(TKGasDelegate(user).nonce(), 0);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0);
+        assertEq(TKGasDelegate(user).sessionCounter(), 0);
     }
 
     function testGassyExecuteSendERC20() public {
@@ -85,17 +85,15 @@ contract TKGasDelegateTest is Test {
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
 
-        // Measure gas usa= gasleft();
-
         bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
         (success, result) = TKGasDelegate(user).execute(
+            signature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
@@ -126,10 +124,10 @@ contract TKGasDelegateTest is Test {
         bytes memory result;
         vm.prank(paymaster);
         (success, result) = TKGasDelegate(user).execute(
+            signature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18)
         );
         vm.stopPrank();
         assertEq(success, true);
@@ -151,18 +149,19 @@ contract TKGasDelegateTest is Test {
         bool success;
         bytes memory result;
         vm.startPrank(paymaster);
-        (success, result) = TKGasDelegate(user).execute(nonce, receiver, 1 ether, "", signature);
+        uint256 gasBefore = gasleft();
+        (success, result) = TKGasDelegate(user).execute(signature, nonce, receiver, 1 ether, "");
+        uint256 gasUsed = gasBefore - gasleft();
 
         assertEq(success, true);
         assertEq(result.length, 0); // returns 0x00
-
         vm.stopPrank();
 
         assertEq(address(receiver).balance, 1 ether);
         assertEq(TKGasDelegate(user).nonce(), nonce + 1);
 
-        // Note: In tests, the test contract pays gas, not the pranked address
-        // The paymaster is just the msg.sender, but gas comes from the test contract
+        console.log("=== TKGasDelegate ETH Transfer Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
     }
 
     function testGassyExecuteRevertsInvalidNonce() public {
@@ -183,10 +182,10 @@ contract TKGasDelegateTest is Test {
         vm.prank(paymaster);
         vm.expectRevert();
         (success, result) = TKGasDelegate(user).execute(
+            signature,
             nonce + 1,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18)
         );
         vm.stopPrank();
     }
@@ -225,10 +224,10 @@ contract TKGasDelegateTest is Test {
         vm.prank(paymaster);
         vm.expectRevert();
         (success, result) = TKGasDelegate(user).execute(
+            signature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 30 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 30 * 10 ** 18)
         );
         vm.stopPrank();
     }
@@ -252,10 +251,10 @@ contract TKGasDelegateTest is Test {
         vm.prank(paymaster);
         vm.expectRevert();
         (success, result) = TKGasDelegate(user).execute(
+            signature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
         vm.stopPrank();
     }
@@ -285,10 +284,10 @@ contract TKGasDelegateTest is Test {
         bytes memory result;
         vm.prank(paymaster);
         (success, result) = TKGasDelegate(user).execute(
+            signature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 10 * 10 ** 18)
         );
         vm.stopPrank();
 
@@ -318,10 +317,10 @@ contract TKGasDelegateTest is Test {
         // First execution should succeed
         vm.prank(paymaster);
         (success, result) = TKGasDelegate(user).execute(
+            signature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
         vm.stopPrank();
 
@@ -332,10 +331,10 @@ contract TKGasDelegateTest is Test {
         vm.prank(paymaster);
         vm.expectRevert();
         (success, result) = TKGasDelegate(user).execute(
+            signature,
             nonce, // Reusing the same nonce
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
         vm.stopPrank();
     }
@@ -348,16 +347,16 @@ contract TKGasDelegateTest is Test {
         uint128 nonce = TKGasDelegate(user).nonce();
 
         // Create batch execution with multiple transfers
-        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
-        executions[0] = IBatchExecution.Execution({
-            outputContract: address(mockToken),
-            ethAmount: 0,
-            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18)
+        IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](2);
+        executions[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18)
         });
-        executions[1] = IBatchExecution.Execution({
-            outputContract: address(mockToken),
-            ethAmount: 0,
-            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
+        executions[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
         });
 
         // Create signature for batch execution
@@ -367,7 +366,7 @@ contract TKGasDelegateTest is Test {
         bytes[] memory results;
 
         vm.prank(paymaster);
-        (success, results) = TKGasDelegate(user).executeBatch(nonce, executions, signature);
+        (success, results) = TKGasDelegate(user).executeBatch(signature, nonce, executions);
         vm.stopPrank();
 
         // Verify batch execution succeeded
@@ -390,31 +389,31 @@ contract TKGasDelegateTest is Test {
         uint128 nonce = TKGasDelegate(user).nonce();
 
         // Create batch execution with multiple transfers
-        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
-        executions[0] = IBatchExecution.Execution({
-            outputContract: address(mockToken),
-            ethAmount: 0,
-            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18)
+        IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](2);
+        executions[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18)
         });
-        executions[1] = IBatchExecution.Execution({
-            outputContract: address(mockToken),
-            ethAmount: 0,
-            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
+        executions[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
         });
 
         // Create signature for batch execution
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, executions);
 
-        IBatchExecution.Execution[] memory badExecutions = new IBatchExecution.Execution[](2);
-        badExecutions[0] = IBatchExecution.Execution({
-            outputContract: address(mockToken),
-            ethAmount: 0,
-            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 20 * 10 ** 18)
+        IBatchExecution.Call[] memory badExecutions = new IBatchExecution.Call[](2);
+        badExecutions[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 20 * 10 ** 18)
         });
-        badExecutions[1] = IBatchExecution.Execution({
-            outputContract: address(mockToken),
-            ethAmount: 0,
-            arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
+        badExecutions[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 15 * 10 ** 18)
         });
 
         bool success;
@@ -422,7 +421,7 @@ contract TKGasDelegateTest is Test {
 
         vm.prank(paymaster);
         vm.expectRevert();
-        (success, results) = TKGasDelegate(user).executeBatch(nonce, badExecutions, signature);
+        (success, results) = TKGasDelegate(user).executeBatch(signature, nonce, badExecutions);
         vm.stopPrank();
 
         // Verify no transfers occurred and nonce unchanged
@@ -436,12 +435,12 @@ contract TKGasDelegateTest is Test {
         uint256 _privateKey,
         address payable _publicKey,
         uint128 _nonce,
-        IBatchExecution.Execution[] memory _executions
+        IBatchExecution.Call[] memory _calls
     ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBatchExecution(_nonce, _executions));
+            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBatchExecution(_nonce, _calls));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
@@ -454,12 +453,12 @@ contract TKGasDelegateTest is Test {
         uint128 nonce = TKGasDelegate(user).nonce();
 
         // Create batch execution with 51 transactions (exceeds MAX_BATCH_SIZE of 50)
-        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](51);
+        IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](51);
         for (uint256 i = 0; i < 51; i++) {
-            executions[i] = IBatchExecution.Execution({
-                outputContract: address(mockToken),
-                ethAmount: 0,
-                arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 * 10 ** 18)
+            executions[i] = IBatchExecution.Call({
+                to: address(mockToken),
+                value: 0,
+                data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 * 10 ** 18)
             });
         }
 
@@ -469,7 +468,7 @@ contract TKGasDelegateTest is Test {
         // Should revert due to batch size limit
         vm.prank(paymaster);
         vm.expectRevert();
-        TKGasDelegate(user).executeBatch(nonce, executions, signature);
+        TKGasDelegate(user).executeBatch(signature, nonce, executions);
         vm.stopPrank();
     }
 
@@ -480,12 +479,12 @@ contract TKGasDelegateTest is Test {
         uint128 nonce = TKGasDelegate(user).nonce();
 
         // Create batch execution with exactly 50 transactions (MAX_BATCH_SIZE)
-        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](50);
+        IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](50);
         for (uint256 i = 0; i < 50; i++) {
-            executions[i] = IBatchExecution.Execution({
-                outputContract: address(mockToken),
-                ethAmount: 0,
-                arguments: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 * 10 ** 18)
+            executions[i] = IBatchExecution.Call({
+                to: address(mockToken),
+                value: 0,
+                data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 * 10 ** 18)
             });
         }
 
@@ -497,7 +496,7 @@ contract TKGasDelegateTest is Test {
 
         // Should succeed with exactly MAX_BATCH_SIZE transactions
         vm.prank(paymaster);
-        (success, results) = TKGasDelegate(user).executeBatch(nonce, executions, signature);
+        (success, results) = TKGasDelegate(user).executeBatch(signature, nonce, executions);
         vm.stopPrank();
 
         // Verify batch execution succeeded
@@ -519,7 +518,7 @@ contract TKGasDelegateTest is Test {
 
         // Burn the nonce
         vm.prank(paymaster);
-        TKGasDelegate(user).burnNonce(nonce, signature);
+        TKGasDelegate(user).burnNonce(signature, nonce);
         vm.stopPrank();
 
         // Verify nonce was incremented
@@ -539,7 +538,7 @@ contract TKGasDelegateTest is Test {
         // Should revert when trying to burn wrong nonce
         vm.prank(paymaster);
         vm.expectRevert();
-        TKGasDelegate(user).burnNonce(nonce + 1, signature);
+        TKGasDelegate(user).burnNonce(signature, nonce + 1);
         vm.stopPrank();
 
         // Verify nonce was not changed
@@ -556,7 +555,7 @@ contract TKGasDelegateTest is Test {
         bytes memory burnSignature = _signBurnNonce(USER_PRIVATE_KEY, user, nonce);
 
         vm.prank(paymaster);
-        TKGasDelegate(user).burnNonce(nonce, burnSignature);
+        TKGasDelegate(user).burnNonce(burnSignature, nonce);
         vm.stopPrank();
 
         // Verify nonce was incremented
@@ -577,10 +576,10 @@ contract TKGasDelegateTest is Test {
         vm.prank(paymaster);
         vm.expectRevert();
         (success, result) = TKGasDelegate(user).execute(
+            executeSignature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
-            executeSignature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
         vm.stopPrank();
 
@@ -640,10 +639,10 @@ contract TKGasDelegateTest is Test {
         vm.prank(paymaster);
         vm.expectRevert();
         (success, result) = TKGasDelegate(user).execute(
+            executeSignature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
-            executeSignature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
         vm.stopPrank();
 
@@ -667,7 +666,7 @@ contract TKGasDelegateTest is Test {
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, user, newNonce);
 
         vm.prank(paymaster);
-        TKGasDelegate(user).burnNonce(newNonce, signature);
+        TKGasDelegate(user).burnNonce(signature, newNonce);
         vm.stopPrank();
 
         uint128 nonceAfterSignature = TKGasDelegate(user).nonce();
@@ -689,7 +688,7 @@ contract TKGasDelegateTest is Test {
         return signature;
     }
 
-    function _signTimeboxed(
+    function _signSession(
         uint256 _privateKey,
         address payable _publicKey,
         uint128 _counter,
@@ -700,14 +699,14 @@ contract TKGasDelegateTest is Test {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, TKGasDelegate(_publicKey).hashTimeboxedExecution(_counter, _deadline, _sender, _outputContract)
+            _privateKey, TKGasDelegate(_publicKey).hashSessionExecution(_counter, _deadline, _sender, _outputContract)
         );
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
     }
 
-    function _signTimeboxedArbitrary(
+    function _signSessionArbitrary(
         uint256 _privateKey,
         address payable _publicKey,
         uint128 _counter,
@@ -716,33 +715,30 @@ contract TKGasDelegateTest is Test {
     ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, TKGasDelegate(_publicKey).hashArbitraryTimeboxedExecution(_counter, _deadline, _sender)
-        );
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashArbitrarySessionExecution(_counter, _deadline, _sender));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
     }
 
-    function _signBurnTimeboxedCounter(
-        uint256 _privateKey,
-        address payable _publicKey,
-        uint128 _counter,
-        address _sender
-    ) internal returns (bytes memory) {
+    function _signBurnSessionCounter(uint256 _privateKey, address payable _publicKey, uint128 _counter, address _sender)
+        internal
+        returns (bytes memory)
+    {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBurnTimeboxedCounter(_counter, _sender));
+            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBurnSessionCounter(_counter, _sender));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
     }
 
-    // ============ TIMEBOXED EXECUTION TESTS ============
+    // ============ SESSION EXECUTION TESTS ============
 
-    function testExecuteTimeboxed() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteSession() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -751,23 +747,23 @@ contract TKGasDelegateTest is Test {
         // Fund the user contract
         vm.deal(user, 1 ether);
 
-        // Sign the timeboxed execution
-        bytes memory signature = _signTimeboxed(USER_PRIVATE_KEY, user, counter, deadline, paymaster, reciever);
+        // Sign the session execution
+        bytes memory signature = _signSession(USER_PRIVATE_KEY, user, counter, deadline, paymaster, reciever);
 
-        // Execute timeboxed transaction
+        // Execute session transaction
         vm.startPrank(paymaster);
         (bool success,) =
-            TKGasDelegate(user).executeTimeboxed(counter, deadline, reciever, ethAmount, executionData, signature);
+            TKGasDelegate(user).executeSession(signature, counter, deadline, reciever, ethAmount, executionData);
         vm.stopPrank();
 
         assertTrue(success);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
         assertEq(reciever.balance, ethAmount);
         assertEq(user.balance, 1 ether - ethAmount);
     }
 
-    function testExecuteTimeboxedArbitrary() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteSessionArbitrary() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -776,24 +772,24 @@ contract TKGasDelegateTest is Test {
         // Fund the user contract
         vm.deal(user, 1 ether);
 
-        // Sign the timeboxed execution
-        bytes memory signature = _signTimeboxedArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
+        // Sign the session execution
+        bytes memory signature = _signSessionArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
 
-        // Execute timeboxed transaction
+        // Execute session transaction
         vm.startPrank(paymaster);
-        (bool success,) = TKGasDelegate(user).executeTimeboxedArbitrary(
-            counter, deadline, reciever, ethAmount, executionData, signature
+        (bool success,) = TKGasDelegate(user).executeSessionArbitrary(
+            signature, counter, deadline, reciever, ethAmount, executionData
         );
         vm.stopPrank();
 
         assertTrue(success);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
         assertEq(reciever.balance, ethAmount);
         assertEq(user.balance, 1 ether - ethAmount);
     }
 
-    function testExecuteTimeboxedArbitraryRevertsDeadlineExceeded() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteSessionArbitraryRevertsDeadlineExceeded() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
         uint256 ethAmount = 0.1 ether;
         address reciever = makeAddr("reciever");
@@ -802,116 +798,116 @@ contract TKGasDelegateTest is Test {
         // Fund the user contract
         vm.deal(user, 1 ether);
 
-        // Sign the timeboxed execution
-        bytes memory signature = _signTimeboxedArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
+        // Sign the session execution
+        bytes memory signature = _signSessionArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
 
-        // Execute timeboxed transaction
+        // Execute session transaction
         vm.startPrank(paymaster);
         vm.expectRevert(); //invalid signature
-        TKGasDelegate(user).executeTimeboxedArbitrary(
+        TKGasDelegate(user).executeSessionArbitrary(
+            signature,
             counter,
             deadline + 1, // makes the signature unable to be validated
             reciever,
             ethAmount,
-            executionData,
-            signature
+            executionData
         );
         vm.warp(deadline + 1);
         vm.expectRevert(TKGasDelegate.DeadlineExceeded.selector); //deadline exceeded
-        TKGasDelegate(user).executeTimeboxedArbitrary(counter, deadline, reciever, ethAmount, executionData, signature);
+        TKGasDelegate(user).executeSessionArbitrary(signature, counter, deadline, reciever, ethAmount, executionData);
         vm.stopPrank();
     }
 
-    function testExecuteBatchTimeboxedArbitrary() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteBatchSessionArbitrary() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
 
         // Fund the user contract
         vm.deal(user, 1 ether);
 
         // Create batch executions
-        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](2);
+        IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](2);
         address receiver1 = makeAddr("receiver1");
         address receiver2 = makeAddr("receiver2");
 
-        executions[0] = IBatchExecution.Execution({outputContract: receiver1, ethAmount: 0.05 ether, arguments: ""});
-        executions[1] = IBatchExecution.Execution({outputContract: receiver2, ethAmount: 0.05 ether, arguments: ""});
+        executions[0] = IBatchExecution.Call({to: receiver1, value: 0.05 ether, data: ""});
+        executions[1] = IBatchExecution.Call({to: receiver2, value: 0.05 ether, data: ""});
 
-        // Sign the arbitrary timeboxed execution
-        bytes memory signature = _signTimeboxedArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
+        // Sign the arbitrary session execution
+        bytes memory signature = _signSessionArbitrary(USER_PRIVATE_KEY, user, counter, deadline, paymaster);
 
-        // Execute batch timeboxed transaction
+        // Execute batch session transaction
         vm.startPrank(paymaster);
         (bool success, bytes[] memory results) =
-            TKGasDelegate(user).executeBatchTimeboxedArbitrary(counter, deadline, executions, signature);
+            TKGasDelegate(user).executeBatchSessionArbitrary(signature, counter, deadline, executions);
         vm.stopPrank();
 
         assertTrue(success);
         assertEq(results.length, 2);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
         assertEq(receiver1.balance, 0.05 ether);
         assertEq(receiver2.balance, 0.05 ether);
         assertEq(user.balance, 1 ether - 0.1 ether);
     }
 
-    function testExecuteBatchTimeboxed() public {
-        uint128 counter = TKGasDelegate(user).timeboxedCounter();
+    function testExecuteBatchSession() public {
+        uint128 counter = TKGasDelegate(user).sessionCounter();
         uint128 deadline = uint128(block.timestamp + 1 hours);
 
         // Fund the user contract
         vm.deal(user, 1 ether);
 
         // Create batch executions with same output contract
-        IBatchExecution.Execution[] memory executions = new IBatchExecution.Execution[](3);
+        IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](3);
         address receiver = makeAddr("receiver");
 
-        executions[0] = IBatchExecution.Execution({outputContract: receiver, ethAmount: 0.1 ether, arguments: ""});
-        executions[1] = IBatchExecution.Execution({outputContract: receiver, ethAmount: 0.2 ether, arguments: ""});
-        executions[2] = IBatchExecution.Execution({outputContract: receiver, ethAmount: 0.3 ether, arguments: ""});
+        executions[0] = IBatchExecution.Call({to: receiver, value: 0.1 ether, data: ""});
+        executions[1] = IBatchExecution.Call({to: receiver, value: 0.2 ether, data: ""});
+        executions[2] = IBatchExecution.Call({to: receiver, value: 0.3 ether, data: ""});
 
-        // Sign the timeboxed execution
-        bytes memory signature = _signTimeboxed(USER_PRIVATE_KEY, user, counter, deadline, paymaster, receiver);
+        // Sign the session execution
+        bytes memory signature = _signSession(USER_PRIVATE_KEY, user, counter, deadline, paymaster, receiver);
 
-        // Execute batch timeboxed transaction
+        // Execute batch session transaction
         vm.startPrank(paymaster);
         (bool success, bytes[] memory results) =
-            TKGasDelegate(user).executeBatchTimeboxed(counter, deadline, receiver, executions, signature);
+            TKGasDelegate(user).executeBatchSession(signature, counter, deadline, receiver, executions);
         vm.stopPrank();
 
         assertTrue(success);
         assertEq(results.length, 3);
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 0); // Counter should NOT increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 0); // Counter should NOT increment
         assertEq(receiver.balance, 0.6 ether); // 0.1 + 0.2 + 0.3
         assertEq(user.balance, 1 ether - 0.6 ether);
     }
 
-    function testBurnTimeboxedCounter() public {
+    function testBurnSessionCounter() public {
         uint128 counter = 0;
 
-        // Sign the burn timeboxed counter
-        bytes memory signature = _signBurnTimeboxedCounter(USER_PRIVATE_KEY, user, counter, paymaster);
+        // Sign the burn session counter
+        bytes memory signature = _signBurnSessionCounter(USER_PRIVATE_KEY, user, counter, paymaster);
 
-        // Burn timeboxed counter
+        // Burn session counter
         vm.startPrank(paymaster);
-        TKGasDelegate(user).burnTimeboxedCounter(counter, paymaster, signature);
+        TKGasDelegate(user).burnSessionCounter(signature, counter, paymaster);
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 1); // Counter should increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 1); // Counter should increment
     }
 
-    function testDirectBurnTimeboxedCounter() public {
+    function testDirectBurnSessionCounter() public {
         vm.startPrank(user, user);
-        TKGasDelegate(user).burnTimeboxedCounter();
+        TKGasDelegate(user).burnSessionCounter();
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 1); // Counter should increment
+        assertEq(TKGasDelegate(user).sessionCounter(), 1); // Counter should increment
 
-        // Burn timeboxed counter again
+        // Burn session counter again
         vm.startPrank(user, user);
-        TKGasDelegate(user).burnTimeboxedCounter();
+        TKGasDelegate(user).burnSessionCounter();
         vm.stopPrank();
 
-        assertEq(TKGasDelegate(user).timeboxedCounter(), 2); // Counter should increment again
+        assertEq(TKGasDelegate(user).sessionCounter(), 2); // Counter should increment again
     }
 
     function testDetailedGasAnalysis() public {
@@ -935,10 +931,10 @@ contract TKGasDelegateTest is Test {
         bytes memory result;
         vm.prank(paymaster);
         (success, result) = TKGasDelegate(user).execute(
+            signature,
             nonce,
             address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18),
-            signature
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
         vm.stopPrank();
 
@@ -970,7 +966,7 @@ contract TKGasDelegateTest is Test {
         bool success;
         bytes memory result;
         vm.prank(paymaster);
-        (success, result) = TKGasDelegate(user).execute(nonce, receiver, transferAmount, "", signature);
+        (success, result) = TKGasDelegate(user).execute(signature, nonce, receiver, transferAmount, "");
         vm.stopPrank();
 
         uint256 gasUsed = gasBefore - gasleft();
@@ -1005,7 +1001,7 @@ contract TKGasDelegateTest is Test {
         bytes memory result;
         vm.prank(paymaster);
         (success, result) = TKGasDelegate(user).execute(
-            nonce, address(mockToken), abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 100), signature
+            signature, nonce, address(mockToken), abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 100)
         );
         vm.stopPrank();
 
@@ -1020,5 +1016,214 @@ contract TKGasDelegateTest is Test {
         console.log("=== TKGasStation Function with Return Value Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
         console.log("Return Value: %s", returnValue);
+    }
+
+    function testFallbackExecuteSendERC20() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        uint128 nonce = TKGasDelegate(user).nonce();
+        bytes memory signature = _sign(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            address(mockToken),
+            0,
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+        );
+
+        console.log("=== Signature ===");
+        console.log("Signature: %s", vm.toString(signature));
+        console.log("=== Mock contract address ===");
+        console.log("Mock contract address: %s", address(mockToken));
+
+        // Construct calldata for fallback function
+        bytes memory fallbackData = _constructFallbackCalldata(
+            nonce,
+            signature,
+            address(mockToken),
+            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+        );
+
+        console.log("=== Fallback Function Calldata ===");
+        console.log("Calldata length: %s bytes", fallbackData.length);
+        console.log("Calldata (hex): %s", vm.toString(fallbackData));
+        console.log("Calldata (bytes): [%s]", _bytesToHexString(fallbackData));
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = user.call(fallbackData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        uint256 receiverBalance = mockToken.balanceOf(receiver);
+        assertEq(receiverBalance, 10 * 10 ** 18);
+        assertEq(success, true);
+        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+
+        // Log gas analysis
+        console.log("=== Fallback Function ERC20 Transfer Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
+        console.log("Transfer Amount: %s", uint256(10 * 10 ** 18));
+    }
+
+    function _constructFallbackCalldata(
+        uint128 _nonce,
+        bytes memory _signature,
+        address _outputContract,
+        bytes memory _arguments
+    ) internal pure returns (bytes memory) {
+        // Convert nonce to bytes (1 byte for small nonce values)
+        bytes memory nonceBytes = abi.encodePacked(uint8(_nonce));
+
+        // Calculate nonce length (0-15, where 0 means 1 byte)
+        // For 1 byte, we need length = 0 (since 0 means 1 byte)
+        uint8 nonceLength = uint8(nonceBytes.length) - 1;
+
+        // Construct the second byte: function selector (0x00) + nonce length
+        bytes1 secondByte = bytes1(uint8(0x00) | nonceLength);
+
+        // Construct calldata:
+        // [0x00][secondByte][signature][nonce][outputContract][arguments]
+        bytes memory fallbackCalldata = abi.encodePacked(
+            bytes1(0x00), // Prefix
+            secondByte, // Function selector + nonce length
+            _signature, // 65 bytes signature
+            nonceBytes, // Nonce data
+            _outputContract, // 20 bytes output contract
+            _arguments // Function arguments
+        );
+
+        return fallbackCalldata;
+    }
+
+    function _bytesToHexString(bytes memory _bytes) internal pure returns (string memory) {
+        string memory result = "";
+        for (uint256 i = 0; i < _bytes.length; i++) {
+            result = string(
+                abi.encodePacked(result, "0x", _toHexString(uint8(_bytes[i])), i < _bytes.length - 1 ? ", " : "")
+            );
+        }
+        return result;
+    }
+
+    function _toHexString(uint8 _value) internal pure returns (string memory) {
+        if (_value == 0) {
+            return "00";
+        }
+        uint256 temp = _value;
+        uint256 length = 0;
+        while (temp != 0) {
+            length++;
+            temp >>= 4;
+        }
+        bytes memory buffer = new bytes(length);
+        for (uint256 i = length; i > 0; i--) {
+            buffer[i - 1] = _toHexChar(uint8(_value & 0x0f));
+            _value >>= 4;
+        }
+        return string(buffer);
+    }
+
+    function _toHexChar(uint8 _value) internal pure returns (bytes1) {
+        if (_value < 10) {
+            return bytes1(uint8(bytes1("0")) + _value);
+        } else {
+            return bytes1(uint8(bytes1("a")) + _value - 10);
+        }
+    }
+
+    function testFallbackExecuteSendETH() public {
+        address receiver = makeAddr("receiver");
+        uint256 ethAmount = 1 ether;
+
+        // Give the user some ETH to transfer
+        vm.deal(user, 2 ether);
+        assertEq(address(receiver).balance, 0 ether);
+
+        uint128 nonce = TKGasDelegate(user).nonce();
+        bytes memory signature = _sign(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            receiver, // ETH transfer to receiver
+            ethAmount,
+            "" // Empty data for ETH transfer
+        );
+
+        console.log("=== ETH Transfer Test ===");
+        console.log("Nonce: %s", nonce);
+        console.log("Signature: %s", vm.toString(signature));
+        console.log("ETH Amount: %s", ethAmount);
+        console.log("Receiver: %s", receiver);
+
+        // Construct calldata for fallback function with ETH
+        bytes memory fallbackData = _constructFallbackCalldataWithETH(
+            nonce,
+            signature,
+            receiver, // ETH transfer to receiver
+            ethAmount,
+            "" // Empty data for ETH transfer
+        );
+
+        console.log("=== Fallback Function Calldata (ETH Transfer) ===");
+        console.log("Calldata length: %s bytes", fallbackData.length);
+        console.log("Calldata (hex): %s", vm.toString(fallbackData));
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = user.call(fallbackData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        uint256 receiverBalance = receiver.balance;
+        assertEq(receiverBalance, ethAmount);
+        assertEq(success, true);
+        assertEq(TKGasDelegate(user).nonce(), nonce + 1);
+
+        // Log gas analysis
+        console.log("=== Fallback Function ETH Transfer Analysis ===");
+        console.log("Total Gas Used: %s", gasUsed);
+        console.log("ETH Amount: %s", ethAmount);
+    }
+
+    function _constructFallbackCalldataWithETH(
+        uint128 _nonce,
+        bytes memory _signature,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes memory _arguments
+    ) internal pure returns (bytes memory) {
+        // Convert nonce to bytes (1 byte for small nonce values)
+        bytes memory nonceBytes = abi.encodePacked(uint8(_nonce));
+
+        // Calculate nonce length (0-15, where 0 means 1 byte)
+        uint8 nonceLength = uint8(nonceBytes.length) - 1;
+
+        // Construct the second byte: function selector (0x01 for executeWithValue) + nonce length
+        bytes1 secondByte = bytes1(uint8(0x10) | nonceLength); // 0x10 = executeWithValue
+
+        // Convert ETH amount to exactly 10 bytes
+        // Use uint80 which fits in 10 bytes (2^80 - 1 is much larger than any reasonable ETH amount)
+        uint80 ethAmount80 = uint80(_ethAmount);
+        bytes memory ethBytes = abi.encodePacked(ethAmount80);
+
+        // Construct calldata:
+        // [0x00][secondByte][signature][nonce][outputContract][ethAmount][arguments]
+        bytes memory fallbackCalldata = abi.encodePacked(
+            bytes1(0x00), // Prefix
+            secondByte, // Function selector + nonce length
+            _signature, // 65 bytes signature
+            nonceBytes, // Nonce data
+            _outputContract, // 20 bytes output contract
+            ethBytes, // ETH amount
+            _arguments // Function arguments
+        );
+
+        return fallbackCalldata;
     }
 }
