@@ -29,7 +29,6 @@ contract TKGasDelegateTest is Test {
         _delegateGasStation(USER_PRIVATE_KEY);
     }
 
-
     function testGassyStationDeployment() public view {
         assertTrue(payable(address(tkGasStation)) != address(0));
     }
@@ -63,7 +62,6 @@ contract TKGasDelegateTest is Test {
         vm.stopPrank();
         return signature;
     }
-
 
     function testGassyDelegationInit() public view {
         bytes memory code = address(user).code;
@@ -901,9 +899,8 @@ contract TKGasDelegateTest is Test {
     ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, TKGasDelegate(_publicKey).hashBatchExecution(_nonce, _calls)
-        );
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBatchExecution(_nonce, _calls));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
@@ -936,9 +933,8 @@ contract TKGasDelegateTest is Test {
     ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, TKGasDelegate(_publicKey).hashArbitrarySessionExecution(_counter, _deadline, _sender)
-        );
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashArbitrarySessionExecution(_counter, _deadline, _sender));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;

@@ -69,10 +69,6 @@ contract TKGasStation {
         return delegatedTo == tkGasDelegate;
     }
 
-    function isDelegated(address _targetEoA) external view returns (bool) {
-        return _isDelegated(_targetEoA);
-    }
-
     function execute(address _targetEoA, bytes calldata _data) external returns (bool, bytes memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
@@ -108,5 +104,9 @@ contract TKGasStation {
             revert NotDelegated();
         }
         return ITKGasDelegate(payable(_targetEoA)).nonce();
+    }
+
+    function isDelegated(address _targetEoA) external view returns (bool) {
+        return _isDelegated(_targetEoA);
     }
 }
