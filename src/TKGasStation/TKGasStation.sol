@@ -6,11 +6,16 @@ import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
 
 contract TKGasStation {
     error NotDelegated();
+    error NoEthAllowed();
 
     address public immutable tkGasDelegate;
 
     constructor(address _tkGasDelegate) {
         tkGasDelegate = _tkGasDelegate;
+    }
+
+    receive() external payable {
+        revert NoEthAllowed();
     }
 
     fallback(bytes calldata) external returns (bytes memory) {
@@ -68,136 +73,25 @@ contract TKGasStation {
         return _isDelegated(_targetEoA);
     }
 
-    function execute(
-        address _targetEoA,
-        bytes calldata _signature,
-        uint128 _nonce,
-        address _outputContract,
-        bytes calldata _arguments
-    ) external returns (bool, bytes memory) {
+    function execute(address _targetEoA, bytes calldata _data) external returns (bool, bytes memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(payable(_targetEoA)).execute(_signature, _nonce, _outputContract, _arguments);
+        return ITKGasDelegate(payable(_targetEoA)).execute(_data);
     }
 
-    function execute(
-        address _targetEoA,
-        bytes calldata _signature,
-        uint128 _nonce,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
-    ) external returns (bool, bytes memory) {
+    function executeNoValue(address _targetEoA, bytes calldata _data) external returns (bool, bytes memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(payable(_targetEoA)).execute(_signature, _nonce, _outputContract, _ethAmount, _arguments);
+        return ITKGasDelegate(payable(_targetEoA)).executeNoValue(_data);
     }
 
-    function executeSession(
-        address _targetEoA,
-        bytes calldata _signature,
-        uint128 _counter,
-        uint128 _deadline,
-        address _outputContract,
-        bytes calldata _arguments
-    ) external returns (bool, bytes memory) {
+    function executeBatch(address _targetEoA, bytes calldata _data) external returns (bool, bytes[] memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(payable(_targetEoA)).executeSession(
-            _signature, _counter, _deadline, _outputContract, _arguments
-        );
-    }
-
-    function executeSession(
-        address _targetEoA,
-        bytes calldata _signature,
-        uint128 _counter,
-        uint128 _deadline,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
-    ) external returns (bool, bytes memory) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(payable(_targetEoA)).executeSession(
-            _signature, _counter, _deadline, _outputContract, _ethAmount, _arguments
-        );
-    }
-
-    function executeBatchSession(
-        address _targetEoA,
-        bytes calldata _signature,
-        uint128 _counter,
-        uint128 _deadline,
-        address _sender,
-        IBatchExecution.Call[] calldata _calls
-    ) external returns (bool, bytes[] memory) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(payable(_targetEoA)).executeBatchSession(_signature, _counter, _deadline, _sender, _calls);
-    }
-
-    function executeSessionArbitrary(
-        address _targetEoA,
-        bytes calldata _signature,
-        uint128 _counter,
-        uint128 _deadline,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
-    ) external returns (bool, bytes memory) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(payable(_targetEoA)).executeSessionArbitrary(
-            _signature, _counter, _deadline, _outputContract, _ethAmount, _arguments
-        );
-    }
-
-    function executeSessionArbitrary(
-        address _targetEoA,
-        bytes calldata _signature,
-        uint128 _counter,
-        uint128 _deadline,
-        address _outputContract,
-        bytes calldata _arguments
-    ) external returns (bool, bytes memory) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(payable(_targetEoA)).executeSessionArbitrary(
-            _signature, _counter, _deadline, _outputContract, _arguments
-        );
-    }
-
-    function executeBatchSessionArbitrary(
-        address _targetEoA,
-        bytes calldata _signature,
-        uint128 _counter,
-        uint128 _deadline,
-        IBatchExecution.Call[] calldata _calls
-    ) external returns (bool, bytes[] memory) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(payable(_targetEoA)).executeBatchSessionArbitrary(_signature, _counter, _deadline, _calls);
-    }
-
-    function executeBatch(
-        address _targetEoA,
-        bytes calldata _signature,
-        uint128 _nonce,
-        IBatchExecution.Call[] calldata _calls
-    ) external returns (bool, bytes[] memory) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(payable(_targetEoA)).executeBatch(_signature, _nonce, _calls);
+        return ITKGasDelegate(payable(_targetEoA)).executeBatch(_data);
     }
 
     function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external {
@@ -207,15 +101,6 @@ contract TKGasStation {
         ITKGasDelegate(payable(_targetEoA)).burnNonce(_signature, _nonce);
     }
 
-    function burnSessionCounter(address _targetEoA, bytes calldata _signature, uint128 _counter, address _sender)
-        external
-    {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        ITKGasDelegate(payable(_targetEoA)).burnSessionCounter(_signature, _counter, _sender);
-    }
-
     /* Lense Functions */
 
     function getNonce(address _targetEoA) external view returns (uint128) {
@@ -223,12 +108,5 @@ contract TKGasStation {
             revert NotDelegated();
         }
         return ITKGasDelegate(payable(_targetEoA)).nonce();
-    }
-
-    function getSessionCounter(address _targetEoA) external view returns (uint128) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(payable(_targetEoA)).sessionCounter();
     }
 }
