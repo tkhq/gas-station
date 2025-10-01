@@ -225,7 +225,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
     // Internal helpers to centralize common validation logic
     function _requireSelf(bytes32 _hash, bytes calldata _signature, address _expected) internal view {
-        if (ECDSA.recover(_hash, _signature) != _expected) {
+        if (ECDSA.recoverCalldata(_hash, _signature) != _expected) {
             revert NotSelf();
         }
     }
@@ -625,7 +625,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         hash = _hashTypedData(hash);
 
         _requireCounter(_counter);
-        if (ECDSA.recover(hash, _signature) != address(this)) {
+        if (ECDSA.recoverCalldata(hash, _signature) != address(this)) {
             revert NotSelf();
         }
         unchecked {
