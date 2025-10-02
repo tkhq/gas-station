@@ -672,8 +672,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
 
-        //_requireSelf(hash, _signature);
-        //_consumeNonce(_nonceBytes);
         _validateExecute(hash, _signature, _nonceBytes);
 
         assembly {
