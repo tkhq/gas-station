@@ -1276,20 +1276,21 @@ contract TKGasDelegateTest is Test {
         address _outputContract,
         bytes memory _arguments
     ) internal pure returns (bytes memory) {
-        // Convert nonce to bytes (1 byte for small nonce values)
-        bytes memory nonceBytes = abi.encodePacked(uint8(_nonce));
+        // Convert nonce to 16 bytes
+        bytes memory nonceBytes = abi.encodePacked(_nonce);
+        // Pad to 16 bytes if needed
+        if (nonceBytes.length < 16) {
+            bytes memory padding = new bytes(16 - nonceBytes.length);
+            nonceBytes = abi.encodePacked(nonceBytes, padding);
+        }
 
-        // Calculate nonce length (0-15, where 0 means 1 byte)
-        // For 1 byte, we need length = 0 (since 0 means 1 byte)
-        uint8 nonceLength = uint8(nonceBytes.length) - 1;
-
-        // Construct the second byte: function selector (0x00) + nonce length
-        bytes1 secondByte = bytes1(uint8(0x00) | nonceLength);
+        // Construct the second byte: function selector (0x00) + nonce length (15 for 16 bytes)
+        bytes1 secondByte = bytes1(uint8(0x00) | 15);
 
         // Construct calldata:
-        // [0x00][secondByte][signature][nonce][outputContract][arguments]
+        // [0x01][secondByte][signature][nonce][outputContract][arguments]
         bytes memory fallbackCalldata = abi.encodePacked(
-            bytes1(0x00), // Prefix
+            bytes1(0x01), // Prefix (return bytes flag)
             secondByte, // Function selector + nonce length
             _signature, // 65 bytes signature
             nonceBytes, // Nonce data
@@ -1400,14 +1401,16 @@ contract TKGasDelegateTest is Test {
         uint256 _ethAmount,
         bytes memory _arguments
     ) internal pure returns (bytes memory) {
-        // Convert nonce to bytes (1 byte for small nonce values)
-        bytes memory nonceBytes = abi.encodePacked(uint8(_nonce));
+        // Convert nonce to 16 bytes
+        bytes memory nonceBytes = abi.encodePacked(_nonce);
+        // Pad to 16 bytes if needed
+        if (nonceBytes.length < 16) {
+            bytes memory padding = new bytes(16 - nonceBytes.length);
+            nonceBytes = abi.encodePacked(nonceBytes, padding);
+        }
 
-        // Calculate nonce length (0-15, where 0 means 1 byte)
-        uint8 nonceLength = uint8(nonceBytes.length) - 1;
-
-        // Construct the second byte: function selector (0x01 for executeWithValue) + nonce length
-        bytes1 secondByte = bytes1(uint8(0x10) | nonceLength); // 0x10 = executeWithValue
+        // Construct the second byte: function selector (0x10 for executeWithValue) + nonce length (15 for 16 bytes)
+        bytes1 secondByte = bytes1(uint8(0x10) | 15); // 0x10 = executeWithValue
 
         // Convert ETH amount to exactly 10 bytes
         // Use uint80 which fits in 10 bytes (2^80 - 1 is much larger than any reasonable ETH amount)
@@ -1415,9 +1418,9 @@ contract TKGasDelegateTest is Test {
         bytes memory ethBytes = abi.encodePacked(ethAmount80);
 
         // Construct calldata:
-        // [0x00][secondByte][signature][nonce][outputContract][ethAmount][arguments]
+        // [0x01][secondByte][signature][nonce][outputContract][ethAmount][arguments]
         bytes memory fallbackCalldata = abi.encodePacked(
-            bytes1(0x00), // Prefix
+            bytes1(0x01), // Prefix (return bytes flag)
             secondByte, // Function selector + nonce length
             _signature, // 65 bytes signature
             nonceBytes, // Nonce data
