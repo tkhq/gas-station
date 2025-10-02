@@ -47,7 +47,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
     // Maximum batch size to prevent griefing attacks
     uint8 public constant MAX_BATCH_SIZE = 50;
-    bytes4 private constant APPROVE_SELECTOR = 0x095ea7b3;
+    //bytes4 private constant APPROVE_SELECTOR = 0x095ea7b3;
     // Fallback function optimizations
     //uint8 public constant ETH_AMOUNT_MAX_LENGTH_BYTES = 10; // max 1.2m eth if using the fallback function
     //uint8 public constant DEADLINE_MAX_LENGTH_BYTES = 5; // up to ~34 years in seconds
@@ -122,13 +122,82 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             (, bytes memory result) = _executeWithValue(signature, nonceBytes, outputContract, ethAmount, arguments);
             return result;
         } else if (functionSelector == bytes1(0x20)) {
-            // executeBatch no return
-            _executeBatchNoReturn(signature, nonceBytes, msg.data[nonceEnd:]);
+            // approveThenExecute no return
+            bytes calldata erc20Bytes;
+            bytes calldata spenderBytes;
+            bytes calldata approveAmountBytes;
+            bytes calldata outputContractBytes;
+            uint256 ethAmount;
+            bytes calldata arguments;
+            assembly {
+                erc20Bytes.offset := nonceEnd
+                erc20Bytes.length := 20
+                spenderBytes.offset := add(nonceEnd, 20)
+                spenderBytes.length := 20
+                approveAmountBytes.offset := add(nonceEnd, 40)
+                approveAmountBytes.length := 32
+                outputContractBytes.offset := add(nonceEnd, 72)
+                outputContractBytes.length := 20
+                let loaded := calldataload(add(nonceEnd, 92))
+                ethAmount := shr(176, loaded)
+                arguments.offset := add(nonceEnd, 102)
+                arguments.length := sub(calldatasize(), add(nonceEnd, 102))
+            }
+            // Use no-return variant
+            _approveThenExecuteNoReturn(
+                signature,
+                nonceBytes,
+                erc20Bytes,
+                spenderBytes,
+                approveAmountBytes,
+                outputContractBytes,
+                ethAmount,
+                arguments
+            );
             assembly {
                 return(0x00, 0x00)
             }
         } else if (functionSelector == bytes1(0x21)) {
-            // executeBatch with return
+            // approveThenExecute with return
+            bytes calldata erc20Bytes;
+            bytes calldata spenderBytes;
+            bytes calldata approveAmountBytes;
+            address outputContract;
+            uint256 ethAmount;
+            bytes calldata arguments;
+            assembly {
+                erc20Bytes.offset := nonceEnd
+                erc20Bytes.length := 20
+                spenderBytes.offset := add(nonceEnd, 20)
+                spenderBytes.length := 20
+                approveAmountBytes.offset := add(nonceEnd, 40)
+                approveAmountBytes.length := 32
+                outputContract := shr(96, calldataload(add(nonceEnd, 72)))
+                let loaded := calldataload(add(nonceEnd, 92))
+                ethAmount := shr(176, loaded)
+                arguments.offset := add(nonceEnd, 102)
+                arguments.length := sub(calldatasize(), add(nonceEnd, 102))
+            }
+            (bool success, bytes memory result) = _approveThenExecute(
+                signature,
+                nonceBytes,
+                erc20Bytes,
+                spenderBytes,
+                approveAmountBytes,
+                outputContract,
+                ethAmount,
+                arguments
+            );
+            // Encode and return the inner call result
+            return abi.encode(success, result);
+        } else if (functionSelector == bytes1(0x22)) {
+            // executeBatch no return (shifted up)
+            _executeBatchNoReturn(signature, nonceBytes, msg.data[nonceEnd:]);
+            assembly {
+                return(0x00, 0x00)
+            }
+        } else if (functionSelector == bytes1(0x23)) {
+            // executeBatch with return (shifted up)
             (, bytes[] memory result) = _executeBatch(signature, nonceBytes, msg.data[nonceEnd:]);
             return abi.encode(result);
         } else if (functionSelector == bytes1(0x30)) {
@@ -500,6 +569,69 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return (success, result);
         }
         revert ExecutionFailed();
+    }
+
+    function _approveThenExecuteNoReturn(
+        bytes calldata _signature, // 65 bytes
+        bytes calldata _nonceBytes, // uint128
+        bytes calldata _erc20Bytes, // address (20 bytes)
+        bytes calldata _spenderBytes, // address (20 bytes)
+        bytes calldata _approveAmountBytes, // uint256 (32 bytes)
+        bytes calldata _outputContractBytes, // address (20 bytes)
+        bytes calldata _ethAmountBytes,
+        bytes calldata _arguments
+    ) internal {
+        bytes32 argsHash = keccak256(_arguments);
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            // erc20 address right-aligned in 32 bytes
+            let erc20Raw := calldataload(_erc20Bytes.offset)
+            mstore(add(ptr, 0x40), shr(96, erc20Raw))
+            // spender address right-aligned in 32 bytes
+            let spenderRaw := calldataload(_spenderBytes.offset)
+            mstore(add(ptr, 0x60), shr(96, spenderRaw))
+            // approve amount (32 bytes)
+            calldatacopy(add(ptr, 0x80), _approveAmountBytes.offset, 32)
+            // output contract right-aligned
+            let outRaw := calldataload(_outputContractBytes.offset)
+            mstore(add(ptr, 0xa0), shr(96, outRaw))
+            // eth amount (right-align arbitrary length up to 32 bytes)
+            {
+                let rawEth := calldataload(_ethAmountBytes.offset)
+                let shiftBits := mul(sub(32, _ethAmountBytes.length), 8)
+                let ethVal := shr(shiftBits, rawEth)
+                mstore(add(ptr, 0xc0), ethVal)
+            }
+            // args hash
+            mstore(add(ptr, 0xe0), argsHash)
+            hash := keccak256(ptr, 0x100)
+        }
+        hash = _hashTypedData(hash);
+
+        _requireSelf(hash, _signature);
+        _consumeNonce(_nonceBytes);
+
+        // approve then execute; single assembly block to minimize overhead
+        assembly {
+            // Approve
+            let token := shr(96, calldataload(_erc20Bytes.offset))
+            let ptr := mload(0x40)
+            mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+            calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
+            calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
+            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { revert(0, 0) }
+
+            // Execute
+            let output := shr(96, calldataload(_outputContractBytes.offset))
+            calldatacopy(ptr, _arguments.offset, _arguments.length)
+            let rawEth := calldataload(_ethAmountBytes.offset)
+            let shiftBits := mul(sub(32, _ethAmountBytes.length), 8)
+            let ethVal := shr(shiftBits, rawEth)
+            if iszero(call(gas(), output, ethVal, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+        }
     }
 
     function _executeNoValueNoReturn(
