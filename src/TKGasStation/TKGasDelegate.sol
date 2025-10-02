@@ -529,7 +529,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         uint256 _ethAmount,
         bytes calldata _arguments
     ) internal returns (bool, bytes memory) {
-        bytes32 argsHash = keccak256(_arguments);
         bytes32 hash;
         assembly {
             let ptr := mload(0x40)
@@ -543,6 +542,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             calldatacopy(add(ptr, 0x80), _approveAmountBytes.offset, 32)
             mstore(add(ptr, 0xa0), _outputContract)
             mstore(add(ptr, 0xc0), _ethAmount)
+            // Compute argsHash in assembly
+            let argsPtr := add(ptr, 0xe0)
+            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
+            let argsHash := keccak256(argsPtr, _arguments.length)
             mstore(add(ptr, 0xe0), argsHash)
             // total = 0x100 (256) bytes
             hash := keccak256(ptr, 0x100)
@@ -673,7 +676,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         address _outputContract,
         bytes calldata _arguments
     ) internal returns (bool, bytes memory) {
-        bytes32 argsHash = keccak256(_arguments);
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
@@ -682,9 +684,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
             mstore(add(ptr, 0x40), _outputContract)
             mstore(add(ptr, 0x60), 0) // ethAmount = 0
+            // Compute argsHash in assembly
+            let argsPtr := add(ptr, 0x80)
+            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
+            let argsHash := keccak256(argsPtr, _arguments.length)
             mstore(add(ptr, 0x80), argsHash)
             hash := keccak256(ptr, 0xa0)
-            // Defer memory pointer update - will be updated at function end
         }
         hash = _hashTypedData(hash);
 
@@ -704,7 +709,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         uint256 _ethAmount,
         bytes calldata _arguments
     ) internal returns (bool, bytes memory) {
-        bytes32 argsHash = keccak256(_arguments);
         bytes32 hash; // all this assembly to avoid using abi.encode
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
@@ -713,9 +717,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
             mstore(add(ptr, 0x40), _outputContract)
             mstore(add(ptr, 0x60), _ethAmount)
+            // Compute argsHash in assembly
+            let argsPtr := add(ptr, 0x80)
+            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
+            let argsHash := keccak256(argsPtr, _arguments.length)
             mstore(add(ptr, 0x80), argsHash)
             hash := keccak256(ptr, 0xa0)
-            // Defer memory pointer update - will be updated at function end
         }
         hash = _hashTypedData(hash);
 
