@@ -279,7 +279,7 @@ contract TKGasDelegateTest is Test {
         _delegateGasStation(user2PrivateKey);
 
         (, uint128 nonce) = TKGasDelegate(user).state();
-        uint128 nonce2 = TKGasDelegate(user).nonce();
+        (, uint128 nonce2) = TKGasDelegate(user).state();
         assertEq(nonce, 0);
         assertEq(nonce2, 0);
 
@@ -305,7 +305,7 @@ contract TKGasDelegateTest is Test {
 
         (, uint128 currentNonce) = TKGasDelegate(user).state();
         assertEq(currentNonce, nonce + 1);
-        assertEq(TKGasDelegate(user2).nonce(), nonce2);
+        assertEq(TKGasDelegate(user2).state().nonce, nonce2);
     }
 
     function testGassyExecuteRevertsNonceReuse() public {
@@ -681,18 +681,18 @@ contract TKGasDelegateTest is Test {
         TKGasDelegate(user).burnNonce();
         vm.stopPrank();
 
-        uint128 nonceAfterDirect = TKGasDelegate(user).nonce();
+        (, uint128 nonceAfterDirect) = TKGasDelegate(user).state();
         assertEq(nonceAfterDirect, nonce + 1);
 
         // Method 2: Signature burn (through TKGasStation)
-        uint128 newNonce = TKGasDelegate(user).nonce();
+        (, uint128 newNonce) = TKGasDelegate(user).state();
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, user, newNonce);
 
         vm.prank(paymaster);
         TKGasDelegate(user).burnNonce(signature, newNonce);
         vm.stopPrank();
 
-        uint128 nonceAfterSignature = TKGasDelegate(user).nonce();
+        (, uint128 nonceAfterSignature) = TKGasDelegate(user).state();
         assertEq(nonceAfterSignature, newNonce + 1);
 
         // Both methods should work and increment nonce

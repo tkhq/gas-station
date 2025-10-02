@@ -245,24 +245,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
     }
 
-    function _performCall(address _outputContract, bytes calldata _arguments) internal returns (bool, bytes memory) {
-        (bool success, bytes memory result) = _outputContract.call(_arguments);
-        if (success) {
-            return (success, result);
-        }
-        revert ExecutionFailed();
-    }
-
-    function _performCallWithValue(address _outputContract, uint256 _ethAmount, bytes calldata _arguments)
-        internal
-        returns (bool, bytes memory)
-    {
-        (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
-        if (success) {
-            return (success, result);
-        }
-        revert ExecutionFailed();
-    }
 
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "TKGasDelegate";
@@ -316,7 +298,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
         _requireSelf(hash, _signature, address(this));
         _consumeNonce(_nonce);
-        return _performCall(_outputContract, _arguments);
+        (bool success, bytes memory result) = _outputContract.call(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 
     function _executeWithValue(
@@ -342,7 +328,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
         _requireSelf(hash, _signature, address(this));
         _consumeNonce(_nonce);
-        return _performCallWithValue(_outputContract, _ethAmount, _arguments);
+        (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 
     
@@ -439,7 +429,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         _requireCounter(_counter);
         _requireSelf(hash, _signature, address(this));
         // Execute the session transaction (counter does NOT increment for session)
-        return _performCall(_outputContract, _arguments);
+        (bool success, bytes memory result) = _outputContract.call(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 
     function _executeBatchSession(
@@ -485,8 +479,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 revert InvalidOutputContract();
             }
             (bool success, bytes memory result) = ethAmount == 0
-                ? _performCall(outputContract, execution.data)
-                : _performCallWithValue(outputContract, ethAmount, execution.data);
+                ? outputContract.call(execution.data)
+                : outputContract.call{value: ethAmount}(execution.data);
 
             results[i] = result;
 
@@ -526,7 +520,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         _requireCounter(_counter);
         _requireSelf(hash, _signature, address(this));
         // Execute the session transaction
-        return _performCall(_outputContract, _arguments);
+        (bool success, bytes memory result) = _outputContract.call(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 
     function _executeSessionArbitraryWithValue(
@@ -556,7 +554,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         _requireCounter(_counter);
         _requireSelf(hash, _signature, address(this));
         // Execute the session transaction
-        return _performCallWithValue(_outputContract, _ethAmount, _arguments);
+        (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 
     function _executeBatchSessionArbitrary(
@@ -598,8 +600,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             address outputContract = execution.to;
 
             (bool success, bytes memory result) = ethAmount == 0
-                ? _performCall(outputContract, execution.data)
-                : _performCallWithValue(outputContract, ethAmount, execution.data);
+                ? outputContract.call(execution.data)
+                : outputContract.call{value: ethAmount}(execution.data);
 
             results[i] = result;
 
@@ -854,6 +856,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x60), _sender)
             mstore(add(ptr, 0x80), _outputContract)
             hash := keccak256(ptr, 0xa0)
+            mstore(0x40, add(ptr, 0xa0)) // Update free memory pointer
         }
         return _hashTypedData(hash);
     }
@@ -871,6 +874,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), _sender)
             hash := keccak256(ptr, 0x80)
+            mstore(0x40, add(ptr, 0x80)) // Update free memory pointer
         }
         return _hashTypedData(hash);
     }
@@ -883,6 +887,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _sender)
             hash := keccak256(ptr, 0x60)
+            mstore(0x40, add(ptr, 0x60)) // Update free memory pointer
         }
         return _hashTypedData(hash);
     }
@@ -892,6 +897,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         view
         returns (bytes32)
     {
+        // Keep abi.encode for complex types (abi.encodePacked doesn't support Call[] arrays)
         bytes32 executionsHash = keccak256(abi.encode(_calls));
         bytes32 hash;
         assembly {
@@ -900,6 +906,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x20), _nonce)
             mstore(add(ptr, 0x40), executionsHash)
             hash := keccak256(ptr, 0x60)
+            mstore(0x40, add(ptr, 0x60)) // Update free memory pointer
         }
         return _hashTypedData(hash);
     }

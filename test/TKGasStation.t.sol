@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
-/*
+
 import "forge-std/Test.sol";
 import {TKGasStation} from "../src/TKGasStation/TKGasStation.sol";
 import {TKGasDelegate} from "../src/TKGasStation/TKGasDelegate.sol";
@@ -87,7 +87,7 @@ contract TKGasStationTest is Test {
         address receiver = makeAddr("receiver");
 
         // Get current nonce
-        uint128 nonce = TKGasDelegate(user).nonce();
+        (, uint128 nonce) = TKGasDelegate(user).state();
 
         // Create signature
         bytes memory signature = _sign(
@@ -130,7 +130,7 @@ contract TKGasStationTest is Test {
         assertEq(address(receiver).balance, 0 ether);
 
         // Get current nonce and create signature
-        uint128 nonce = ITKGasDelegate(user).nonce();
+        (, uint128 nonce) = ITKGasDelegate(user).state();
         bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, receiver, transferAmount, "");
 
         // Execute ETH transfer through TKGasStation (bytes-only API with value)
@@ -157,7 +157,7 @@ contract TKGasStationTest is Test {
         mockToken.mint(newUser, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        uint128 nonce = ITKGasDelegate(user).nonce(); // Use nonce 0 for new user
+        (, uint128 nonce) = ITKGasDelegate(user).state(); // Use nonce 0 for new user
         bytes memory signature = _sign(
             USER_PRIVATE_KEY, // Use the delegated user's private key to create signature
             user, // Use the delegated user's address for hashExecution
@@ -179,4 +179,4 @@ contract TKGasStationTest is Test {
         tkGasStation.executeNoValue(newUser, data);
     }
 }
-*/
+
