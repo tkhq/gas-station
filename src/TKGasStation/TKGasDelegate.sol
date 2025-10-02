@@ -89,7 +89,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             uint256 ethAmount;
             bytes calldata arguments;
             assembly {
-                outputContract := shr(96, calldataload(nonceEnd))
+                let data := calldataload(nonceEnd)
+                outputContract := shr(96, data)
                 let loaded := calldataload(add(nonceEnd, 20))
                 ethAmount := shr(176, loaded)
                 arguments.offset := add(nonceEnd, 30)
@@ -105,7 +106,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             uint256 ethAmount;
             bytes calldata arguments;
             assembly {
-                outputContract := shr(96, calldataload(nonceEnd))
+                let data := calldataload(nonceEnd)
+                outputContract := shr(96, data)
                 let loaded := calldataload(add(nonceEnd, 20))
                 ethAmount := shr(176, loaded)
                 arguments.offset := add(nonceEnd, 30)
@@ -450,7 +452,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x60), 0) // ethAmount = 0
             mstore(add(ptr, 0x80), argsHash)
             hash := keccak256(ptr, 0xa0)
-            mstore(0x40, add(ptr, 0xa0)) // Update free memory pointer
+            // Defer memory pointer update - will be updated at function end
         }
         hash = _hashTypedData(hash);
 
@@ -481,7 +483,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x60), _ethAmount)
             mstore(add(ptr, 0x80), argsHash)
             hash := keccak256(ptr, 0xa0)
-            mstore(0x40, add(ptr, 0xa0)) // Update free memory pointer
+            // Defer memory pointer update - will be updated at function end
         }
         hash = _hashTypedData(hash);
 
