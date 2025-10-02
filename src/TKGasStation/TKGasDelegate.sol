@@ -22,6 +22,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
     // Original: keccak256("Execution(uint128 nonce,address outputContract,uint256 ethAmount,bytes arguments)")
 
+    bytes32 private constant APPROVE_THEN_EXECUTE_TYPEHASH =
+        0xd36c50d64a0a4020f90bce7e65dcb7db1dcf1fffc14bddcf9a1c98ca9faaee62;
+    // Original: keccak256("ApproveThenExecute(uint128 nonce,address erc20Contract,address spender,uint256 approveAmount,address outputContract,uint256 ethAmount,bytes arguments)")
+
     bytes32 private constant BATCH_EXECUTION_TYPEHASH =
         0x55e88ae5d875bf1c64043249314f1ead2a2fcd11e1e423107ef7e93aafc30182;
     // Original: keccak256("BatchExecution(uint128 nonce,Call[] calls)Call(address to,uint256 value,bytes data)")
@@ -43,6 +47,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
     // Maximum batch size to prevent griefing attacks
     uint8 public constant MAX_BATCH_SIZE = 50;
+    bytes4 private constant APPROVE_SELECTOR = 0x095ea7b3;
     // Fallback function optimizations
     //uint8 public constant ETH_AMOUNT_MAX_LENGTH_BYTES = 10; // max 1.2m eth if using the fallback function
     //uint8 public constant DEADLINE_MAX_LENGTH_BYTES = 5; // up to ~34 years in seconds
@@ -61,14 +66,15 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
         if (functionSelector == bytes1(0x00)) {
             // execute (no value) no return
-            address outputContract;
+            bytes calldata outputContractBytes;
             bytes calldata arguments;
             assembly {
-                outputContract := shr(96, calldataload(nonceEnd))
+                outputContractBytes.offset := nonceEnd
+                outputContractBytes.length := 20
                 arguments.offset := add(nonceEnd, 20)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 20))
             }
-            _execute(signature, nonceBytes, outputContract, arguments);
+            _executeNoValueNoReturn(signature, nonceBytes, outputContractBytes, arguments);
             assembly {
                 return(0x00, 0x00)
             }
@@ -81,7 +87,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 arguments.offset := add(nonceEnd, 20)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 20))
             }
-            (, bytes memory result) = _execute(signature, nonceBytes, outputContract, arguments);
+            (, bytes memory result) = _executeNoValue(signature, nonceBytes, outputContract, arguments);
             return result;
         } else if (functionSelector == bytes1(0x10)) {
             // executeWithValue no return
@@ -354,8 +360,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     }
 
     // Internal helpers to centralize common validation logic
-    function _requireSelf(bytes32 _hash, bytes calldata _signature, address _expected) internal view {
-        if (ECDSA.recoverCalldata(_hash, _signature) != _expected) {
+    function _requireSelf(bytes32 _hash, bytes calldata _signature) internal view {
+        if (ECDSA.recoverCalldata(_hash, _signature) != address(this)) {
             revert NotSelf();
         }
     }
@@ -407,35 +413,136 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     }
 
     function execute(bytes calldata data) external returns (bool, bytes memory) {
-        uint128 thisNonce;
         address to;
         uint256 value;
         assembly {
-            // nonce is 16 bytes at offset 65
-            thisNonce := shr(128, calldataload(add(data.offset, 65)))
             // address is 20 bytes immediately after nonce
             to := shr(96, calldataload(add(data.offset, 81)))
             // value is 32 bytes immediately after address
             value := calldataload(add(data.offset, 101))
         }
         return value == 0
-            ? _execute(data[0:65], data[65:81], to, data[133:])
+            ? _executeNoValue(data[0:65], data[65:81], to, data[133:])
             : _executeWithValue(data[0:65], data[65:81], to, value, data[133:]);
     }
 
     function executeNoValue(bytes calldata data) external returns (bool, bytes memory) {
-        uint128 thisNonce;
         address to;
         assembly {
-            // nonce is 16 bytes at offset 65
-            thisNonce := shr(128, calldataload(add(data.offset, 65)))
             // address is 20 bytes immediately after nonce
             to := shr(96, calldataload(add(data.offset, 81)))
         }
-        return _execute(data[0:65], data[65:81], to, data[101:]);
+        return _executeNoValue(data[0:65], data[65:81], to, data[101:]);
     }
 
-    function _execute(
+    function approveThenExecute(bytes calldata _data) external returns (bool, bytes memory) {
+        // Layout: [signature(65)][nonce(16)][erc20(20)][spender(20)][approveAmount(32)][output(20)][eth(32)][args]
+        address to;
+        uint256 value;
+        assembly {
+            to := shr(96, calldataload(add(_data.offset, 153)))
+            value := calldataload(add(_data.offset, 173))
+        }
+        return _approveThenExecute(
+            _data[0:65],
+            _data[65:81],
+            _data[81:101], // erc20 bytes
+            _data[101:121],
+            _data[121:153],
+            to,
+            value,
+            _data[205:]
+        );
+    }
+
+    function _approveThenExecute(
+        bytes calldata _signature, // 65 bytes
+        bytes calldata _nonceBytes, // uint128
+        bytes calldata _erc20Bytes, // address (20 bytes)
+        bytes calldata _spenderBytes, // address
+        bytes calldata _approveAmountBytes, // uint256
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) internal returns (bool, bytes memory) {
+        bytes32 argsHash = keccak256(_arguments);
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            // erc20 address right-aligned in 32 bytes
+            calldatacopy(add(ptr, 0x4c), _erc20Bytes.offset, 20)
+            // Write spender (20 bytes right-aligned in 32 bytes)
+            calldatacopy(add(ptr, 0x54), _spenderBytes.offset, 20)
+            // Write approveAmount (32 bytes)
+            calldatacopy(add(ptr, 0x80), _approveAmountBytes.offset, 32)
+            mstore(add(ptr, 0xa0), _outputContract)
+            mstore(add(ptr, 0xc0), _ethAmount)
+            mstore(add(ptr, 0xe0), argsHash)
+            // total = 0x100 (256) bytes
+            hash := keccak256(ptr, 0x100)
+        }
+        hash = _hashTypedData(hash);
+
+        _requireSelf(hash, _signature);
+        _consumeNonce(_nonceBytes);
+        // Build calldata for approve(spender, amount) cheaply in assembly and call token
+        assembly {
+            let token := shr(96, calldataload(_erc20Bytes.offset))
+            let ptr := mload(0x40)
+            mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+            // Write spender (20 bytes) into the lower 20 bytes of the next 32-byte word
+            // Offset 4 + 12 = 16 (0x10)
+            calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
+            // Write amount (32 bytes) starting at offset 4 + 32 = 0x24
+            calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
+            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { revert(0, 0) }
+        }
+        (bool success, bytes memory result) =
+            _ethAmount == 0 ? _outputContract.call(_arguments) : _outputContract.call{value: _ethAmount}(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
+    }
+
+    function _executeNoValueNoReturn(
+        bytes calldata _signature,
+        bytes calldata _nonceBytes,
+        bytes calldata _outputContractBytes,
+        bytes calldata _arguments
+    ) internal {
+        bytes32 argsHash = keccak256(_arguments);
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, EXECUTION_TYPEHASH)
+            // Copy nonce bytes directly to memory
+            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            // Write the 20-byte address (right-aligned) from calldata
+            // Load 32 bytes from the start of the address slice, then shift
+            // to right-align the 20-byte address in a 32-byte word.
+            let raw := calldataload(_outputContractBytes.offset)
+            mstore(add(ptr, 0x40), shr(96, raw))
+            mstore(add(ptr, 0x60), 0) // ethAmount = 0
+            mstore(add(ptr, 0x80), argsHash)
+            hash := keccak256(ptr, 0xa0)
+            // Defer memory pointer update - will be updated at function end
+        }
+        hash = _hashTypedData(hash);
+
+        _requireSelf(hash, _signature);
+        _consumeNonce(_nonceBytes);
+        assembly {
+            let outputContract := shr(96, calldataload(_outputContractBytes.offset))
+            let ptr := mload(0x40)
+            calldatacopy(ptr, _arguments.offset, _arguments.length)
+            if iszero(call(gas(), outputContract, 0, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+        }
+    }
+
+    function _executeNoValue(
         bytes calldata _signature,
         bytes calldata _nonceBytes,
         address _outputContract,
@@ -456,7 +563,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
 
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
         _consumeNonce(_nonceBytes);
         (bool success, bytes memory result) = _outputContract.call(_arguments);
         if (success) {
@@ -487,7 +594,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
 
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
         _consumeNonce(_nonceBytes);
         (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
         if (success) {
@@ -507,7 +614,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
 
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
         _consumeNonce(_nonce);
     }
 
@@ -553,7 +660,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         hash = _hashTypedData(hash);
 
         _requireCounter(_counterBytes);
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
 
         (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
 
@@ -593,7 +700,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         hash = _hashTypedData(hash);
 
         _requireCounter(_counterBytes);
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
         // Execute the session transaction (counter does NOT increment for session)
         (bool success, bytes memory result) = _outputContract.call(_arguments);
         if (success) {
@@ -634,7 +741,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
         _requireCounter(_counterBytes);
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
 
         // Execute the session transaction
         uint256 length = _calls.length;
@@ -691,7 +798,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
         _requireCounter(_counterBytes);
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
         // Execute the session transaction
         (bool success, bytes memory result) = _outputContract.call(_arguments);
         if (success) {
@@ -728,7 +835,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
         _requireCounter(_counterBytes);
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
         // Execute the session transaction
         (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
         if (success) {
@@ -767,7 +874,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         hash = _hashTypedData(hash);
         _requireCounter(_counterBytes);
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
         // Execute the session transaction
         uint256 length = _calls.length;
         bytes[] memory results = new bytes[](length);
@@ -912,7 +1019,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(0x40, add(ptr, 0x60)) // Update free memory pointer
         }
         hash = _hashTypedData(hash);
-        _requireSelf(hash, _signature, address(this));
+        _requireSelf(hash, _signature);
         _consumeNonce(_nonceBytes);
 
         IBatchExecution.Call[] calldata calls;
