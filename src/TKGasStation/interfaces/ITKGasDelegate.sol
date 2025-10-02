@@ -9,7 +9,7 @@ interface ITKGasDelegate is IBatchExecution {
         uint128 sessionCounter;
         uint128 nonce;
     }
-    
+
     // Execute functions
     function execute(bytes calldata data) external returns (bool, bytes memory);
 

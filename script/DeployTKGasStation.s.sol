@@ -21,8 +21,7 @@ contract DeployTKGasStation is Script {
         //console2.log("Using existing TKGasDelegate at:", _delegate);
 
         // Deploy TKGasStation with mined salt for 2 null bytes
-        TKGasStation _station =
-            new TKGasStation{salt: keccak256("Gassy")}(address(_delegate));
+        TKGasStation _station = new TKGasStation{salt: keccak256("Gassy")}(address(_delegate));
         console2.log("TKGasStation deployed at:", address(_station));
 
         vm.stopBroadcast();

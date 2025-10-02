@@ -1147,12 +1147,11 @@ contract TKGasDelegateTest is Test {
         console.log("Decoded return (bool): %s", ret);
     }
 
-    function _constructExecuteBytesNoValue(
-        bytes memory _signature,
-        uint128 _nonce,
-        address _to,
-        bytes memory _args
-    ) internal pure returns (bytes memory) {
+    function _constructExecuteBytesNoValue(bytes memory _signature, uint128 _nonce, address _to, bytes memory _args)
+        internal
+        pure
+        returns (bytes memory)
+    {
         // 65-byte signature
         require(_signature.length == 65, "sig len");
         // 16-byte nonce (left-padded to 16 in the 32-byte slot when loaded)
@@ -1161,7 +1160,6 @@ contract TKGasDelegateTest is Test {
         bytes20 to20 = bytes20(_to);
         return abi.encodePacked(_signature, nonce16, to20, _args);
     }
-
 
     function _constructExecuteBytes(
         bytes memory _signature,
