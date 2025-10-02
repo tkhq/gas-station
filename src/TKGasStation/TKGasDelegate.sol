@@ -91,18 +91,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return result;
         } else if (functionSelector == bytes1(0x10)) {
             // executeWithValue no return
-            address outputContract;
+            bytes calldata outputContractBytes;
             uint256 ethAmount;
             bytes calldata arguments;
             assembly {
-                let data := calldataload(nonceEnd)
-                outputContract := shr(96, data)
+                outputContractBytes.offset := nonceEnd
+                outputContractBytes.length := 20
                 let loaded := calldataload(add(nonceEnd, 20))
                 ethAmount := shr(176, loaded)
                 arguments.offset := add(nonceEnd, 30)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 30))
             }
-            _executeWithValue(signature, nonceBytes, outputContract, ethAmount, arguments);
+            _executeWithValueNoReturn(signature, nonceBytes, outputContractBytes, ethAmount, arguments);
             assembly {
                 return(0x00, 0x00)
             }
@@ -123,7 +123,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return result;
         } else if (functionSelector == bytes1(0x20)) {
             // executeBatch no return
-            _executeBatch(signature, nonceBytes, msg.data[nonceEnd:]);
+            _executeBatchNoReturn(signature, nonceBytes, msg.data[nonceEnd:]);
             assembly {
                 return(0x00, 0x00)
             }
@@ -133,19 +133,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return abi.encode(result);
         } else if (functionSelector == bytes1(0x30)) {
             // executeSession no return
-            uint128 counter;
             bytes calldata deadlineBytes;
-            address outputContract;
+            bytes calldata outputContractBytes;
             bytes calldata arguments;
             assembly {
-                counter := shr(128, calldataload(nonceBytes.offset))
                 deadlineBytes.offset := add(nonceEnd, 5)
                 deadlineBytes.length := 4
-                outputContract := shr(96, calldataload(add(nonceEnd, 9)))
+                outputContractBytes.offset := add(nonceEnd, 9)
+                outputContractBytes.length := 20
                 arguments.offset := add(nonceEnd, 29)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 29))
             }
-            _executeSession(signature, nonceBytes, deadlineBytes, outputContract, arguments);
+            _executeSessionNoReturn(signature, nonceBytes, deadlineBytes, outputContractBytes, arguments);
             assembly {
                 return(0x00, 0x00)
             }
@@ -167,22 +166,23 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return result;
         } else if (functionSelector == bytes1(0x40)) {
             // executeSessionWithValue no return
-            uint128 counter;
             bytes calldata deadlineBytes;
-            address outputContract;
+            bytes calldata outputContractBytes;
             uint256 ethAmount;
             bytes calldata arguments;
             assembly {
-                counter := shr(128, calldataload(nonceBytes.offset))
                 deadlineBytes.offset := add(nonceEnd, 5)
                 deadlineBytes.length := 4
-                outputContract := shr(96, calldataload(add(nonceEnd, 9)))
+                outputContractBytes.offset := add(nonceEnd, 9)
+                outputContractBytes.length := 20
                 let loaded := calldataload(add(nonceEnd, 24))
                 ethAmount := shr(176, loaded)
                 arguments.offset := add(nonceEnd, 39)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 39))
             }
-            _executeSessionWithValue(signature, nonceBytes, deadlineBytes, outputContract, ethAmount, arguments);
+            _executeSessionWithValueNoReturn(
+                signature, nonceBytes, deadlineBytes, outputContractBytes, ethAmount, arguments
+            );
             assembly {
                 return(0x00, 0x00)
             }
@@ -208,20 +208,19 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return result;
         } else if (functionSelector == bytes1(0x50)) {
             // executeBatchSession no return
-            uint128 counter;
             bytes calldata deadlineBytes;
-            address outputContract;
+            bytes calldata outputContractBytes;
             IBatchExecution.Call[] calldata calls;
             assembly {
-                counter := shr(128, calldataload(nonceBytes.offset))
                 deadlineBytes.offset := add(nonceEnd, 5)
                 deadlineBytes.length := 4
-                outputContract := shr(96, calldataload(add(nonceEnd, 9)))
+                outputContractBytes.offset := add(nonceEnd, 9)
+                outputContractBytes.length := 20
                 let head := add(nonceEnd, 41)
                 calls.length := calldataload(head)
                 calls.offset := add(head, 0x20)
             }
-            _executeBatchSession(signature, nonceBytes, deadlineBytes, outputContract, calls);
+            _executeBatchSessionNoReturn(signature, nonceBytes, deadlineBytes, outputContractBytes, calls);
             assembly {
                 return(0x00, 0x00)
             }
@@ -245,19 +244,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return abi.encode(result);
         } else if (functionSelector == bytes1(0x60)) {
             // executeSessionArbitrary no return
-            uint128 counter;
             bytes calldata deadlineBytes;
-            address outputContract;
+            bytes calldata outputContractBytes;
             bytes calldata arguments;
             assembly {
-                counter := shr(128, calldataload(nonceBytes.offset))
                 deadlineBytes.offset := add(nonceEnd, 5)
                 deadlineBytes.length := 4
-                outputContract := shr(96, calldataload(add(nonceEnd, 9)))
+                outputContractBytes.offset := add(nonceEnd, 9)
+                outputContractBytes.length := 20
                 arguments.offset := add(nonceEnd, 29)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 29))
             }
-            _executeSessionArbitrary(signature, nonceBytes, deadlineBytes, outputContract, arguments);
+            _executeSessionArbitraryNoReturn(signature, nonceBytes, deadlineBytes, outputContractBytes, arguments);
             assembly {
                 return(0x00, 0x00)
             }
@@ -280,23 +278,22 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return result;
         } else if (functionSelector == bytes1(0x70)) {
             // executeSessionArbitraryWithValue no return
-            uint128 counter;
             bytes calldata deadlineBytes;
-            address outputContract;
+            bytes calldata outputContractBytes;
             uint256 ethAmount;
             bytes calldata arguments;
             assembly {
-                counter := shr(128, calldataload(nonceBytes.offset))
                 deadlineBytes.offset := add(nonceEnd, 5)
                 deadlineBytes.length := 4
-                outputContract := shr(96, calldataload(add(nonceEnd, 9)))
+                outputContractBytes.offset := add(nonceEnd, 9)
+                outputContractBytes.length := 20
                 let loaded := calldataload(add(nonceEnd, 24))
                 ethAmount := shr(176, loaded)
                 arguments.offset := add(nonceEnd, 39)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 39))
             }
-            _executeSessionArbitraryWithValue(
-                signature, nonceBytes, deadlineBytes, outputContract, ethAmount, arguments
+            _executeSessionArbitraryWithValueNoReturn(
+                signature, nonceBytes, deadlineBytes, outputContractBytes, ethAmount, arguments
             );
             assembly {
                 return(0x00, 0x00)
@@ -324,18 +321,16 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return result;
         } else if (functionSelector == bytes1(0x80)) {
             // executeBatchSessionArbitrary no return
-            uint128 counter;
             bytes calldata deadlineBytes;
             IBatchExecution.Call[] calldata calls;
             assembly {
-                counter := shr(128, calldataload(nonceBytes.offset))
                 deadlineBytes.offset := add(nonceEnd, 5)
                 deadlineBytes.length := 4
                 let head := add(nonceEnd, 9)
                 calls.length := calldataload(head)
                 calls.offset := add(head, 0x20)
             }
-            _executeBatchSessionArbitrary(signature, nonceBytes, deadlineBytes, calls);
+            _executeBatchSessionArbitraryNoReturn(signature, nonceBytes, deadlineBytes, calls);
             assembly {
                 return(0x00, 0x00)
             }
@@ -603,6 +598,39 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         revert ExecutionFailed();
     }
 
+    function _executeWithValueNoReturn(
+        bytes calldata _signature,
+        bytes calldata _nonceBytes,
+        bytes calldata _outputContractBytes,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) internal {
+        bytes32 argsHash = keccak256(_arguments);
+        bytes32 hash; // all this assembly to avoid using abi.encode
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, EXECUTION_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            let raw := calldataload(_outputContractBytes.offset)
+            mstore(add(ptr, 0x40), shr(96, raw))
+            mstore(add(ptr, 0x60), _ethAmount)
+            mstore(add(ptr, 0x80), argsHash)
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+
+        _requireSelf(hash, _signature);
+        _consumeNonce(_nonceBytes);
+        assembly {
+            let outputContract := shr(96, calldataload(_outputContractBytes.offset))
+            let ptr := mload(0x40)
+            calldatacopy(ptr, _arguments.offset, _arguments.length)
+            if iszero(call(gas(), outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) {
+                revert(0, 0)
+            }
+        }
+    }
+
     function burnNonce(bytes calldata _signature, uint128 _nonce) external {
         bytes32 hash;
         assembly {
@@ -670,6 +698,43 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         revert ExecutionFailed();
     }
 
+    function _executeSessionWithValueNoReturn(
+        bytes calldata _signature,
+        bytes calldata _counterBytes,
+        bytes calldata _deadlineBytes,
+        bytes calldata _outputContractBytes,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) internal {
+        assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) { revert(0, 0) }
+        }
+
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, SESSION_EXECUTION_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x60), sender)
+            let raw := calldataload(_outputContractBytes.offset)
+            mstore(add(ptr, 0x80), shr(96, raw))
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+
+        _requireCounter(_counterBytes);
+        _requireSelf(hash, _signature);
+        assembly {
+            let outputContract := shr(96, calldataload(_outputContractBytes.offset))
+            let ptr := mload(0x40)
+            calldatacopy(ptr, _arguments.offset, _arguments.length)
+            if iszero(call(gas(), outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+        }
+    }
+
     function _executeSession(
         bytes calldata _signature,
         bytes calldata _counterBytes,
@@ -707,6 +772,42 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return (success, result);
         }
         revert ExecutionFailed();
+    }
+
+    function _executeSessionNoReturn(
+        bytes calldata _signature,
+        bytes calldata _counterBytes,
+        bytes calldata _deadlineBytes,
+        bytes calldata _outputContractBytes,
+        bytes calldata _arguments
+    ) internal {
+        assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) { revert(0, 0) }
+        }
+
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, SESSION_EXECUTION_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x60), sender)
+            let raw := calldataload(_outputContractBytes.offset)
+            mstore(add(ptr, 0x80), shr(96, raw))
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+
+        _requireCounter(_counterBytes);
+        _requireSelf(hash, _signature);
+        assembly {
+            let outputContract := shr(96, calldataload(_outputContractBytes.offset))
+            let ptr := mload(0x40)
+            calldatacopy(ptr, _arguments.offset, _arguments.length)
+            if iszero(call(gas(), outputContract, 0, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+        }
     }
 
     function _executeBatchSession(
@@ -771,6 +872,58 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return (true, results);
     }
 
+    function _executeBatchSessionNoReturn(
+        bytes calldata _signature,
+        bytes calldata _counterBytes,
+        bytes calldata _deadlineBytes,
+        bytes calldata _outputContractBytes,
+        IBatchExecution.Call[] calldata _calls
+    ) internal {
+        assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) { revert(0, 0) }
+        }
+        if (_calls.length > MAX_BATCH_SIZE) {
+            revert BatchSizeExceeded();
+        }
+
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, SESSION_EXECUTION_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x60), sender)
+            let raw := calldataload(_outputContractBytes.offset)
+            mstore(add(ptr, 0x80), shr(96, raw))
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+        _requireCounter(_counterBytes);
+        _requireSelf(hash, _signature);
+
+        address _out = address(uint160(uint256(bytes32(msg.data)))); // placeholder to avoid warnings
+        _out; // silence
+        uint256 length = _calls.length;
+        for (uint256 i = 0; i < length;) {
+            IBatchExecution.Call calldata execution = _calls[i];
+            uint256 ethAmount = execution.value;
+            address outputContract = execution.to;
+            bytes calldata _callData = execution.data;
+            assembly {
+                let ptr := mload(0x40)
+                calldatacopy(ptr, _callData.offset, _callData.length)
+                if iszero(call(gas(), outputContract, ethAmount, ptr, _callData.length, 0, 0)) {
+                    revert(0, 0)
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
     function _executeSessionArbitrary(
         bytes calldata _signature,
         bytes calldata _counterBytes,
@@ -805,6 +958,39 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return (success, result);
         }
         revert ExecutionFailed();
+    }
+
+    function _executeSessionArbitraryNoReturn(
+        bytes calldata _signature,
+        bytes calldata _counterBytes,
+        bytes calldata _deadlineBytes,
+        bytes calldata _outputContractBytes,
+        bytes calldata _arguments
+    ) internal {
+        assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) { revert(0, 0) }
+        }
+
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x60), sender)
+            hash := keccak256(ptr, 0x80)
+        }
+        hash = _hashTypedData(hash);
+        _requireCounter(_counterBytes);
+        _requireSelf(hash, _signature);
+        assembly {
+            let outputContract := shr(96, calldataload(_outputContractBytes.offset))
+            let ptr := mload(0x40)
+            calldatacopy(ptr, _arguments.offset, _arguments.length)
+            if iszero(call(gas(), outputContract, 0, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+        }
     }
 
     function _executeSessionArbitraryWithValue(
@@ -842,6 +1028,40 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             return (success, result);
         }
         revert ExecutionFailed();
+    }
+
+    function _executeSessionArbitraryWithValueNoReturn(
+        bytes calldata _signature,
+        bytes calldata _counterBytes,
+        bytes calldata _deadlineBytes,
+        bytes calldata _outputContractBytes,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) internal {
+        assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) { revert(0, 0) }
+        }
+
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x60), sender)
+            hash := keccak256(ptr, 0x80)
+        }
+        hash = _hashTypedData(hash);
+        _requireCounter(_counterBytes);
+        _requireSelf(hash, _signature);
+        assembly {
+            let outputContract := shr(96, calldataload(_outputContractBytes.offset))
+            let ptr := mload(0x40)
+            calldatacopy(ptr, _arguments.offset, _arguments.length)
+            if iszero(call(gas(), outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+        }
     }
 
     function _executeBatchSessionArbitrary(
@@ -899,6 +1119,49 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
 
         return (true, results);
+    }
+
+    function _executeBatchSessionArbitraryNoReturn(
+        bytes calldata _signature,
+        bytes calldata _counterBytes,
+        bytes calldata _deadlineBytes,
+        IBatchExecution.Call[] calldata _calls
+    ) internal {
+        assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) { revert(0, 0) }
+        }
+        if (_calls.length > MAX_BATCH_SIZE) revert BatchSizeExceeded();
+
+        address sender = msg.sender;
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x60), sender)
+            hash := keccak256(ptr, 0x80)
+        }
+        hash = _hashTypedData(hash);
+        _requireCounter(_counterBytes);
+        _requireSelf(hash, _signature);
+
+        uint256 length = _calls.length;
+        for (uint256 i = 0; i < length;) {
+            IBatchExecution.Call calldata execution = _calls[i];
+            uint256 ethAmount = execution.value;
+            address outputContract = execution.to;
+            bytes calldata _callData = execution.data;
+            assembly {
+                let ptr := mload(0x40)
+                calldatacopy(ptr, _callData.offset, _callData.length)
+                if iszero(call(gas(), outputContract, ethAmount, ptr, _callData.length, 0, 0)) {
+                    revert(0, 0)
+                }
+            }
+            unchecked { ++i; }
+        }
     }
 
     function burnSessionCounter(bytes calldata _signature, uint128 _counter, address _sender) external {
@@ -1049,6 +1312,49 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             }
         }
         return (true, results);
+    }
+
+    function _executeBatchNoReturn(
+        bytes calldata _signature,
+        bytes calldata _nonceBytes,
+        bytes calldata _calls
+    ) internal {
+        bytes32 executionsHash = keccak256(_calls);
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
+            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            mstore(add(ptr, 0x40), executionsHash)
+            hash := keccak256(ptr, 0x60)
+            mstore(0x40, add(ptr, 0x60))
+        }
+        hash = _hashTypedData(hash);
+        _requireSelf(hash, _signature);
+        _consumeNonce(_nonceBytes);
+
+        IBatchExecution.Call[] calldata calls;
+        uint256 length;
+        assembly {
+            calls.offset := add(_calls.offset, 0x40)
+            calls.length := calldataload(add(_calls.offset, 0x20))
+            length := calls.length
+        }
+        if (length > MAX_BATCH_SIZE) revert BatchSizeExceeded();
+        for (uint256 i = 0; i < length;) {
+            IBatchExecution.Call calldata execution = calls[i];
+            uint256 ethAmount = execution.value;
+            address outputContract = execution.to;
+            bytes calldata _callData2 = execution.data;
+            assembly {
+                let ptr := mload(0x40)
+                calldatacopy(ptr, _callData2.offset, _callData2.length)
+                if iszero(call(gas(), outputContract, ethAmount, ptr, _callData2.length, 0, 0)) {
+                    revert(0, 0)
+                }
+            }
+            unchecked { ++i; }
+        }
     }
 
     /**
