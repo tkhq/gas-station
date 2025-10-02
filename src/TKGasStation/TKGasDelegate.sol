@@ -127,7 +127,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             bytes calldata spenderBytes;
             bytes calldata approveAmountBytes;
             bytes calldata outputContractBytes;
-            uint256 ethAmount;
+            bytes calldata ethAmountBytes;
             bytes calldata arguments;
             assembly {
                 erc20Bytes.offset := nonceEnd
@@ -138,8 +138,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 approveAmountBytes.length := 32
                 outputContractBytes.offset := add(nonceEnd, 72)
                 outputContractBytes.length := 20
-                let loaded := calldataload(add(nonceEnd, 92))
-                ethAmount := shr(176, loaded)
+                ethAmountBytes.offset := add(nonceEnd, 92)
+                ethAmountBytes.length := 10
                 arguments.offset := add(nonceEnd, 102)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 102))
             }
@@ -151,7 +151,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 spenderBytes,
                 approveAmountBytes,
                 outputContractBytes,
-                ethAmount,
+                ethAmountBytes,
                 arguments
             );
             assembly {
@@ -640,22 +640,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _outputContractBytes,
         bytes calldata _arguments
     ) internal {
-        bytes32 argsHash = keccak256(_arguments);
         bytes32 hash;
         assembly {
-            let ptr := mload(0x40) // Get free memory pointer
+            let ptr := mload(0x40)
             mstore(ptr, EXECUTION_TYPEHASH)
-            // Copy nonce bytes directly to memory
             calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
-            // Write the 20-byte address (right-aligned) from calldata
-            // Load 32 bytes from the start of the address slice, then shift
-            // to right-align the 20-byte address in a 32-byte word.
             let raw := calldataload(_outputContractBytes.offset)
             mstore(add(ptr, 0x40), shr(96, raw))
-            mstore(add(ptr, 0x60), 0) // ethAmount = 0
+            mstore(add(ptr, 0x60), 0)
+            // Compute argsHash in assembly to avoid a separate solidity temp
+            let argsPtr := add(ptr, 0x80)
+            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
+            let argsHash := keccak256(argsPtr, _arguments.length)
             mstore(add(ptr, 0x80), argsHash)
             hash := keccak256(ptr, 0xa0)
-            // Defer memory pointer update - will be updated at function end
         }
         hash = _hashTypedData(hash);
 
