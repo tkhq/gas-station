@@ -1284,14 +1284,11 @@ contract TKGasDelegateTest is Test {
             nonceBytes = abi.encodePacked(nonceBytes, padding);
         }
 
-        // Construct the second byte: function selector (0x00) + nonce length (15 for 16 bytes)
-        bytes1 secondByte = bytes1(uint8(0x00) | 15);
-
         // Construct calldata:
-        // [0x01][secondByte][signature][nonce][outputContract][arguments]
+        // [0x00][0x00][signature][nonce][outputContract][arguments]
         bytes memory fallbackCalldata = abi.encodePacked(
-            bytes1(0x01), // Prefix (return bytes flag)
-            secondByte, // Function selector + nonce length
+            bytes1(0x00), // First byte (unused)
+            bytes1(0x00), // execute no return
             _signature, // 65 bytes signature
             nonceBytes, // Nonce data
             _outputContract, // 20 bytes output contract
@@ -1409,19 +1406,16 @@ contract TKGasDelegateTest is Test {
             nonceBytes = abi.encodePacked(nonceBytes, padding);
         }
 
-        // Construct the second byte: function selector (0x10 for executeWithValue) + nonce length (15 for 16 bytes)
-        bytes1 secondByte = bytes1(uint8(0x10) | 15); // 0x10 = executeWithValue
-
         // Convert ETH amount to exactly 10 bytes
         // Use uint80 which fits in 10 bytes (2^80 - 1 is much larger than any reasonable ETH amount)
         uint80 ethAmount80 = uint80(_ethAmount);
         bytes memory ethBytes = abi.encodePacked(ethAmount80);
 
         // Construct calldata:
-        // [0x01][secondByte][signature][nonce][outputContract][ethAmount][arguments]
+        // [0x00][0x10][signature][nonce][outputContract][ethAmount][arguments]
         bytes memory fallbackCalldata = abi.encodePacked(
-            bytes1(0x01), // Prefix (return bytes flag)
-            secondByte, // Function selector + nonce length
+            bytes1(0x00), // First byte (unused)
+            bytes1(0x10), // executeWithValue no return
             _signature, // 65 bytes signature
             nonceBytes, // Nonce data
             _outputContract, // 20 bytes output contract
