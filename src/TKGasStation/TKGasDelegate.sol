@@ -63,7 +63,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes1 functionSelector = bytes1(msg.data[1]);
 
         bytes calldata signature = msg.data[2:67];
-        bytes calldata nonceBytes = msg.data[67:83]; // Always 16 bytes
+        bytes calldata nonceBytes = msg.data[67:83]; // Always 16 bytes - can also be the counter
         uint256 nonceEnd = 83; // Fixed offset after 16-byte nonce
 
         // NO RETURN PATHS (0xX0) - Checked first
@@ -335,6 +335,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         version = "1";
     }
 
+    function execute(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
+        return _ethAmount == 0 
+            ? _executeNoValue(_data[0:65], _data[65:81], _to, _data[81:])
+            : _executeWithValue(_data[0:65], _data[65:81], _to, _ethAmount, _data[81:]);
+    }
+    
     function execute(bytes calldata data) external returns (bool, bytes memory) {
         address to;
         uint256 value;
@@ -1160,13 +1166,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
     function executeBatch(bytes calldata data) external returns (bool, bytes[] memory) {
         // Layout: [signature(65)][nonce(16)][abi.encode(IBatchExecution.Call[])]
-        bytes calldata signature = data[0:65];
-        uint128 thisNonce;
-        assembly {
-            thisNonce := shr(128, calldataload(add(data.offset, 65)))
-        }
-        // Forward the raw encoded calls slice to preserve exact preimage
-        return _executeBatch(signature, data[65:81], data[81:]);
+        return _executeBatch(data[0:65], data[65:81], data[81:]);
     }
 
     function _executeBatch(bytes calldata _signature, bytes calldata _nonceBytes, bytes calldata _calls)

@@ -6,6 +6,7 @@ import {ITKGasDelegate} from "./interfaces/ITKGasDelegate.sol";
 contract TKGasStation {
     error NotDelegated();
     error NoEthAllowed();
+    error InvalidFunctionSelector();
 
     address public immutable tkGasDelegate;
 
@@ -16,6 +17,26 @@ contract TKGasStation {
     receive() external payable {
         revert NoEthAllowed();
     }
+/*
+    fallback(bytes calldata data) external returns (bytes memory) {
+        address target;
+        assembly {
+            target := shr(96, calldataload(add(data.offset, 1)))
+            value := calldataload(add(data.offset, 1))
+        }
+        if (!_isDelegated(target)) {
+            revert NotDelegated();
+        }
+
+        bytes1 functionSelector = bytes1(data[22] & 0xf0);
+
+        if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20 || functionSelector == 0x30) { 
+            return target.call(data[21:]);
+        }
+
+        revert InvalidFunctionSelector();
+    }
+    */ 
 
     function _isDelegated(address _targetEoA) internal view returns (bool) {
         uint256 size;
@@ -50,6 +71,13 @@ contract TKGasStation {
             revert NotDelegated();
         }
         return ITKGasDelegate(payable(_targetEoA)).execute(_data);
+    }
+
+    function execute(address _targetEoA, address _to, uint256 ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(payable(_targetEoA)).execute(_to, ethAmount, _data);
     }
 
     function executeNoValue(address _targetEoA, bytes calldata _data) external returns (bool, bytes memory) {

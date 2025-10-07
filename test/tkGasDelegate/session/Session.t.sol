@@ -121,6 +121,22 @@ contract SessionTest is TKGasDelegateBase {
         vm.stopPrank();
     }
 
+    function testSessionExecute_SignedByOtherUser_RevertsNotSelf() public {
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        // Sign with USER_PRIVATE_KEY_2 instead of the user's key
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY_2, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory args = bytes("");
+        bytes memory data = _constructSessionExecuteBytes(signature, counter, deadline, address(mockToken), 0, args);
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeSession(data);
+        vm.stopPrank();
+    }
+
     function testSessionExecuteFallbackNoReturn() public {
         mockToken.mint(user, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
