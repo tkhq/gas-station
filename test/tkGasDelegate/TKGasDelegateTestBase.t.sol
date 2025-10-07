@@ -3,11 +3,12 @@ pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
 import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
+import {MockDelegate} from "../mocks/MockDelegate.t.sol";
 import {IBatchExecution} from "../../src/TKGasStation/interfaces/IBatchExecution.sol";
-import "../../test/mocks/MockERC20.sol";
+import "../../test/mocks/MockERC20.t.sol";
 
 contract TKGasDelegateTestBase is Test {
-    TKGasDelegate public tkGasDelegate;
+    MockDelegate public tkGasDelegate;
     MockERC20 public mockToken;
 
     address public paymaster = makeAddr("paymaster");
@@ -15,9 +16,9 @@ contract TKGasDelegateTestBase is Test {
     uint256 public constant USER_PRIVATE_KEY = 0xAAAAAA;
     address payable public user;
 
-    function setUp() public {
-        // Deploy TKGasDelegate
-        tkGasDelegate = new TKGasDelegate();
+    function setUp() public virtual {
+        // Deploy MockDelegate
+        tkGasDelegate = new MockDelegate();
         user = payable(vm.addr(USER_PRIVATE_KEY)); // 0x3545A2F3928d5b21E71a790FB458F4AE03306C55
 
         // Deploy Mock ERC20
@@ -25,7 +26,7 @@ contract TKGasDelegateTestBase is Test {
 
         vm.deal(paymaster, 10 ether);
 
-        // Delegate TKGasDelegate for the user
+        // Delegate MockDelegate for the user
         _delegate(USER_PRIVATE_KEY);
     }
 
@@ -48,7 +49,7 @@ contract TKGasDelegateTestBase is Test {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, TKGasDelegate(_publicKey).hashExecution(_nonce, _outputContract, _ethAmount, _arguments)
+            _privateKey, MockDelegate(_publicKey).hashExecution(_nonce, _outputContract, _ethAmount, _arguments)
         );
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
@@ -61,7 +62,7 @@ contract TKGasDelegateTestBase is Test {
     {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBurnNonce(_nonce));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, MockDelegate(_publicKey).hashBurnNonce(_nonce));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
@@ -74,7 +75,7 @@ contract TKGasDelegateTestBase is Test {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBurnSessionCounter(_counter, _sender));
+            vm.sign(_privateKey, MockDelegate(_publicKey).hashBurnSessionCounter(_counter, _sender));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
@@ -180,7 +181,7 @@ contract TKGasDelegateTestBase is Test {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, TKGasDelegate(_publicKey).hashSessionExecution(_counter, uint128(_deadline), signer, _outputContract)
+            _privateKey, MockDelegate(_publicKey).hashSessionExecution(_counter, uint128(_deadline), signer, _outputContract)
         );
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
@@ -212,9 +213,69 @@ contract TKGasDelegateTestBase is Test {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBatchExecution(_nonce, _calls));
+            vm.sign(_privateKey, MockDelegate(_publicKey).hashBatchExecution(_nonce, _calls));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
+    }
+
+    function _signApproveThenExecute(
+        uint256 _privateKey,
+        address payable _publicKey,
+        uint128 _nonce,
+        address _erc20Contract,
+        address _spender,
+        uint256 _approveAmount,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes memory _arguments
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey, 
+            MockDelegate(_publicKey).hashApproveThenExecute(
+                _nonce,
+                _erc20Contract,
+                _spender,
+                _approveAmount,
+                _outputContract,
+                _ethAmount,
+                _arguments
+            )
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function _constructApproveThenExecuteBytes(
+        bytes memory _signature,
+        uint128 _nonce,
+        address _erc20Contract,
+        address _spender,
+        uint256 _approveAmount,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes memory _arguments
+    ) internal pure returns (bytes memory) {
+        require(_signature.length == 65, "sig len");
+        bytes16 nonce16 = bytes16(uint128(_nonce));
+        bytes20 erc20Bytes = bytes20(_erc20Contract);
+        bytes20 spenderBytes = bytes20(_spender);
+        bytes32 approveAmountBytes = bytes32(_approveAmount);
+        bytes20 outputBytes = bytes20(_outputContract);
+        bytes32 ethAmountBytes = bytes32(_ethAmount);
+        
+        return abi.encodePacked(
+            _signature,
+            nonce16,
+            erc20Bytes,
+            spenderBytes,
+            approveAmountBytes,
+            outputBytes,
+            ethAmountBytes,
+            _arguments
+        );
     }
 }

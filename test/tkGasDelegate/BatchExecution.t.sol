@@ -3,10 +3,10 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
-import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
+import {MockDelegate} from "../mocks/MockDelegate.t.sol";
 import {IBatchExecution} from "../../src/TKGasStation/interfaces/IBatchExecution.sol";
-import {MockERC20} from "../mocks/MockERC20.sol";
-import {TKGasDelegateTestBase} from "./TKGasDelegateTestBase.sol";
+import {MockERC20} from "../mocks/MockERC20.t.sol";
+import {TKGasDelegateTestBase} from "./TKGasDelegateTestBase.t.sol";
 
 contract BatchExecutionTest is TKGasDelegateTestBase {
     function testExecuteBatchBytesGas() public {
@@ -14,7 +14,7 @@ contract BatchExecutionTest is TKGasDelegateTestBase {
         address receiver1 = makeAddr("receiver1_bytes_batch");
         address receiver2 = makeAddr("receiver2_bytes_batch");
 
-        (, uint128 nonce) = TKGasDelegate(user).state();
+        (, uint128 nonce) = MockDelegate(user).state();
 
         IBatchExecution.Call[] memory executions = new IBatchExecution.Call[](2);
         executions[0] = IBatchExecution.Call({
@@ -38,7 +38,7 @@ contract BatchExecutionTest is TKGasDelegateTestBase {
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, results) = TKGasDelegate(user).executeBatch(executeData);
+        (success, results) = MockDelegate(user).executeBatch(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -47,7 +47,7 @@ contract BatchExecutionTest is TKGasDelegateTestBase {
         assertEq(mockToken.balanceOf(receiver1), 10 * 10 ** 18);
         assertEq(mockToken.balanceOf(receiver2), 15 * 10 ** 18);
         assertEq(mockToken.balanceOf(user), 25 * 10 ** 18);
-        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        (, uint128 currentNonce) = MockDelegate(user).state();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== executeBatch(bytes) Gas ===");

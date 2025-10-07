@@ -451,7 +451,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             nonceValue := shr(128, calldataload(_nonceBytes.offset))
         }
-        if (nonceValue != currentNonce) {
+        if (nonceValue != currentNonce ) {
             revert InvalidNonce();
         }
         unchecked {
@@ -550,9 +550,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             let nonceValue := shr(128, calldataload(_nonceBytes.offset))
             mstore(add(ptr, 0x20), nonceValue)
             // erc20 address right-aligned in 32 bytes
-            calldatacopy(add(ptr, 0x4c), _erc20Bytes.offset, 20)
+            let erc20Raw := calldataload(_erc20Bytes.offset)
+            mstore(add(ptr, 0x40), shr(96, erc20Raw))
             // Write spender (20 bytes right-aligned in 32 bytes)
-            calldatacopy(add(ptr, 0x54), _spenderBytes.offset, 20)
+            let spenderRaw := calldataload(_spenderBytes.offset)
+            mstore(add(ptr, 0x60), shr(96, spenderRaw))
             // Write approveAmount (32 bytes)
             calldatacopy(add(ptr, 0x80), _approveAmountBytes.offset, 32)
             mstore(add(ptr, 0xa0), _outputContract)
@@ -578,7 +580,23 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
             // Write amount (32 bytes) starting at offset 4 + 32 = 0x24
             calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
-            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { revert(0, 0) }
+            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { 
+                // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
+                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                mstore(add(ptr, 0x10), _spenderBytes.offset)
+                mstore(add(ptr, 0x24), 0) // essentially write nothing to the next word in the register so it's 0 
+                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { 
+                    let errorPtr := mload(0x40)
+                    mstore(errorPtr, "ApprovalTo0Failed")
+                    revert(errorPtr, 14)
+                }
+                mstore(add(ptr, 0x24), _approveAmountBytes.offset) // then write something
+                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { 
+                    let errorPtr := mload(0x40)
+                    mstore(errorPtr, "ApprovalFailed")
+                    revert(errorPtr, 13)
+                }
+            } // set the approval 
         }
         (bool success, bytes memory result) =
             _ethAmount == 0 ? _outputContract.call(_arguments) : _outputContract.call{value: _ethAmount}(_arguments);
@@ -1585,6 +1603,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
+            // Store nonce as 32-byte value (same as internal function)
             mstore(add(ptr, 0x20), _nonce)
             mstore(add(ptr, 0x40), _erc20Contract)
             mstore(add(ptr, 0x60), _spender)

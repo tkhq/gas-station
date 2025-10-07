@@ -2,15 +2,15 @@
 pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
-import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
-import {TKGasDelegateTestBase as TKGasDelegateBase} from "./TKGasDelegateTestBase.sol";
+import {MockDelegate} from "../mocks/MockDelegate.t.sol";
+import {TKGasDelegateTestBase as TKGasDelegateBase} from "./TKGasDelegateTestBase.t.sol";
 
 contract FallbackExecutionTest is TKGasDelegateBase {
     function testFallbackExecuteSendERC20() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (, uint128 nonce) = TKGasDelegate(user).state();
+        (, uint128 nonce) = MockDelegate(user).state();
         bytes memory signature = _signExecute(
             USER_PRIVATE_KEY,
             user,
@@ -48,7 +48,7 @@ contract FallbackExecutionTest is TKGasDelegateBase {
         uint256 receiverBalance = mockToken.balanceOf(receiver);
         assertEq(receiverBalance, 10 * 10 ** 18);
         assertEq(success, true);
-        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        (, uint128 currentNonce) = MockDelegate(user).state();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Fallback Function ERC20 Transfer Analysis ===");

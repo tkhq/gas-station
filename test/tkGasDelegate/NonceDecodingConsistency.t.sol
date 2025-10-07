@@ -3,15 +3,16 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
-import {MockERC20} from "../mocks/MockERC20.sol";
-import {TKGasDelegateTestBase} from "./TKGasDelegateTestBase.sol";
+import {MockDelegate} from "../mocks/MockDelegate.t.sol";
+import {MockERC20} from "../mocks/MockERC20.t.sol";
+import {TKGasDelegateTestBase} from "./TKGasDelegateTestBase.t.sol";
 
 contract NonceDecodingConsistencyTest is TKGasDelegateTestBase {
     function testNonceDecodingConsistency() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
         
-        (, uint128 nonce) = TKGasDelegate(user).state();
+        (, uint128 nonce) = MockDelegate(user).state();
         
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
         
@@ -22,7 +23,7 @@ contract NonceDecodingConsistencyTest is TKGasDelegateTestBase {
         bool success;
         bytes memory result;
         vm.prank(paymaster);
-        (success, result) = TKGasDelegate(user).execute(executeData);
+        (success, result) = MockDelegate(user).execute(executeData);
         
         assertTrue(success, "Execute should succeed with consistent nonce decoding");
         
@@ -33,7 +34,7 @@ contract NonceDecodingConsistencyTest is TKGasDelegateTestBase {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
         
-        (, uint128 nonce) = TKGasDelegate(user).state();
+        (, uint128 nonce) = MockDelegate(user).state();
         
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
         
@@ -46,7 +47,7 @@ contract NonceDecodingConsistencyTest is TKGasDelegateTestBase {
         
         vm.prank(paymaster);
         vm.expectRevert(abi.encodeWithSelector(TKGasDelegate.NotSelf.selector));
-        TKGasDelegate(user).execute(executeData);
+        MockDelegate(user).execute(executeData);
         
         assertEq(mockToken.balanceOf(receiver), 0);
     }

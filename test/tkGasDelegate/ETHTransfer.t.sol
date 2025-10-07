@@ -1,6 +1,9 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.30;
+
 import "forge-std/Test.sol";
-import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
-import {TKGasDelegateTestBase as TKGasDelegateBase} from "./TKGasDelegateTestBase.sol";
+import {MockDelegate} from "../mocks/MockDelegate.t.sol";
+import {TKGasDelegateTestBase as TKGasDelegateBase} from "./TKGasDelegateTestBase.t.sol";
 
 contract ETHTransferTest is TKGasDelegateBase {
     function testExecuteBytesETHGas() public {
@@ -10,7 +13,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         vm.deal(user, 2 ether);
         assertEq(receiver.balance, 0);
 
-        (, uint128 nonce) = TKGasDelegate(user).state();
+        (, uint128 nonce) = MockDelegate(user).state();
         bytes memory args = "";
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, receiver, ethAmount, args);
 
@@ -20,14 +23,14 @@ contract ETHTransferTest is TKGasDelegateBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = TKGasDelegate(user).execute(executeData);
+        (success, result) = MockDelegate(user).execute(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
         assertEq(success, true);
         assertEq(result.length, 0);
         assertEq(receiver.balance, ethAmount);
-        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        (, uint128 currentNonce) = MockDelegate(user).state();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== execute(bytes) ETH Transfer Gas ===");
@@ -41,7 +44,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         vm.deal(user, 2 ether);
         assertEq(address(receiver).balance, 0 ether);
 
-        (, uint128 nonce) = TKGasDelegate(user).state();
+        (, uint128 nonce) = MockDelegate(user).state();
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, receiver, ethAmount, "");
 
         console.log("=== ETH Transfer Test ===");
@@ -67,7 +70,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         uint256 receiverBalance = receiver.balance;
         assertEq(receiverBalance, ethAmount);
         assertEq(success, true);
-        (, uint128 currentNonce) = TKGasDelegate(user).state();
+        (, uint128 currentNonce) = MockDelegate(user).state();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Fallback Function ETH Transfer Analysis ===");

@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {TKGasStation} from "../src/TKGasStation/TKGasStation.sol";
 import {TKGasDelegate} from "../src/TKGasStation/TKGasDelegate.sol";
 import {ITKGasDelegate} from "../src/TKGasStation/interfaces/ITKGasDelegate.sol";
-import "../test/mocks/MockERC20.sol";
+import "../test/mocks/MockERC20.t.sol";
 
 contract TKGasStationTest is Test {
     TKGasStation public tkGasStation;
@@ -32,12 +32,12 @@ contract TKGasStationTest is Test {
         vm.deal(user, 5 ether);
 
         // Delegate TKGasDelegate for the user
-        _delegateGasStation(USER_PRIVATE_KEY);
+        _delegate(USER_PRIVATE_KEY, address(tkGasDelegate));
     }
 
-    function _delegateGasStation(uint256 _userPrivateKey) internal {
+    function _delegate(uint256 _userPrivateKey, address _delegateTo) internal {
         Vm.SignedDelegation memory signedDelegation =
-            vm.signDelegation(payable(address(tkGasDelegate)), _userPrivateKey);
+            vm.signDelegation(payable(address(_delegateTo)), _userPrivateKey);
 
         vm.prank(paymaster);
         vm.attachDelegation(signedDelegation);
@@ -177,5 +177,41 @@ contract TKGasStationTest is Test {
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18)
         );
         tkGasStation.executeNoValue(newUser, data);
+    }
+
+    function testNotDelegatedToRightContractRevertAll() public {
+        TKGasDelegate badDelegate = new TKGasDelegate();
+        _delegate(USER_PRIVATE_KEY, address(badDelegate));
+
+        bytes memory data = hex"0000012322222222222222222222222222222222222222222222222222222222";
+        vm.prank(paymaster);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeNoValue(user, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.execute(user, data);       
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.approveThenExecute(user, data);   
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeBatch(user, data);     
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.burnNonce(user, data, 0);     
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.getNonce(user);     
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.getNonce(user);     
+        
+        bool isDelegated = tkGasStation.isDelegated(user);     
+        assertFalse(isDelegated);
+
+        bytes memory fallbackData = abi.encodePacked(hex"00", user, hex"00", data);
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        address(tkGasStation).call(fallbackData);
     }
 }

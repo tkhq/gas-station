@@ -82,6 +82,13 @@ contract TKGasStation {
         return ITKGasDelegate(payable(_targetEoA)).executeNoValue(_data);
     }
 
+    function approveThenExecute(address _targetEoA, bytes calldata _data) external returns (bool, bytes memory) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(payable(_targetEoA)).approveThenExecute(_data);
+    }
+
     function executeBatch(address _targetEoA, bytes calldata _data) external returns (bool, bytes[] memory) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
