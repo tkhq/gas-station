@@ -38,3 +38,27 @@ TKGasStationV2: 0xBbb7F4d7758aD153f4C37F1c89948A656736643B
 * The Gas station cannot use session based auth. This is because authorizing the gas station to send arbitrary messages would enable anyone to send arbitrary messages through the gas station
 * The delegate does not implement EIP-7821[https://eips.ethereum.org/EIPS/eip-7821] as described since the execute function is _payable_. As a security measure to not drain the paymaster, no execute functions by design are allowed to be payable
 
+
+## Packing data for calling the fallback function
+
+The fall back function can call the execute and session execution functions. It does not call the burn functions 
+
+To use it:
+The first byte should be a null byte 0x00
+The second byte is a combination of the first nibble that acts as the function selector and the second nibble that acts as a boolean that says whether or not to return values or not
+The eth value must be exactly 10 bytes, since it will be treated as a uint80
+Otherwise the order is exactly the same, simply encode it packed and it will parse for you
+
+Function selectors:
+* 00 - ExecuteNoValue no return
+* 01 - ExecuteNoValue does return
+* 10 - Execute with value no return
+* 11 - Execute with value does return
+* 20 - Approve then execute no return
+* 21 - Approve then execute with return
+* 30 - Batch execute no return
+* 31 - Batch execute with return
+* 40
+* 50
+* 60
+* 70 
