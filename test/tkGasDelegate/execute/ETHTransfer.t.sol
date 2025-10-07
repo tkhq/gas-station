@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {MockDelegate} from "../../mocks/MockDelegate.t.sol";
 import {TKGasDelegateTestBase as TKGasDelegateBase} from "../TKGasDelegateTestBase.t.sol";
 import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
+import {MockContractInteractions} from "../../mocks/MockContractInteractions.t.sol";
 
 contract ETHTransferTest is TKGasDelegateBase {
     function testExecuteBytesETHGas() public {
@@ -110,5 +111,58 @@ contract ETHTransferTest is TKGasDelegateBase {
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.NotSelf.selector);
         MockDelegate(user).execute(executeData);
+    }
+
+    function testFallbackExecuteSendEthNoReturn() public {
+        address receiver = makeAddr("receiver");
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, receiver, 1 ether, bytes(""));
+
+        bytes memory fallbackData = _constructFallbackCalldata(
+            bytes1(0x10), 
+            signature, 
+            nonce, 
+            abi.encodePacked(
+                receiver, 
+                _fallbackEncodeEth(1 ether), 
+                bytes("")
+            )
+        );
+
+        vm.prank(paymaster);
+        vm.deal(user, 1 ether);
+        (bool success,) = user.call(fallbackData);
+        vm.stopPrank();
+
+        assertTrue(success);
+    }
+
+
+    function testFallbackExecuteSendEthWithReturn() public {
+        MockContractInteractions mockSwap = new MockContractInteractions();
+        (, uint128 nonce) = MockDelegate(user).state();
+        vm.deal(user, 2 ether);
+
+        bytes memory data = abi.encodeWithSelector(mockSwap.mockDepositEth.selector);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockSwap), 2 ether, data);
+
+        bytes memory fallbackData = _constructFallbackCalldata(
+            bytes1(0x11), 
+            signature, 
+            nonce, 
+            abi.encodePacked(
+                address(mockSwap), 
+                _fallbackEncodeEth(2 ether), 
+                data
+            )
+        );
+
+        vm.prank(paymaster);
+        (bool success, bytes memory result) = user.call(fallbackData);
+        vm.stopPrank();
+
+        assertTrue(success);
+        uint256 returnedAmount = abi.decode(result, (uint256));
+        assertEq(returnedAmount, 2 ether);
     }
 }

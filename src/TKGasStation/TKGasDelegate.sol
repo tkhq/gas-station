@@ -24,6 +24,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     bytes4 private constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
     bytes4 private constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
     bytes4 private constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
+    uint8 public constant MAX_BATCH_SIZE = 20;
 
     bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
     // Original: keccak256("Execution(uint128 nonce,address outputContract,uint256 ethAmount,bytes arguments)")
@@ -51,14 +52,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         0x9e83fc2d99981f8f5e9cca6e9253e48163b75f85c9f1e80235a9380203430d4f;
     // Original: keccak256("BurnSessionCounter(uint128 counter,address sender)")
 
-    // Maximum batch size to prevent griefing attacks
-    uint8 public constant MAX_BATCH_SIZE = 20;
     //bytes4 private constant APPROVE_SELECTOR = 0x095ea7b3;
-    // Fallback function optimizations
-    //uint8 public constant ETH_AMOUNT_MAX_LENGTH_BYTES = 10; // max 1.2m eth if using the fallback function
-
-    //uint8 public constant CONTRACT_LENGTH_BYTES = 20; // just for convenience
-
     State public state;
 
     constructor() EIP712() {}
@@ -270,7 +264,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 arguments.offset := add(nonceEnd, 102)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 102))
             }
-            (bool success, bytes memory result) = _approveThenExecute(
+            (, bytes memory result) = _approveThenExecute(
                 signature,
                 nonceBytes,
                 erc20Bytes,
@@ -280,10 +274,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 ethAmount,
                 arguments
             );
-            // Encode and return the inner call result
-            return abi.encode(success, result);
+            return result;
         } else if (functionSelector == bytes1(0x31)) {
-            // executeBatch with return (shifted up)
+            // executeBatch with return
             (, bytes[] memory result) = _executeBatch(signature, nonceBytes, msg.data[nonceEnd:]);
             return abi.encode(result);
         } else if (functionSelector == bytes1(0x41)) {
@@ -1224,8 +1217,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeBatchSession(data[0:65], data[65:81], data[81:85], output, calls);
     }
 
-    function executeSessionArbitrary(bytes calldata data) external returns (bool, bytes memory) { // does not limit output contract
-        // Layout: [signature(65)][counter(16)][deadline(4)][output(20)][ethAmount(32)][args] 
+    function executeSessionArbitrary(bytes calldata data) external returns (bool, bytes memory) {
+        // does not limit output contract
+        // Layout: [signature(65)][counter(16)][deadline(4)][output(20)][ethAmount(32)][args]
         address output;
         uint256 ethAmount;
         assembly {

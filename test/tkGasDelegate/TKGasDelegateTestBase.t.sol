@@ -97,6 +97,11 @@ contract TKGasDelegateTestBase is Test {
         return abi.encodePacked(_signature, nonce16, to20, _args);
     }
 
+    function _fallbackEncodeEth(uint256 _ethAmount) internal pure returns (bytes memory) {
+        bytes memory ethBytes = abi.encodePacked(uint80(_ethAmount));
+        return ethBytes;
+    }
+
     function _constructExecuteBytes(
         bytes memory _signature,
         uint128 _nonce,
@@ -109,6 +114,14 @@ contract TKGasDelegateTestBase is Test {
         bytes20 to20 = bytes20(_to);
         bytes32 value32 = bytes32(_value);
         return abi.encodePacked(_signature, nonce16, to20, value32, _args);
+    }
+
+    function _constructFallbackCalldata(bytes1 _selector, bytes memory _signature, uint128 _nonce, bytes memory _data)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(hex"00", _selector, _signature, _nonce, _data);
     }
 
     function _constructFallbackCalldata(
@@ -179,7 +192,6 @@ contract TKGasDelegateTestBase is Test {
         }
     }
 
-
     function _signSessionExecuteWithSender(
         uint256 _privateKey,
         address payable _publicKey,
@@ -225,9 +237,18 @@ contract TKGasDelegateTestBase is Test {
             counterBytes = abi.encodePacked(counterBytes, padding);
         }
         bytes4 deadline4 = bytes4(_deadline);
-        // Insert a single padding byte between nonce and deadline as expected by fallback parsing
+        // Insert a single padding byte between nonce and deadline; include 10-byte ETH amount (zero) before args
+        bytes10 ethAmount10 = bytes10(0);
         return abi.encodePacked(
-            bytes1(0x00), bytes1(0x41), _signature, counterBytes, bytes1(0x00), deadline4, _outputContract, _arguments
+            bytes1(0x00),
+            bytes1(0x41),
+            _signature,
+            counterBytes,
+            bytes1(0x00),
+            deadline4,
+            _outputContract,
+            ethAmount10,
+            _arguments
         );
     }
 
@@ -238,22 +259,26 @@ contract TKGasDelegateTestBase is Test {
         address _outputContract,
         IBatchExecution.Call[] memory _calls
     ) internal pure returns (bytes memory) {
-        // selector 0x61 for executeBatchSession with return
+        // selector 0x51 for executeBatchSession with return
         bytes memory counterBytes = abi.encodePacked(_counter);
         if (counterBytes.length < 16) {
             bytes memory padding = new bytes(16 - counterBytes.length);
             counterBytes = abi.encodePacked(counterBytes, padding);
         }
         bytes4 deadline4 = bytes4(_deadline);
+        // After output (20 bytes), pad 12 bytes so that the next word (length) sits at nonceEnd+41
+        bytes12 pad12 = bytes12(0);
+        bytes memory callsEncoded = abi.encode(_calls); // starts with length then elements
         return abi.encodePacked(
             bytes1(0x00),
-            bytes1(0x61),
+            bytes1(0x51),
             _signature,
             counterBytes,
             bytes1(0x00),
             deadline4,
             _outputContract,
-            abi.encode(_calls)
+            pad12,
+            callsEncoded
         );
     }
 

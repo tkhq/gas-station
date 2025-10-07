@@ -19,6 +19,10 @@ contract MockContractInteractions {
         IERC20(token).transferFrom(msg.sender, address(this), amount);
     }
 
+    function mockDepositEth() external payable returns (uint256) {
+        return msg.value;
+    }
+
     function mockWithdraw(address token, uint256 amount) external {
         IERC20(token).transfer(msg.sender, amount);
     }

@@ -303,4 +303,131 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         vm.expectRevert(TKGasDelegate.NotSelf.selector);
         MockDelegate(user).approveThenExecute(executeData);
     }
+
+    function testFallbackExecutionNoReturn() public {
+
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint256 expectedOutput = 95 * 10 ** 18; // 5% slippage
+
+        MockDelegate(user).spoof_Nonce(5000);
+
+        (, uint128 nonce) = MockDelegate(user).state();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        // Create the approve then execute signature
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        bytes memory fallbackExecuteData = _constructFallbackCalldata(
+            0x20,
+            signature,
+            nonce,
+            abi.encodePacked(
+                address(tokenA),
+                address(mockSwap),
+                swapAmount,
+                address(mockSwap),
+                _fallbackEncodeEth(0),
+                swapData
+            )
+        );
+
+        // Execute approve then execute
+        bool success;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, ) = user.call(fallbackExecuteData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Assertions
+        assertTrue(success);
+        assertEq(tokenA.balanceOf(user), 900 * 10 ** 18); // 1000 - 100
+        assertEq(tokenB.balanceOf(user), 1095 * 10 ** 18); // 1000 + 95
+        assertEq(tokenA.balanceOf(address(mockSwap)), 10100 * 10 ** 18); // 10000 + 100
+        assertEq(tokenB.balanceOf(address(mockSwap)), 9905 * 10 ** 18); // 10000 - 95
+
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
+
+        console.log("=== Approve Then Execute Swap Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testFallbackExecutionWithReturn() public {
+
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint256 expectedOutput = 95 * 10 ** 18; // 5% slippage
+
+        MockDelegate(user).spoof_Nonce(5000);
+
+        (, uint128 nonce) = MockDelegate(user).state();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        // Create the approve then execute signature
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        bytes memory fallbackExecuteData = _constructFallbackCalldata(
+            0x21,
+            signature,
+            nonce,
+            abi.encodePacked(
+                address(tokenA),
+                address(mockSwap),
+                swapAmount,
+                address(mockSwap),
+                _fallbackEncodeEth(0),
+                swapData
+            )
+        );
+
+        // Execute approve then execute
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = user.call(fallbackExecuteData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Assertions
+        assertTrue(success);
+        assertEq(tokenA.balanceOf(user), 900 * 10 ** 18); // 1000 - 100
+        assertEq(tokenB.balanceOf(user), 1095 * 10 ** 18); // 1000 + 95
+        assertEq(tokenA.balanceOf(address(mockSwap)), 10100 * 10 ** 18); // 10000 + 100
+        assertEq(tokenB.balanceOf(address(mockSwap)), 9905 * 10 ** 18); // 10000 - 95
+        uint256 returnedAmount = abi.decode(result, (uint256));
+        assertEq(returnedAmount, expectedOutput);
+
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
+
+        console.log("=== Approve Then Execute Swap Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
 }

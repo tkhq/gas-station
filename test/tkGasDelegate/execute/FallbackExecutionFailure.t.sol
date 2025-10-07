@@ -27,10 +27,13 @@ contract FallbackExecutionTest is TKGasDelegateBase {
         console.log("Mock contract address: %s", address(mockToken));
 
         bytes memory fallbackData = _constructFallbackCalldata(
-            nonce,
+            bytes1(0x00),
             signature,
-            address(mockToken),
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+            nonce,
+            abi.encodePacked(
+                address(mockToken),
+                abi.encodeWithSelector(mockToken.transfer.selector, receiver, uint256(10 * 10 ** 18))
+            )
         );
 
         console.log("=== Fallback Function Calldata ===");
@@ -57,14 +60,36 @@ contract FallbackExecutionTest is TKGasDelegateBase {
         console.log("Transfer Amount: %s", uint256(10 * 10 ** 18));
     }
 
+    function testFallbackExecuteSendEth() public {
+        address receiver = makeAddr("receiver");
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, receiver, 1 ether, bytes(""));
+
+        bytes memory fallbackData = _constructFallbackCalldata(
+            bytes1(0x10), 
+            signature, 
+            nonce, 
+            abi.encodePacked(
+                receiver, 
+                _fallbackEncodeEth(1 ether), 
+                bytes("")
+            )
+        );
+
+        vm.prank(paymaster);
+        vm.deal(user, 1 ether);
+        (bool success,) = user.call(fallbackData);
+        vm.stopPrank();
+
+        assertTrue(success);
+    }
+
+
     function testFallbackUnexpectedExecutionMode() public {
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(0), 0, bytes(""));
 
-        bytes memory fallbackData = _constructFallbackCalldata(nonce, signature, address(0), bytes(""));
-
-        // Force unexpected execution mode by setting the second byte to 0xFF
-        fallbackData[1] = bytes1(0xFF);
+        bytes memory fallbackData = _constructFallbackCalldata(bytes1(0xFF), signature, nonce, bytes(""));
 
         bool success;
         bytes memory result;

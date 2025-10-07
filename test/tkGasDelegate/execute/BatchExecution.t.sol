@@ -220,4 +220,75 @@ contract BatchExecutionTest is TKGasDelegateBase {
         vm.expectRevert(TKGasDelegate.NotSelf.selector);
         MockDelegate(user).executeBatch(data);
     }
+
+    function testExecuteBatchFallbackNoReturn() public {
+        // Build a simple batch of 1 call
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 1 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 2 ether)
+        });
+
+        // Record initial balance
+        uint256 initialBalance = mockToken.balanceOf(user);
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
+        bytes memory fallbackData = _constructFallbackCalldata(
+            bytes1(0x30),
+            signature,
+            nonce,
+            abi.encode(calls)
+        );
+
+        vm.prank(paymaster);
+        (bool success,) = user.call(fallbackData);
+        assertTrue(success);
+
+        // Assert that the user received the minted tokens
+        assertEq(mockToken.balanceOf(user), initialBalance + 1 ether + 2 ether);
+    }
+
+    function testExecuteBatchFallbackWithReturn() public {
+        // Build a simple batch of 1 call
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 1 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 2 ether)
+        });
+
+        // Record initial balance
+        uint256 initialBalance = mockToken.balanceOf(user);
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
+        bytes memory fallbackData = _constructFallbackCalldata(
+            bytes1(0x31),
+            signature,
+            nonce,
+            abi.encode(calls)
+        );
+
+        vm.prank(paymaster);
+        (bool success, bytes memory result) = user.call(fallbackData);
+        assertTrue(success);
+
+        // Assert that the user received the minted tokens
+        assertEq(mockToken.balanceOf(user), initialBalance + 1 ether + 2 ether);
+        bytes[] memory results = abi.decode(result, (bytes[]));
+        assertEq(results[0], abi.encode(1 ether));
+        assertEq(results[1], abi.encode(2 ether));
+    }
 }

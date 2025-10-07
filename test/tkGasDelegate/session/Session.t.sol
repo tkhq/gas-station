@@ -72,7 +72,8 @@ contract SessionTest is TKGasDelegateBase {
 
         (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp + 1 days);
-        bytes memory signature = _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 ether);
         bytes memory data = _constructSessionExecuteBytes(signature, counter, deadline, address(mockToken), 0, args);
 

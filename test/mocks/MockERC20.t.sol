@@ -21,8 +21,9 @@ contract MockERC20 is ERC20 {
     }
 
     // Arbitrary mint function for testing
-    function mint(address to, uint256 amount) external {
+    function mint(address to, uint256 amount) external returns (uint256) {
         _mint(to, amount);
+        return amount;
     }
 
     function returnPlusHoldings(uint256 plus) external view returns (uint256) {
