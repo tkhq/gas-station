@@ -593,18 +593,29 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
             calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
             if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, APPROVAL_FAILED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // todo: check security wise if this will be safe with USDT returning a boolean rather than reverting
-
+                // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
+                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
+                mstore(add(ptr, 0x24), 0) // essentially write nothing to the next word in the register so it's 0
+                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
+                    let errorPtr := mload(0x40)
+                    mstore(errorPtr, APPROVAL_TO_0_FAILED_SELECTOR)
+                    revert(errorPtr, 0x04)
+                }
+                calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32) // then write something
+                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
+                    let errorPtr := mload(0x40)
+                    mstore(errorPtr, APPROVAL_FAILED_SELECTOR)
+                    revert(errorPtr, 0x04)
+                }
+            } // set the approval
             // Execute
-            let output := shr(96, calldataload(_outputContractBytes.offset))
+            let outputAddr := shr(96, calldataload(_outputContractBytes.offset))
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             let rawEth := calldataload(_ethAmountBytes.offset)
             let shiftBits := mul(sub(32, _ethAmountBytes.length), 8)
             let ethVal := shr(shiftBits, rawEth)
-            if iszero(call(gas(), output, ethVal, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            if iszero(call(gas(), outputAddr, ethVal, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
         }
     }
 
