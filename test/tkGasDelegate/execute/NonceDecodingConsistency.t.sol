@@ -2,10 +2,10 @@
 pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
-import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
-import {MockDelegate} from "../mocks/MockDelegate.t.sol";
-import {MockERC20} from "../mocks/MockERC20.t.sol";
-import {TKGasDelegateTestBase} from "./TKGasDelegateTestBase.t.sol";
+import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
+import {MockDelegate} from "../../mocks/MockDelegate.t.sol";
+import {MockERC20} from "../../mocks/MockERC20.t.sol";
+import {TKGasDelegateTestBase} from "../TKGasDelegateTestBase.t.sol";
 
 contract NonceDecodingConsistencyTest is TKGasDelegateTestBase {
     function testNonceDecodingConsistency() public {

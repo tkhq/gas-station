@@ -214,4 +214,9 @@ contract TKGasStationTest is Test {
         vm.expectRevert(TKGasStation.NotDelegated.selector);
         address(tkGasStation).call(fallbackData);
     }
+
+    function testReceiveReverts() public {
+        vm.expectRevert(TKGasStation.NoEthAllowed.selector);
+        address(tkGasStation).call{value: 1 ether}("");
+    }
 }

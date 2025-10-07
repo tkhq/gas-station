@@ -14,12 +14,15 @@ contract TKGasDelegateTestBase is Test {
     address public paymaster = makeAddr("paymaster");
     address public targetContract = makeAddr("targetContract");
     uint256 public constant USER_PRIVATE_KEY = 0xAAAAAA;
+    uint256 public constant USER_PRIVATE_KEY_2 = 0xBBBBBB;
     address payable public user;
+    address payable public user2;
 
     function setUp() public virtual {
         // Deploy MockDelegate
         tkGasDelegate = new MockDelegate();
         user = payable(vm.addr(USER_PRIVATE_KEY)); // 0x3545A2F3928d5b21E71a790FB458F4AE03306C55
+        user2 = payable(vm.addr(USER_PRIVATE_KEY_2)); 
 
         // Deploy Mock ERC20
         mockToken = new MockERC20("Test Token", "TEST");
@@ -28,6 +31,7 @@ contract TKGasDelegateTestBase is Test {
 
         // Delegate MockDelegate for the user
         _delegate(USER_PRIVATE_KEY);
+        _delegate(USER_PRIVATE_KEY_2);
     }
 
     function _delegate(uint256 _userPrivateKey) internal {

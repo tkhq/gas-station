@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import "forge-std/Test.sol";
 import {MockDelegate} from "../mocks/MockDelegate.t.sol";
 import {TKGasDelegateTestBase as TKGasDelegateBase} from "./TKGasDelegateTestBase.t.sol";
+import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
 
 contract FallbackExecutionTest is TKGasDelegateBase {
     function testFallbackExecuteSendERC20() public {
@@ -54,6 +55,37 @@ contract FallbackExecutionTest is TKGasDelegateBase {
         console.log("=== Fallback Function ERC20 Transfer Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
         console.log("Transfer Amount: %s", uint256(10 * 10 ** 18));
+    }
+
+    function testFallbackUnexpectedExecutionMode() public {
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory signature = _signExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            address(0),
+            0,
+            bytes("")
+        );
+
+        bytes memory fallbackData = _constructFallbackCalldata(
+            nonce,
+            signature,
+            address(0),
+            bytes("")
+        );
+
+        // Force unexpected execution mode by setting the second byte to 0xFF
+        fallbackData[1] = bytes1(0xFF);
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        (success, result) = user.call(fallbackData);
+        vm.stopPrank();
+
+        assertEq(success, false);
+        assertEq(result, abi.encodeWithSelector(TKGasDelegate.UnsupportedExecutionMode.selector));
     }
 }
 

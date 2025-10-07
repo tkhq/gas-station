@@ -16,7 +16,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     error InvalidCounter();
     error NotSelf();
     error ExecutionFailed();
-    error NoEthAllowed();
     error UnsupportedExecutionMode();
 
     bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
@@ -46,7 +45,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     // Original: keccak256("BurnSessionCounter(uint128 counter,address sender)")
 
     // Maximum batch size to prevent griefing attacks
-    uint8 public constant MAX_BATCH_SIZE = 50;
+    uint8 public constant MAX_BATCH_SIZE = 20;
     //bytes4 private constant APPROVE_SELECTOR = 0x095ea7b3;
     // Fallback function optimizations
     //uint8 public constant ETH_AMOUNT_MAX_LENGTH_BYTES = 10; // max 1.2m eth if using the fallback function
@@ -583,14 +582,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { 
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
                 mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-                mstore(add(ptr, 0x10), _spenderBytes.offset)
+                calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
                 mstore(add(ptr, 0x24), 0) // essentially write nothing to the next word in the register so it's 0 
                 if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { 
                     let errorPtr := mload(0x40)
                     mstore(errorPtr, "ApprovalTo0Failed")
                     revert(errorPtr, 14)
                 }
-                mstore(add(ptr, 0x24), _approveAmountBytes.offset) // then write something
+                calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32) // then write something
                 if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { 
                     let errorPtr := mload(0x40)
                     mstore(errorPtr, "ApprovalFailed")

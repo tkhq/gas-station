@@ -2,8 +2,9 @@
 pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
-import {MockDelegate} from "../mocks/MockDelegate.t.sol";
-import {TKGasDelegateTestBase as TKGasDelegateBase} from "./TKGasDelegateTestBase.t.sol";
+import {MockDelegate} from "../../mocks/MockDelegate.t.sol";
+import {TKGasDelegateTestBase as TKGasDelegateBase} from "../TKGasDelegateTestBase.t.sol";
+import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
 
 contract ETHTransferTest is TKGasDelegateBase {
     function testExecuteBytesETHGas() public {
@@ -76,5 +77,38 @@ contract ETHTransferTest is TKGasDelegateBase {
         console.log("=== Fallback Function ETH Transfer Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
         console.log("ETH Amount: %s", ethAmount);
+    }
+
+    function testExecuteBytesETHWrongNonceReverts() public {
+        address payable receiver = payable(makeAddr("receiver"));
+        uint256 ethAmount = 1 ether;
+
+        vm.deal(user, 2 ether);
+
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
+        
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, wrongNonce, receiver, ethAmount, "");
+
+        bytes memory executeData = _constructExecuteBytes(signature, wrongNonce, receiver, ethAmount, "");
+
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).execute(executeData);
+    }
+
+    function testExecuteBytesETHSignedByOtherUserRevertsNotSelf() public {
+        address payable receiver = payable(makeAddr("receiver"));
+        uint256 ethAmount = 1 ether;
+        vm.deal(user, 2 ether);
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        uint256 OTHER_PRIVATE_KEY = 0xBEEF04;
+        bytes memory signature = _signExecute(OTHER_PRIVATE_KEY, user, nonce, receiver, ethAmount, "");
+        bytes memory executeData = _constructExecuteBytes(signature, nonce, receiver, ethAmount, "");
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).execute(executeData);
     }
 }
