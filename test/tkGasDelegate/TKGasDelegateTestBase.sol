@@ -169,4 +169,37 @@ contract TKGasDelegateTestBase is Test {
             return bytes1(uint8(bytes1("a")) + _value - 10);
         }
     }
+
+    function _signSessionExecute(
+        uint256 _privateKey,
+        address payable _publicKey,
+        uint128 _counter,
+        uint32 _deadline,
+        address _outputContract
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey, TKGasDelegate(_publicKey).hashSessionExecution(_counter, uint128(_deadline), signer, _outputContract)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function _constructSessionExecuteBytes(
+        bytes memory _signature,
+        uint128 _counter,
+        uint32 _deadline,
+        address _outputContract,
+        bytes memory _arguments
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            _signature,
+            _counter,
+            _deadline,
+            _outputContract,
+            _arguments
+        );
+    }
 }
