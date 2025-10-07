@@ -99,4 +99,84 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
         assertEq(mockToken.balanceOf(receiver), 4 ether);
     }
+
+    function testArbitraryBatchSessionFallbackNoReturn() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        (, uint128 counter) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+
+        bytes memory data = _constructFallbackCalldata(
+            bytes1(0x70),
+            signature,
+            counter,
+            abi.encodePacked(
+                deadline,
+                abi.encode(calls)
+            )
+        );
+
+        vm.prank(paymaster);
+        (bool success, ) = user.call(data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+    }
+
+    function testArbitraryBatchSessionFallbackWithReturn() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        (, uint128 counter) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+
+        bytes memory data = _constructFallbackCalldata(
+            bytes1(0x71),
+            signature,
+            counter,
+            abi.encodePacked(
+                deadline,
+                abi.encode(calls)
+            )
+        );
+
+        vm.prank(paymaster);
+        (bool success, bytes memory result) = user.call(data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        bytes[] memory results = abi.decode(result, (bytes[]));
+        assertEq(results.length, 2);
+        assertTrue(abi.decode(results[0], (bool)));
+        assertTrue(abi.decode(results[1], (bool)));
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+    }
 }

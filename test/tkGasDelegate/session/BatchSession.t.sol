@@ -9,6 +9,7 @@ import {TKGasDelegateTestBase as TKGasDelegateBase} from "../TKGasDelegateTestBa
 import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
 
 contract BatchSessionTest is TKGasDelegateBase {
+
     function testBatchSessionExecute_Succeeds() public {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
@@ -151,5 +152,89 @@ contract BatchSessionTest is TKGasDelegateBase {
         vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
         MockDelegate(user).executeBatchSession(data);
         vm.stopPrank();
+    }
+
+    function testBatchSessionExecuteFallbackNoReturn() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory data = _constructFallbackCalldata(
+            bytes1(0x50),
+            signature,
+            counter,
+            abi.encodePacked(
+                deadline,
+                address(mockToken),
+                abi.encode(calls)
+            )
+        );
+
+        vm.prank(paymaster);
+        (bool success, ) = user.call(data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+    }
+
+    function testBatchSessionExecuteFallbackWithReturn() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory data = _constructFallbackCalldata(
+            bytes1(0x51),
+            signature,
+            counter,
+            abi.encodePacked(
+                deadline,
+                address(mockToken),
+                abi.encode(calls)
+            )
+        );
+
+        vm.prank(paymaster);
+        (bool success, bytes memory result) = user.call(data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        bytes[] memory results = abi.decode(result, (bytes[]));
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+        assertTrue(results.length == 2);
+        assertTrue(abi.decode(results[0], (bool)));
+        assertTrue(abi.decode(results[1], (bool)));
     }
 }

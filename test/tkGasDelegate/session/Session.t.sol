@@ -120,4 +120,67 @@ contract SessionTest is TKGasDelegateBase {
         MockDelegate(user).executeSession(data);
         vm.stopPrank();
     }
+
+    function testSessionExecuteFallbackNoReturn() public {
+        mockToken.mint(user, 10 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
+
+        bytes memory data = _constructFallbackCalldata(
+            bytes1(0x40),
+            signature,
+            counter,
+            abi.encodePacked(
+                deadline,
+                address(mockToken),
+                _fallbackEncodeEth(0),
+                args
+            )
+        );
+
+        vm.prank(paymaster);
+        (bool success,) = user.call(data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
+    }
+
+    function testSessionExecuteFallbackWithReturn() public {
+        mockToken.mint(user, 10 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
+
+        bytes memory data = _constructFallbackCalldata(
+            bytes1(0x41),
+            signature,
+            counter,
+            abi.encodePacked(
+                deadline,
+                address(mockToken),
+                _fallbackEncodeEth(0),
+                args
+            )
+        );
+
+        vm.prank(paymaster);
+        (bool success,bytes memory result) = user.call(data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        assertEq(abi.decode(result, (bool)), true);
+        assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
+    }
 }

@@ -99,4 +99,77 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         assertTrue(s1 && s2);
         assertEq(mockToken.balanceOf(receiver), 8 ether);
     }
+
+    function testArbitrarySessionExecuteFallbackNoReturn() public {
+        mockToken.mint(user, 10 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+
+        // Sign for arbitrary session (sender only, no contract lock)
+        address signerAddr = vm.addr(USER_PRIVATE_KEY);
+        vm.startPrank(signerAddr);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(USER_PRIVATE_KEY, MockDelegate(user).hashArbitrarySessionExecution(counter, deadline, paymaster));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
+        bytes memory data = _constructFallbackCalldata(
+            bytes1(0x60),
+            signature,
+            counter,
+            abi.encodePacked(
+                deadline,
+                address(mockToken),
+                _fallbackEncodeEth(0),
+                args
+            )
+        );
+
+        vm.prank(paymaster);
+        (bool success,) = user.call(data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
+    }
+
+    function testArbitrarySessionExecuteFallbackWithReturn() public {
+        mockToken.mint(user, 10 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+
+        // Sign for arbitrary session (sender only, no contract lock)
+        address signerAddr = vm.addr(USER_PRIVATE_KEY);
+        vm.startPrank(signerAddr);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(USER_PRIVATE_KEY, MockDelegate(user).hashArbitrarySessionExecution(counter, deadline, paymaster));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
+        bytes memory data = _constructFallbackCalldata(
+            bytes1(0x61),
+            signature,
+            counter,
+            abi.encodePacked(
+                deadline,
+                address(mockToken),
+                _fallbackEncodeEth(0),
+                args
+            )
+        );
+
+        vm.prank(paymaster);
+        (bool success, bytes memory result) = user.call(data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        assertEq(abi.decode(result, (bool)), true);
+        assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
+    }
 }

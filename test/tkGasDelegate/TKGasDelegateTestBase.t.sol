@@ -223,6 +223,35 @@ contract TKGasDelegateTestBase is Test {
     }
 
     // Fallback builders for session paths (returning variants)
+    function _constructFallbackSessionCalldataNoReturn(
+        uint128 _counter,
+        uint32 _deadline,
+        bytes memory _signature,
+        address _outputContract,
+        bytes memory _arguments
+    ) internal pure returns (bytes memory) {
+        // selector 0x40 for executeSession without return
+        bytes memory counterBytes = abi.encodePacked(_counter);
+        if (counterBytes.length < 16) {
+            bytes memory padding = new bytes(16 - counterBytes.length);
+            counterBytes = abi.encodePacked(counterBytes, padding);
+        }
+        bytes4 deadline4 = bytes4(_deadline);
+        // Insert a single padding byte between nonce and deadline; include 10-byte ETH amount (zero) before args
+        bytes10 ethAmount10 = bytes10(0);
+        return abi.encodePacked(
+            bytes1(0x00),
+            bytes1(0x40),
+            _signature,
+            counterBytes,
+            bytes1(0x00),
+            deadline4,
+            _outputContract,
+            ethAmount10,
+            _arguments
+        );
+    }
+
     function _constructFallbackSessionCalldata(
         uint128 _counter,
         uint32 _deadline,
