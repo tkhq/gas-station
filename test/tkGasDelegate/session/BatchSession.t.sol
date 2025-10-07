@@ -25,7 +25,7 @@ contract BatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
         });
 
-        (, uint128 counter) = MockDelegate(user).state();
+        (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -52,7 +52,7 @@ contract BatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 ether)
         });
 
-        (, uint128 counter) = MockDelegate(user).state();
+        (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -66,7 +66,7 @@ contract BatchSessionTest is TKGasDelegateBase {
 
     function testBatchSessionExecute_ExpiredDeadline_Reverts() public {
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
-        (, uint128 counter) = MockDelegate(user).state();
+        (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp - 1);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -80,7 +80,7 @@ contract BatchSessionTest is TKGasDelegateBase {
 
     function testBatchSessionExecute_InvalidCounter_Reverts() public {
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
-        (, uint128 counter) = MockDelegate(user).state();
+        (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -107,7 +107,7 @@ contract BatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 3 ether)
         });
 
-        (, uint128 counter) = MockDelegate(user).state();
+        (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -119,5 +119,37 @@ contract BatchSessionTest is TKGasDelegateBase {
         vm.stopPrank();
 
         assertEq(mockToken.balanceOf(receiver), 6 ether);
+    }
+
+    function testBatchSessionExecute_AttemptDifferentContractCall_Reverts() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+        address other = makeAddr("otherContract");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        // first call is to correct contract
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 5 ether)
+        });
+        // second call attempts a different contract
+        calls[1] = IBatchExecution.Call({
+            to: other,
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 ether)
+        });
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), abi.encode(calls));
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
+        MockDelegate(user).executeBatchSession(data);
+        vm.stopPrank();
     }
 }

@@ -12,7 +12,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
 
-        (, uint128 counter) = MockDelegate(user).state();
+        (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         // Sign for arbitrary session (sender only, no contract lock)
@@ -24,7 +24,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         vm.stopPrank();
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether);
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), args);
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), args);
 
         vm.prank(paymaster);
         (bool success,) = MockDelegate(user).executeSessionArbitrary(data);
@@ -35,7 +35,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
     }
 
     function testArbitrarySessionExecute_ExpiredDeadline_Reverts() public {
-        (, uint128 counter) = MockDelegate(user).state();
+        (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp - 1);
 
         address signerAddr = vm.addr(USER_PRIVATE_KEY);
@@ -45,7 +45,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), bytes(""));
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), bytes(""));
 
         vm.prank(paymaster);
         vm.expectRevert();
@@ -54,7 +54,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
     }
 
     function testArbitrarySessionExecute_InvalidCounter_Reverts() public {
-        (, uint128 counter) = MockDelegate(user).state();
+        (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         address signerAddr = vm.addr(USER_PRIVATE_KEY);
@@ -64,7 +64,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), bytes(""));
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), bytes(""));
 
         vm.prank(user);
         MockDelegate(user).spoof_Counter(counter + 1);
@@ -80,17 +80,16 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
 
-        (, uint128 counter) = MockDelegate(user).state();
+        (uint128 counter,) = MockDelegate(user).state();
         uint32 deadline = uint32(block.timestamp + 1 days);
-        address signerAddr = vm.addr(USER_PRIVATE_KEY);
-        vm.startPrank(signerAddr);
+        vm.startPrank(user);
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(USER_PRIVATE_KEY, MockDelegate(user).hashArbitrarySessionExecution(counter, deadline, signerAddr));
+            vm.sign(USER_PRIVATE_KEY, MockDelegate(user).hashArbitrarySessionExecution(counter, deadline, paymaster));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 4 ether);
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), args);
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), args);
 
         vm.startPrank(paymaster);
         (bool s1,) = MockDelegate(user).executeSessionArbitrary(data);

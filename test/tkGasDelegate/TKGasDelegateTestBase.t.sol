@@ -179,22 +179,6 @@ contract TKGasDelegateTestBase is Test {
         }
     }
 
-    function _signSessionExecute(
-        uint256 _privateKey,
-        address payable _publicKey,
-        uint128 _counter,
-        uint32 _deadline,
-        address _outputContract
-    ) internal returns (bytes memory) {
-        address signer = vm.addr(_privateKey);
-        vm.startPrank(signer);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, MockDelegate(_publicKey).hashSessionExecution(_counter, _deadline, signer, _outputContract)
-        );
-        bytes memory signature = abi.encodePacked(r, s, v);
-        vm.stopPrank();
-        return signature;
-    }
 
     function _signSessionExecuteWithSender(
         uint256 _privateKey,
@@ -220,9 +204,10 @@ contract TKGasDelegateTestBase is Test {
         uint128 _counter,
         uint32 _deadline,
         address _outputContract,
+        uint256 _value,
         bytes memory _arguments
     ) internal pure returns (bytes memory) {
-        return abi.encodePacked(_signature, _counter, _deadline, _outputContract, _arguments);
+        return abi.encodePacked(_signature, _counter, _deadline, _outputContract, _value, _arguments);
     }
 
     // Fallback builders for session paths (returning variants)
