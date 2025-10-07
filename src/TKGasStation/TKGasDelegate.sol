@@ -50,7 +50,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     //bytes4 private constant APPROVE_SELECTOR = 0x095ea7b3;
     // Fallback function optimizations
     //uint8 public constant ETH_AMOUNT_MAX_LENGTH_BYTES = 10; // max 1.2m eth if using the fallback function
-    //uint8 public constant DEADLINE_MAX_LENGTH_BYTES = 5; // up to ~34 years in seconds
+
     //uint8 public constant CONTRACT_LENGTH_BYTES = 20; // just for convenience
 
     State public state;
@@ -547,7 +547,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
             // erc20 address right-aligned in 32 bytes
             calldatacopy(add(ptr, 0x4c), _erc20Bytes.offset, 20)
             // Write spender (20 bytes right-aligned in 32 bytes)
@@ -602,7 +603,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
             // erc20 address right-aligned in 32 bytes
             let erc20Raw := calldataload(_erc20Bytes.offset)
             mstore(add(ptr, 0x40), shr(96, erc20Raw))
@@ -659,7 +661,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, EXECUTION_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
             let raw := calldataload(_outputContractBytes.offset)
             mstore(add(ptr, 0x40), shr(96, raw))
             mstore(add(ptr, 0x60), 0)
@@ -692,8 +695,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, EXECUTION_TYPEHASH)
-            // Copy nonce bytes directly to memory
-            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
             mstore(add(ptr, 0x40), _outputContract)
             mstore(add(ptr, 0x60), 0) // ethAmount = 0
             // Compute argsHash in assembly
@@ -724,8 +727,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, EXECUTION_TYPEHASH)
-            // Copy nonce bytes directly to memory
-            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
             mstore(add(ptr, 0x40), _outputContract)
             mstore(add(ptr, 0x60), _ethAmount)
             // Compute argsHash in assembly
@@ -757,7 +760,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, EXECUTION_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
             let raw := calldataload(_outputContractBytes.offset)
             mstore(add(ptr, 0x40), shr(96, raw))
             mstore(add(ptr, 0x60), _ethAmount)
@@ -821,7 +825,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             // Copy deadline bytes directly to memory
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
@@ -859,7 +864,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
             let raw := calldataload(_outputContractBytes.offset)
@@ -896,7 +902,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             // Copy deadline bytes directly to memory
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
@@ -932,7 +939,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
             let raw := calldataload(_outputContractBytes.offset)
@@ -972,7 +980,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             // Copy deadline bytes directly to memory
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
@@ -1031,7 +1040,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
             let raw := calldataload(_outputContractBytes.offset)
@@ -1079,7 +1089,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             // Copy deadline bytes directly to memory
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
@@ -1112,7 +1123,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
@@ -1147,7 +1159,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             // Copy deadline bytes directly to memory
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
@@ -1181,7 +1194,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
@@ -1218,7 +1232,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             // Copy deadline bytes directly to memory
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
@@ -1269,7 +1284,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _counterBytes.offset, 16)
+            let counterValue := shr(128, calldataload(_counterBytes.offset))
+            mstore(add(ptr, 0x20), counterValue)
             calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
@@ -1405,8 +1421,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, BATCH_EXECUTION_TYPEHASH)
-            // Copy nonce bytes directly to memory
-            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
             mstore(add(ptr, 0x40), executionsHash)
             hash := keccak256(ptr, 0x60)
             mstore(0x40, add(ptr, 0x60)) // Update free memory pointer
@@ -1451,7 +1467,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, BATCH_EXECUTION_TYPEHASH)
-            calldatacopy(add(ptr, 0x20), _nonceBytes.offset, 16)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
             mstore(add(ptr, 0x40), executionsHash)
             hash := keccak256(ptr, 0x60)
             mstore(0x40, add(ptr, 0x60))
