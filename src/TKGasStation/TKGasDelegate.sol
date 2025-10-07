@@ -637,7 +637,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
             calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
             calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
-            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { revert(0, 0) }
+            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { revert(0, 0) }  // todo: check security wise if this will be safe with USDT returning a boolean rather than reverting 
 
             // Execute
             let output := shr(96, calldataload(_outputContractBytes.offset))
@@ -1551,6 +1551,37 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x20), _nonce)
             hash := keccak256(ptr, 0x40)
             mstore(0x40, add(ptr, 0x40)) // Update free memory pointer
+        }
+        return _hashTypedData(hash);
+    }
+
+    function hashApproveThenExecute(
+        uint128 _nonce,
+        address _erc20Contract,
+        address _spender,
+        uint256 _approveAmount,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) external view returns (bytes32) {
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            mstore(add(ptr, 0x40), _erc20Contract)
+            mstore(add(ptr, 0x60), _spender)
+            mstore(add(ptr, 0x80), _approveAmount)
+            mstore(add(ptr, 0xa0), _outputContract)
+            mstore(add(ptr, 0xc0), _ethAmount)
+            // Compute argsHash in assembly
+            let argsPtr := add(ptr, 0xe0)
+            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
+            let argsHash := keccak256(argsPtr, _arguments.length)
+            mstore(add(ptr, 0xe0), argsHash)
+            // total = 0x100 (256) bytes
+            hash := keccak256(ptr, 0x100)
+            mstore(0x40, add(ptr, 0x100)) // Update free memory pointer
         }
         return _hashTypedData(hash);
     }
