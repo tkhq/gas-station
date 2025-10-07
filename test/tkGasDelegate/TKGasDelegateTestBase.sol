@@ -202,4 +202,19 @@ contract TKGasDelegateTestBase is Test {
             _arguments
         );
     }
+
+    function _signBatch(
+        uint256 _privateKey,
+        address payable _publicKey,
+        uint128 _nonce,
+        IBatchExecution.Call[] memory _calls
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(_privateKey, TKGasDelegate(_publicKey).hashBatchExecution(_nonce, _calls));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
 }
