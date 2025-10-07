@@ -120,7 +120,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
         // MAX_BATCH_SIZE = 20, build exactly 20 calls
         uint256 maxSize = MockDelegate(user).MAX_BATCH_SIZE();
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](maxSize);
-        
+
         for (uint256 i = 0; i < maxSize; i++) {
             calls[i] = IBatchExecution.Call({
                 to: address(mockToken),
@@ -128,7 +128,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
                 data: abi.encodeWithSelector(mockToken.mint.selector, user, 1 ether)
             });
         }
-        
+
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), abi.encode(calls));
@@ -152,7 +152,6 @@ contract BatchExecutionTest is TKGasDelegateBase {
     }
 
     function testExecuteBatchWrongNonceReverts() public {
-
         MockDelegate(user).spoof_Nonce(20);
         // Prepare calls
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
@@ -169,7 +168,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
 
         (, uint128 currentNonce) = MockDelegate(user).state();
         uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
-        
+
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, wrongNonce, calls);
         bytes memory data = abi.encodePacked(signature, bytes16(wrongNonce), abi.encode(calls));
 

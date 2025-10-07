@@ -17,29 +17,6 @@ contract TKGasStation {
         revert NoEthAllowed();
     }
 
-    fallback(bytes calldata) external returns (bytes memory) {
-        // Parse bytes 1-20 as the address to call as a gas delegate
-        address targetDelegate;
-        assembly {
-            targetDelegate := shr(96, calldataload(1))
-        }
-
-        // Check if the target delegate is a valid gas delegate
-        if (!_isDelegated(targetDelegate)) {
-            revert NotDelegated();
-        }
-
-        // Send the remaining calldata (bytes 21+) to the target delegate
-        (bool success, bytes memory data) = targetDelegate.call(msg.data[21:]);
-        if (!success) {
-            assembly {
-                returndatacopy(0, 0, returndatasize())
-                revert(0, returndatasize())
-            }
-        }
-        return data;
-    }
-
     function _isDelegated(address _targetEoA) internal view returns (bool) {
         uint256 size;
         assembly {

@@ -22,4 +22,3 @@ contract InitTest is TKGasDelegateBase {
         assertEq(sessionCounter, 0);
     }
 }
-

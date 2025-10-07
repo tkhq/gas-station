@@ -22,7 +22,7 @@ contract TKGasDelegateTestBase is Test {
         // Deploy MockDelegate
         tkGasDelegate = new MockDelegate();
         user = payable(vm.addr(USER_PRIVATE_KEY)); // 0x3545A2F3928d5b21E71a790FB458F4AE03306C55
-        user2 = payable(vm.addr(USER_PRIVATE_KEY_2)); 
+        user2 = payable(vm.addr(USER_PRIVATE_KEY_2));
 
         // Deploy Mock ERC20
         mockToken = new MockERC20("Test Token", "TEST");
@@ -35,7 +35,8 @@ contract TKGasDelegateTestBase is Test {
     }
 
     function _delegate(uint256 _userPrivateKey) internal {
-        Vm.SignedDelegation memory signedDelegation = vm.signDelegation(payable(address(tkGasDelegate)), _userPrivateKey);
+        Vm.SignedDelegation memory signedDelegation =
+            vm.signDelegation(payable(address(tkGasDelegate)), _userPrivateKey);
 
         vm.prank(paymaster);
         vm.attachDelegation(signedDelegation);
@@ -138,13 +139,16 @@ contract TKGasDelegateTestBase is Test {
         }
         uint80 ethAmount80 = uint80(_ethAmount);
         bytes memory ethBytes = abi.encodePacked(ethAmount80);
-        return abi.encodePacked(bytes1(0x00), bytes1(0x10), _signature, nonceBytes, _outputContract, ethBytes, _arguments);
+        return
+            abi.encodePacked(bytes1(0x00), bytes1(0x10), _signature, nonceBytes, _outputContract, ethBytes, _arguments);
     }
 
     function _bytesToHexString(bytes memory _bytes) internal pure returns (string memory) {
         string memory result = "";
         for (uint256 i = 0; i < _bytes.length; i++) {
-            result = string(abi.encodePacked(result, "0x", _toHexString(uint8(_bytes[i])), i < _bytes.length - 1 ? ", " : ""));
+            result = string(
+                abi.encodePacked(result, "0x", _toHexString(uint8(_bytes[i])), i < _bytes.length - 1 ? ", " : "")
+            );
         }
         return result;
     }
@@ -185,7 +189,26 @@ contract TKGasDelegateTestBase is Test {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, MockDelegate(_publicKey).hashSessionExecution(_counter, uint128(_deadline), signer, _outputContract)
+            _privateKey, MockDelegate(_publicKey).hashSessionExecution(_counter, _deadline, signer, _outputContract)
+        );
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
+    function _signSessionExecuteWithSender(
+        uint256 _privateKey,
+        address payable _publicKey,
+        uint128 _counter,
+        uint32 _deadline,
+        address _sender,
+        address _outputContract
+    ) internal returns (bytes memory) {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+            _privateKey,
+            MockDelegate(_publicKey).hashSessionExecution(_counter, uint32(_deadline), _sender, _outputContract)
         );
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
@@ -199,12 +222,90 @@ contract TKGasDelegateTestBase is Test {
         address _outputContract,
         bytes memory _arguments
     ) internal pure returns (bytes memory) {
+        return abi.encodePacked(_signature, _counter, _deadline, _outputContract, _arguments);
+    }
+
+    // Fallback builders for session paths (returning variants)
+    function _constructFallbackSessionCalldata(
+        uint128 _counter,
+        uint32 _deadline,
+        bytes memory _signature,
+        address _outputContract,
+        bytes memory _arguments
+    ) internal pure returns (bytes memory) {
+        // selector 0x41 for executeSession with return
+        bytes memory counterBytes = abi.encodePacked(_counter);
+        if (counterBytes.length < 16) {
+            bytes memory padding = new bytes(16 - counterBytes.length);
+            counterBytes = abi.encodePacked(counterBytes, padding);
+        }
+        bytes4 deadline4 = bytes4(_deadline);
+        // Insert a single padding byte between nonce and deadline as expected by fallback parsing
         return abi.encodePacked(
+            bytes1(0x00), bytes1(0x41), _signature, counterBytes, bytes1(0x00), deadline4, _outputContract, _arguments
+        );
+    }
+
+    function _constructFallbackBatchSessionCalldata(
+        uint128 _counter,
+        uint32 _deadline,
+        bytes memory _signature,
+        address _outputContract,
+        IBatchExecution.Call[] memory _calls
+    ) internal pure returns (bytes memory) {
+        // selector 0x61 for executeBatchSession with return
+        bytes memory counterBytes = abi.encodePacked(_counter);
+        if (counterBytes.length < 16) {
+            bytes memory padding = new bytes(16 - counterBytes.length);
+            counterBytes = abi.encodePacked(counterBytes, padding);
+        }
+        bytes4 deadline4 = bytes4(_deadline);
+        return abi.encodePacked(
+            bytes1(0x00),
+            bytes1(0x61),
             _signature,
-            _counter,
-            _deadline,
+            counterBytes,
+            bytes1(0x00),
+            deadline4,
             _outputContract,
-            _arguments
+            abi.encode(_calls)
+        );
+    }
+
+    function _constructFallbackArbitrarySessionCalldata(
+        uint128 _counter,
+        uint32 _deadline,
+        bytes memory _signature,
+        address _outputContract,
+        bytes memory _arguments
+    ) internal pure returns (bytes memory) {
+        // selector 0x71 for executeSessionArbitrary with return
+        bytes memory counterBytes = abi.encodePacked(_counter);
+        if (counterBytes.length < 16) {
+            bytes memory padding = new bytes(16 - counterBytes.length);
+            counterBytes = abi.encodePacked(counterBytes, padding);
+        }
+        bytes4 deadline4 = bytes4(_deadline);
+        return abi.encodePacked(
+            bytes1(0x00), bytes1(0x71), _signature, counterBytes, bytes1(0x00), deadline4, _outputContract, _arguments
+        );
+    }
+
+    function _constructFallbackArbitraryBatchSessionCalldata(
+        uint128 _counter,
+        uint32 _deadline,
+        bytes memory _signature,
+        IBatchExecution.Call[] memory _calls
+    ) internal pure returns (bytes memory) {
+        // selector 0x91 for executeBatchSessionArbitrary with return
+        bytes memory counterBytes = abi.encodePacked(_counter);
+        if (counterBytes.length < 16) {
+            bytes memory padding = new bytes(16 - counterBytes.length);
+            counterBytes = abi.encodePacked(counterBytes, padding);
+        }
+        bytes4 deadline4 = bytes4(_deadline);
+        return abi.encodePacked(
+            bytes1(0x00), bytes1(0x91), _signature, counterBytes, bytes1(0x00), deadline4, abi.encode(_calls)
         );
     }
 
@@ -237,15 +338,9 @@ contract TKGasDelegateTestBase is Test {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, 
+            _privateKey,
             MockDelegate(_publicKey).hashApproveThenExecute(
-                _nonce,
-                _erc20Contract,
-                _spender,
-                _approveAmount,
-                _outputContract,
-                _ethAmount,
-                _arguments
+                _nonce, _erc20Contract, _spender, _approveAmount, _outputContract, _ethAmount, _arguments
             )
         );
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -270,16 +365,9 @@ contract TKGasDelegateTestBase is Test {
         bytes32 approveAmountBytes = bytes32(_approveAmount);
         bytes20 outputBytes = bytes20(_outputContract);
         bytes32 ethAmountBytes = bytes32(_ethAmount);
-        
+
         return abi.encodePacked(
-            _signature,
-            nonce16,
-            erc20Bytes,
-            spenderBytes,
-            approveAmountBytes,
-            outputBytes,
-            ethAmountBytes,
-            _arguments
+            _signature, nonce16, erc20Bytes, spenderBytes, approveAmountBytes, outputBytes, ethAmountBytes, _arguments
         );
     }
 }

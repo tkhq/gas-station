@@ -95,7 +95,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         (, uint128 currentNonce) = MockDelegate(user).state();
         uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
-        
+
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, wrongNonce, address(mockToken), 0, args);
 

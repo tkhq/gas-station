@@ -2,9 +2,9 @@
 pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
-import {MockDelegate} from "../mocks/MockDelegate.t.sol";
-import {TKGasDelegateTestBase as TKGasDelegateBase} from "./TKGasDelegateTestBase.t.sol";
-import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
+import {MockDelegate} from "../../mocks/MockDelegate.t.sol";
+import {TKGasDelegateTestBase as TKGasDelegateBase} from "../TKGasDelegateTestBase.t.sol";
+import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
 
 contract FallbackExecutionTest is TKGasDelegateBase {
     function testFallbackExecuteSendERC20() public {
@@ -59,21 +59,9 @@ contract FallbackExecutionTest is TKGasDelegateBase {
 
     function testFallbackUnexpectedExecutionMode() public {
         (, uint128 nonce) = MockDelegate(user).state();
-        bytes memory signature = _signExecute(
-            USER_PRIVATE_KEY,
-            user,
-            nonce,
-            address(0),
-            0,
-            bytes("")
-        );
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(0), 0, bytes(""));
 
-        bytes memory fallbackData = _constructFallbackCalldata(
-            nonce,
-            signature,
-            address(0),
-            bytes("")
-        );
+        bytes memory fallbackData = _constructFallbackCalldata(nonce, signature, address(0), bytes(""));
 
         // Force unexpected execution mode by setting the second byte to 0xFF
         fallbackData[1] = bytes1(0xFF);
@@ -88,4 +76,3 @@ contract FallbackExecutionTest is TKGasDelegateBase {
         assertEq(result, abi.encodeWithSelector(TKGasDelegate.UnsupportedExecutionMode.selector));
     }
 }
-

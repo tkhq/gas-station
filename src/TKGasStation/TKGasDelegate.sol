@@ -17,6 +17,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     error NotSelf();
     error ExecutionFailed();
     error UnsupportedExecutionMode();
+    error ApprovalFailed();
+    error ApprovalTo0Failed();
+
+    // Precomputed selector for DeadlineExceeded(): 0x559895a3
+    bytes4 private constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
+    bytes4 private constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
+    bytes4 private constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
 
     bytes32 private constant EXECUTION_TYPEHASH = 0xcd5f5d65a387f188fe5c0c9265c7e7ec501fa0b0ee45ad769c119694cac5d895;
     // Original: keccak256("Execution(uint128 nonce,address outputContract,uint256 ethAmount,bytes arguments)")
@@ -450,7 +457,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             nonceValue := shr(128, calldataload(_nonceBytes.offset))
         }
-        if (nonceValue != currentNonce ) {
+        if (nonceValue != currentNonce) {
             revert InvalidNonce();
         }
         unchecked {
@@ -579,23 +586,23 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
             // Write amount (32 bytes) starting at offset 4 + 32 = 0x24
             calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
-            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { 
+            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
                 mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
                 calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
-                mstore(add(ptr, 0x24), 0) // essentially write nothing to the next word in the register so it's 0 
-                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { 
+                mstore(add(ptr, 0x24), 0) // essentially write nothing to the next word in the register so it's 0
+                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
                     let errorPtr := mload(0x40)
-                    mstore(errorPtr, "ApprovalTo0Failed")
-                    revert(errorPtr, 14)
+                    mstore(errorPtr, APPROVAL_TO_0_FAILED_SELECTOR)
+                    revert(errorPtr, 0x04)
                 }
                 calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32) // then write something
-                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { 
+                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
                     let errorPtr := mload(0x40)
-                    mstore(errorPtr, "ApprovalFailed")
-                    revert(errorPtr, 13)
+                    mstore(errorPtr, APPROVAL_FAILED_SELECTOR)
+                    revert(errorPtr, 0x04)
                 }
-            } // set the approval 
+            } // set the approval
         }
         (bool success, bytes memory result) =
             _ethAmount == 0 ? _outputContract.call(_arguments) : _outputContract.call{value: _ethAmount}(_arguments);
@@ -656,7 +663,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
             calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
             calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
-            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) { revert(0, 0) }  // todo: check security wise if this will be safe with USDT returning a boolean rather than reverting 
+            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, APPROVAL_FAILED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // todo: check security wise if this will be safe with USDT returning a boolean rather than reverting
 
             // Execute
             let output := shr(96, calldataload(_outputContractBytes.offset))
@@ -831,21 +842,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _arguments
     ) internal returns (bool, bytes memory) {
         // Check if deadline has passed using calldata
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) } // DeadlineExceeded
-        }
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
-            // Copy counter bytes directly to memory
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            // Copy deadline bytes directly to memory
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             mstore(add(ptr, 0x80), _outputContract)
             hash := keccak256(ptr, 0xa0)
@@ -871,19 +881,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         uint256 _ethAmount,
         bytes calldata _arguments
     ) internal {
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) }
-        }
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                // Use precomputed selector and revert with 4-byte custom error
+                mstore(0x00, DEADLINE_EXCEEDED_SELECTOR)
+                revert(0x00, 0x04)
+            }
             let ptr := mload(0x40)
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             let raw := calldataload(_outputContractBytes.offset)
             mstore(add(ptr, 0x80), shr(96, raw))
@@ -907,22 +918,21 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         address _outputContract,
         bytes calldata _arguments
     ) internal returns (bool, bytes memory) {
-        // Check if deadline has passed using calldata
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) } // DeadlineExceeded
-        }
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            // Copy deadline bytes directly to memory
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             mstore(add(ptr, 0x80), _outputContract)
             hash := keccak256(ptr, 0xa0)
@@ -946,19 +956,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _outputContractBytes,
         bytes calldata _arguments
     ) internal {
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) }
-        }
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
             let ptr := mload(0x40)
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             let raw := calldataload(_outputContractBytes.offset)
             mstore(add(ptr, 0x80), shr(96, raw))
@@ -983,10 +994,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         IBatchExecution.Call[] calldata _calls
     ) internal returns (bool, bytes[] memory) {
         // Check if deadline has passed using calldata
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) } // DeadlineExceeded
-        }
+
         if (_calls.length > MAX_BATCH_SIZE) {
             revert BatchSizeExceeded();
         }
@@ -994,13 +1002,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            // Copy deadline bytes directly to memory
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             mstore(add(ptr, 0x80), _outputContract)
             hash := keccak256(ptr, 0xa0)
@@ -1018,6 +1031,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             IBatchExecution.Call calldata execution = _calls[i];
             uint256 ethAmount = execution.value;
             address outputContract = execution.to;
+            // do not cache execution.data - leave it as calldata
             if (outputContract != _outputContract) {
                 revert InvalidOutputContract();
             }
@@ -1044,10 +1058,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _outputContractBytes,
         IBatchExecution.Call[] calldata _calls
     ) internal {
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) }
-        }
         if (_calls.length > MAX_BATCH_SIZE) {
             revert BatchSizeExceeded();
         }
@@ -1055,11 +1065,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
             let ptr := mload(0x40)
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             let raw := calldataload(_outputContractBytes.offset)
             mstore(add(ptr, 0x80), shr(96, raw))
@@ -1095,21 +1111,22 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _arguments
     ) internal returns (bool, bytes memory) {
         // Check if deadline has passed using calldata
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) } // DeadlineExceeded
-        }
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            // Copy deadline bytes directly to memory
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            // Store previously loaded deadline directly to memory
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
         }
@@ -1130,19 +1147,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _outputContractBytes,
         bytes calldata _arguments
     ) internal {
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) }
-        }
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
             let ptr := mload(0x40)
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
         }
@@ -1165,21 +1183,22 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _arguments
     ) internal returns (bool, bytes memory) {
         // Check if deadline has passed using calldata
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) } // DeadlineExceeded
-        }
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            // Copy deadline bytes directly to memory
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            // Store previously loaded deadline directly to memory
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
         }
@@ -1201,19 +1220,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         uint256 _ethAmount,
         bytes calldata _arguments
     ) internal {
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) }
-        }
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
             let ptr := mload(0x40)
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
         }
@@ -1233,26 +1253,26 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _deadlineBytes, // Changed from uint128
         IBatchExecution.Call[] calldata _calls
     ) internal returns (bool, bytes[] memory) {
-        // Check if deadline has passed using calldata
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) } // DeadlineExceeded
-        }
-        // Prevent griefing attacks by limiting batch size
         if (_calls.length > MAX_BATCH_SIZE) {
             revert BatchSizeExceeded();
         }
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
+                revert(errorPtr, 0x04)
+            } // DeadlineExceeded
+
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             // Copy counter bytes directly to memory
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            // Copy deadline bytes directly to memory
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            // Store previously loaded deadline directly to memory
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
         }
@@ -1290,20 +1310,22 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _deadlineBytes,
         IBatchExecution.Call[] calldata _calls
     ) internal {
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) { revert(0, 0) }
-        }
         if (_calls.length > MAX_BATCH_SIZE) revert BatchSizeExceeded();
-
         address sender = msg.sender;
         bytes32 hash;
         assembly {
+            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            if gt(timestamp(), deadline) {
+                // Use precomputed selector and revert with 4-byte custom error
+                mstore(0x00, DEADLINE_EXCEEDED_SELECTOR)
+                revert(0x00, 0x04)
+            }
+
             let ptr := mload(0x40)
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
-            calldatacopy(add(ptr, 0x40), _deadlineBytes.offset, 4)
+            mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), sender)
             hash := keccak256(ptr, 0x80)
         }
@@ -1357,7 +1379,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
     }
 
-    /* Bytes-encoded entrypoints to match refactored interface */
     function executeSession(bytes calldata data) external returns (bool, bytes memory) {
         // Layout: [signature(65)][counter(16)][deadline(4)][sender(20)][output(20)][args]
         bytes calldata signature = data[0:65];
@@ -1383,8 +1404,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
         IBatchExecution.Call[] calldata calls;
         assembly {
-            calls.offset := add(data.offset, 105)
-            calls.length := calldataload(add(data.offset, 105))
+            // ABI: at offset 105, we have the head for the dynamic array: [offset=0x20][length][elements]
+            calls.offset := add(data.offset, add(105, 0x40))
+            calls.length := calldataload(add(data.offset, add(105, 0x20)))
         }
         return _executeBatchSession(signature, data[65:81], data[81:85], output, calls);
     }
@@ -1411,8 +1433,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         IBatchExecution.Call[] calldata calls;
         assembly {
-            calls.offset := add(data.offset, 85)
-            calls.length := calldataload(add(data.offset, 85))
+            // ABI: at offset 85, we have the head for the dynamic array: [offset=0x20][length][elements]
+            calls.offset := add(data.offset, add(85, 0x40))
+            calls.length := calldataload(add(data.offset, add(85, 0x20)))
         }
         return _executeBatchSessionArbitrary(signature, data[65:81], data[81:85], calls);
     }
@@ -1621,7 +1644,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _hashTypedData(hash);
     }
 
-    function hashSessionExecution(uint128 _counter, uint128 _deadline, address _sender, address _outputContract)
+    function hashSessionExecution(uint128 _counter, uint32 _deadline, address _sender, address _outputContract)
         external
         view
         returns (bytes32)
@@ -1640,7 +1663,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _hashTypedData(hash);
     }
 
-    function hashArbitrarySessionExecution(uint128 _counter, uint128 _deadline, address _sender)
+    function hashArbitrarySessionExecution(uint128 _counter, uint32 _deadline, address _sender)
         external
         view
         returns (bytes32)

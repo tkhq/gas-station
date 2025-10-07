@@ -35,9 +35,12 @@ contract TKGasStationTest is Test {
         _delegate(USER_PRIVATE_KEY, address(tkGasDelegate));
     }
 
+    function testInit() public view {
+        assertTrue(tkGasStation.tkGasDelegate() == address(tkGasDelegate));
+    }
+
     function _delegate(uint256 _userPrivateKey, address _delegateTo) internal {
-        Vm.SignedDelegation memory signedDelegation =
-            vm.signDelegation(payable(address(_delegateTo)), _userPrivateKey);
+        Vm.SignedDelegation memory signedDelegation = vm.signDelegation(payable(address(_delegateTo)), _userPrivateKey);
 
         vm.prank(paymaster);
         vm.attachDelegation(signedDelegation);
@@ -190,29 +193,25 @@ contract TKGasStationTest is Test {
         tkGasStation.executeNoValue(user, data);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.execute(user, data);       
+        tkGasStation.execute(user, data);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.approveThenExecute(user, data);   
+        tkGasStation.approveThenExecute(user, data);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.executeBatch(user, data);     
+        tkGasStation.executeBatch(user, data);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.burnNonce(user, data, 0);     
+        tkGasStation.burnNonce(user, data, 0);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.getNonce(user);     
+        tkGasStation.getNonce(user);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.getNonce(user);     
-        
-        bool isDelegated = tkGasStation.isDelegated(user);     
+        tkGasStation.getNonce(user);
+
+        bool isDelegated = tkGasStation.isDelegated(user);
         assertFalse(isDelegated);
-
-        bytes memory fallbackData = abi.encodePacked(hex"00", user, hex"00", data);
-        vm.expectRevert(TKGasStation.NotDelegated.selector);
-        address(tkGasStation).call(fallbackData);
     }
 
     function testReceiveReverts() public {

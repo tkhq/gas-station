@@ -51,7 +51,6 @@ contract BurnTest is TKGasDelegateBase {
         assertEq(currentNonce, 0);
     }
 
-
     function testGassyBurnNonceRevertsInvalidNonce() public {
         (, uint128 nonce) = MockDelegate(user).state();
 
@@ -191,4 +190,3 @@ contract BurnTest is TKGasDelegateBase {
         assertEq(nonceAfterSignature, nonceAfterDirect + 1);
     }
 }
-
