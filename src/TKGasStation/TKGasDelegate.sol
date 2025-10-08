@@ -20,8 +20,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     error ApprovalFailed();
     error ApprovalTo0Failed();
 
-    error R(uint256 r);
-
     // Precomputed selector for DeadlineExceeded(): 0x559895a3
     bytes4 private constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
     bytes4 private constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
@@ -364,6 +362,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeNoValue(data[0:65], data[65:81], to, data[101:]);
     }
 
+    function executeNoValue(address _to, bytes calldata _data) external returns (bool, bytes memory) {
+        return _executeNoValue(_data[0:65], _data[65:81], _to, _data[81:]);
+    }
+
     function approveThenExecute(bytes calldata _data) external returns (bool, bytes memory) {
         // Layout: [signature(65)][nonce(16)][erc20(20)][spender(20)][approveAmount(32)][output(20)][eth(32)][args]
         address to;
@@ -381,6 +383,19 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             to,
             value,
             _data[205:]
+        );
+    }
+
+    function approveThenExecute(address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external returns (bool, bytes memory) {
+        return _approveThenExecuteWithParams(
+            _data[0:65],
+            _data[65:81],
+            _erc20,
+            _spender,
+            _approveAmount,
+            _to,
+            _ethAmount,
+            _data[81:]
         );
     }
 
@@ -457,6 +472,72 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         revert ExecutionFailed();
     }
 
+    function _approveThenExecuteWithParams(
+        bytes calldata _signature, // 65 bytes
+        bytes calldata _nonceBytes, // uint128
+        address _erc20,
+        address _spender,
+        uint256 _approveAmount,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) internal returns (bool, bytes memory) {
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
+            mstore(add(ptr, 0x40), _erc20)
+            mstore(add(ptr, 0x60), _spender)
+            mstore(add(ptr, 0x80), _approveAmount)
+            mstore(add(ptr, 0xa0), _outputContract)
+            mstore(add(ptr, 0xc0), _ethAmount)
+            // Compute argsHash in assembly
+            let argsPtr := add(ptr, 0xe0)
+            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
+            let argsHash := keccak256(argsPtr, _arguments.length)
+            mstore(add(ptr, 0xe0), argsHash)
+            // total = 0x100 (256) bytes
+            hash := keccak256(ptr, 0x100)
+        }
+        hash = _hashTypedData(hash);
+
+        _validateExecute(hash, _signature, _nonceBytes);
+        
+        // Build calldata for approve(spender, amount) and call token
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+            mstore(add(ptr, 0x04), _spender)
+            mstore(add(ptr, 0x24), _approveAmount)
+            if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
+                // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
+                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                mstore(add(ptr, 0x04), _spender)
+                mstore(add(ptr, 0x24), 0)
+                if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
+                    mstore(0x00, APPROVAL_TO_0_FAILED_SELECTOR)
+                    revert(0x00, 0x04)
+                }
+                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                mstore(add(ptr, 0x04), _spender)
+                mstore(add(ptr, 0x24), _approveAmount)
+                if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
+                    mstore(0x00, APPROVAL_FAILED_SELECTOR)
+                    revert(0x00, 0x04)
+                }
+            }
+        }
+
+        (bool success, bytes memory result) =
+            _ethAmount == 0 ? _outputContract.call(_arguments) : _outputContract.call{value: _ethAmount}(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
+    }
+
     function _approveThenExecuteNoReturn(
         bytes calldata _signature, // 65 bytes
         bytes calldata _nonceBytes, // uint128
@@ -467,7 +548,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _ethAmountBytes,
         bytes calldata _arguments
     ) internal {
-        bytes32 argsHash = keccak256(_arguments);
+        //bytes32 argsHash = keccak256(_arguments);
         bytes32 hash;
         assembly {
             let ptr := mload(0x40)
@@ -493,6 +574,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 mstore(add(ptr, 0xc0), ethVal)
             }
             // args hash
+            let argsPtr := add(ptr, 0xe0)
+            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
+            let argsHash := keccak256(argsPtr, _arguments.length)
             mstore(add(ptr, 0xe0), argsHash)
             hash := keccak256(ptr, 0x100)
         }
@@ -1126,6 +1210,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeSessionWithValue(data[0:65], data[65:81], data[81:85], output, ethAmount, data[137:]);
     }
 
+    function executeSession(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
+        return _executeSessionWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
+    }
+
     function executeBatchSession(bytes calldata data) external returns (bool, bytes[] memory) {
         // Layout: [signature(65)][counter(16)][deadline(4)][output(20)][abi.encode(IBatchExecution.Call[])]
         IBatchExecution.Call[] calldata calls;
@@ -1140,6 +1228,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeBatchSession(data[0:65], data[65:81], data[81:85], output, calls);
     }
 
+    function executeBatchSession(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
+        return _executeBatchSession(_data[0:65], _data[65:81], _data[81:85], address(0), _calls);
+    }
+
     function executeSessionArbitrary(bytes calldata data) external returns (bool, bytes memory) {
         // does not limit output contract
         // Layout: [signature(65)][counter(16)][deadline(4)][output(20)][ethAmount(32)][args]
@@ -1150,6 +1242,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             ethAmount := calldataload(add(data.offset, 105))
         }
         return _executeSessionArbitraryWithValue(data[0:65], data[65:81], data[81:85], output, ethAmount, data[137:]);
+    }
+
+    function executeSessionArbitrary(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
+        return _executeSessionArbitraryWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
     }
 
     function executeBatchSessionArbitrary(bytes calldata data) external returns (bool, bytes[] memory) {
@@ -1164,9 +1260,54 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeBatchSessionArbitrary(data[0:65], data[65:81], data[81:85], calls);
     }
 
+    function executeBatchSessionArbitrary(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
+        return _executeBatchSessionArbitrary(_data[0:65], _data[65:81], _data[81:85], _calls);
+    }
+
     function executeBatch(bytes calldata data) external returns (bool, bytes[] memory) {
         // Layout: [signature(65)][nonce(16)][abi.encode(IBatchExecution.Call[])]
         return _executeBatch(data[0:65], data[65:81], data[81:]);
+    }
+
+    function executeBatch(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
+        return _executeBatchWithCalls(_data[0:65], _data[65:81], _calls);
+    }
+
+    function _executeBatchWithCalls(bytes calldata _signature, bytes calldata _nonceBytes, IBatchExecution.Call[] calldata _calls)
+        internal
+        returns (bool, bytes[] memory)
+    {
+        // Hash the calls array directly
+        bytes32 executionsHash = keccak256(abi.encode(_calls));
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40)
+            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), executionsHash)
+            hash := keccak256(ptr, 0x40)
+            mstore(0x40, add(ptr, 0x40)) // Update free memory pointer
+        }
+        hash = _hashTypedData(hash);
+        _validateExecute(hash, _signature, _nonceBytes);
+
+        uint256 length = _calls.length;
+        if (length > MAX_BATCH_SIZE) {
+            revert BatchSizeExceeded();
+        }
+
+        bytes[] memory results = new bytes[](length);
+        for (uint256 i; i < length;) {
+            IBatchExecution.Call calldata execution = _calls[i];
+            (bool success, bytes memory result) = execution.to.call{value: execution.value}(execution.data);
+            if (!success) {
+                revert ExecutionFailed();
+            }
+            results[i] = result;
+            unchecked {
+                ++i;
+            }
+        }
+        return (true, results);
     }
 
     function _executeBatch(bytes calldata _signature, bytes calldata _nonceBytes, bytes calldata _calls)

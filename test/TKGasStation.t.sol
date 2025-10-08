@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {TKGasStation} from "../src/TKGasStation/TKGasStation.sol";
 import {TKGasDelegate} from "../src/TKGasStation/TKGasDelegate.sol";
 import {ITKGasDelegate} from "../src/TKGasStation/interfaces/ITKGasDelegate.sol";
+import {IBatchExecution} from "../src/TKGasStation/interfaces/IBatchExecution.sol";
 import "../test/mocks/MockERC20.t.sol";
 
 contract TKGasStationTest is Test {
@@ -207,11 +208,83 @@ contract TKGasStationTest is Test {
         vm.expectRevert(TKGasStation.NotDelegated.selector);
         tkGasStation.getNonce(user);
 
+        // Test new functions that delegate to msg.sender
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.getNonce(user);
+        tkGasStation.execute(user, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeNoValue(user, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.approveThenExecute(user, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeSession(user, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeBatch(user, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeBatchSession(user, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeSessionArbitrary(user, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeBatchSessionArbitrary(user, data);
+
+        // Test overloaded functions with explicit parameters
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.execute(user, user, 0, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeNoValue(user, user, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.approveThenExecute(user, user, 0, address(mockToken), user, 1000, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeSession(user, user, 0, data);
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, user, 1000)
+        });
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeBatch(user, calls, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeBatchSession(user, calls, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeSessionArbitrary(user, user, 0, data);
+
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        tkGasStation.executeBatchSessionArbitrary(user, calls, data);
+
+        // Test fallback function
+        vm.expectRevert(TKGasStation.NotDelegated.selector);
+        address(tkGasStation).call(abi.encodePacked(bytes1(0x00), user, bytes1(0x00)));
 
         bool isDelegated = tkGasStation.isDelegated(user);
         assertFalse(isDelegated);
+    }
+
+    function testFallbackInvalidFunctionSelectorRevert() public {
+        vm.expectRevert(TKGasStation.InvalidFunctionSelector.selector);
+        address(tkGasStation).call(abi.encodePacked(bytes1(0x00), user, bytes1(0x41)));
+
+        vm.expectRevert(TKGasStation.InvalidFunctionSelector.selector);
+        address(tkGasStation).call(abi.encodePacked(bytes1(0x00), user, bytes1(0x50)));
+
+        vm.expectRevert(TKGasStation.InvalidFunctionSelector.selector);
+        address(tkGasStation).call(abi.encodePacked(bytes1(0x00), user, bytes1(0x6F)));
+
+        vm.expectRevert(TKGasStation.InvalidFunctionSelector.selector);
+        address(tkGasStation).call(abi.encodePacked(bytes1(0x00), user, bytes1(0x71)));
     }
 
     function testReceiveReverts() public {
