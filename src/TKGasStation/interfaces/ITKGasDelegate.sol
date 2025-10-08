@@ -4,15 +4,8 @@ pragma solidity ^0.8.30;
 import {IBatchExecution} from "./IBatchExecution.sol";
 
 interface ITKGasDelegate is IBatchExecution {
-    // State struct
-    struct State {
-        uint128 sessionCounter;
-        uint128 nonce;
-    }
 
     function nonce() external view returns (uint128);
-
-    function sessionCounter() external view returns (uint128);
 
     // Execute functions
     function execute(bytes calldata data) external returns (bytes memory);
@@ -107,8 +100,5 @@ interface ITKGasDelegate is IBatchExecution {
     function burnNonce(bytes calldata _signature, uint128 _nonce) external;
     function burnSessionCounter(bytes calldata _signature, uint128 _counter, address _sender) external;
     function burnNonce() external;
-    function burnSessionCounter() external;
-
-    // State access
-    function state() external view returns (uint128 _sessionCounter, uint128 _nonce);
+    function burnSessionCounter(uint128 _counter) external;
 }

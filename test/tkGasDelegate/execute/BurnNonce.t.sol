@@ -7,7 +7,7 @@ import {TKGasDelegateTestBase as TKGasDelegateBase} from "../TKGasDelegateTestBa
 
 contract BurnTest is TKGasDelegateBase {
     function testGassyBurnNonce() public {
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, user, nonce);
 
@@ -15,7 +15,7 @@ contract BurnTest is TKGasDelegateBase {
         MockDelegate(user).burnNonce(signature, nonce);
         vm.stopPrank();
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
     }
 
@@ -30,7 +30,7 @@ contract BurnTest is TKGasDelegateBase {
         MockDelegate(user).burnNonce(signature, nonce);
         vm.stopPrank();
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
     }
 
@@ -47,12 +47,12 @@ contract BurnTest is TKGasDelegateBase {
         MockDelegate(user).burnNonce(signature, nonce);
         vm.stopPrank();
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, 0);
     }
 
     function testGassyBurnNonceRevertsInvalidNonce() public {
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, user, nonce + 1);
 
@@ -61,7 +61,7 @@ contract BurnTest is TKGasDelegateBase {
         MockDelegate(user).burnNonce(signature, nonce + 1);
         vm.stopPrank();
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce);
     }
 
@@ -69,7 +69,7 @@ contract BurnTest is TKGasDelegateBase {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory burnSignature = _signBurnNonce(USER_PRIVATE_KEY, user, nonce);
 
@@ -77,13 +77,14 @@ contract BurnTest is TKGasDelegateBase {
         MockDelegate(user).burnNonce(burnSignature, nonce);
         vm.stopPrank();
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         bytes memory executeSignature = _signExecute(
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(mockToken),
             0,
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
@@ -96,6 +97,7 @@ contract BurnTest is TKGasDelegateBase {
         bytes memory execData = _constructExecuteBytes(
             executeSignature,
             nonce,
+            uint32(block.timestamp + 86400),
             address(mockToken),
             0,
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
@@ -107,13 +109,13 @@ contract BurnTest is TKGasDelegateBase {
     }
 
     function testGassyDirectBurnNonce() public {
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
         MockDelegate(user).burnNonce();
         vm.stopPrank();
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         vm.startPrank(user);
@@ -123,13 +125,13 @@ contract BurnTest is TKGasDelegateBase {
     }
 
     function testGassyDirectBurnNonceRevertsInvalidNonce() public {
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
         MockDelegate(user).burnNonce();
         vm.stopPrank();
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         vm.startPrank(user);
@@ -142,19 +144,20 @@ contract BurnTest is TKGasDelegateBase {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
         MockDelegate(user).burnNonce();
         vm.stopPrank();
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         bytes memory executeSignature = _signExecute(
             USER_PRIVATE_KEY,
             payable(address(tkGasDelegate)),
             nonce,
+            uint32(block.timestamp + 86400),
             address(mockToken),
             0,
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
@@ -167,6 +170,7 @@ contract BurnTest is TKGasDelegateBase {
         bytes memory execData2 = _constructExecuteBytes(
             executeSignature,
             nonce,
+            uint32(block.timestamp + 86400),
             address(mockToken),
             0,
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
@@ -178,23 +182,23 @@ contract BurnTest is TKGasDelegateBase {
     }
 
     function testGassyDirectBurnNonceVsSignatureBurn() public {
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
         MockDelegate(user).burnNonce();
         vm.stopPrank();
 
-        (, uint128 nonceAfterDirect) = MockDelegate(user).state();
+        uint128 nonceAfterDirect = MockDelegate(user).nonce();
         assertEq(nonceAfterDirect, nonce + 1);
 
-        (, uint128 newNonce) = MockDelegate(user).state();
+        uint128 newNonce = MockDelegate(user).nonce();
         bytes memory signature = _signBurnNonce(USER_PRIVATE_KEY, user, newNonce);
 
         vm.prank(paymaster);
         MockDelegate(user).burnNonce(signature, newNonce);
         vm.stopPrank();
 
-        (, uint128 nonceAfterSignature) = MockDelegate(user).state();
+        uint128 nonceAfterSignature = MockDelegate(user).nonce();
         assertEq(nonceAfterSignature, newNonce + 1);
 
         assertEq(nonceAfterSignature, nonceAfterDirect + 1);

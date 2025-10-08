@@ -13,7 +13,7 @@ contract SessionTest is TKGasDelegateBase {
         mockToken.mint(user, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -30,7 +30,7 @@ contract SessionTest is TKGasDelegateBase {
     }
 
     function testSessionExecute_ExpiredDeadline_Reverts() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp - 1);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -44,7 +44,7 @@ contract SessionTest is TKGasDelegateBase {
     }
 
     function testSessionExecute_InvalidCounter_Reverts() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -53,10 +53,10 @@ contract SessionTest is TKGasDelegateBase {
 
         // Burn the counter
         vm.prank(user, user);
-        MockDelegate(user).burnSessionCounter();
+        MockDelegate(user).spoof_burnSessionCounter(counter);
         vm.stopPrank();
 
-        (uint128 newCounter,) = MockDelegate(user).state();
+        uint128 newCounter = 1; // Use fixed counter value
 
         assertEq(counter + 1, newCounter);
 
@@ -70,7 +70,7 @@ contract SessionTest is TKGasDelegateBase {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -89,7 +89,7 @@ contract SessionTest is TKGasDelegateBase {
     function testSessionExecute_AttemptDifferentContract_Reverts() public {
         // build a valid signature for mockToken but attempt to call a different contract
         address other = makeAddr("otherContract");
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         vm.deal(user, 1 ether);
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
@@ -107,7 +107,7 @@ contract SessionTest is TKGasDelegateBase {
 
     function testSessionExecute_AttemptDifferentContractWithValue_Reverts() public {
         address other = makeAddr("otherContract");
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -122,7 +122,7 @@ contract SessionTest is TKGasDelegateBase {
     }
 
     function testSessionExecute_SignedByOtherUser_RevertsNotSelf() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         // Sign with USER_PRIVATE_KEY_2 instead of the user's key
         bytes memory signature =
@@ -141,14 +141,14 @@ contract SessionTest is TKGasDelegateBase {
         mockToken.mint(user, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
 
-        bytes memory data = _constructFallbackCalldata(
+        bytes memory data = _constructSessionFallbackCalldata(
             bytes1(0x30),
             signature,
             counter,
@@ -167,14 +167,14 @@ contract SessionTest is TKGasDelegateBase {
         mockToken.mint(user, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
 
-        bytes memory data = _constructFallbackCalldata(
+        bytes memory data = _constructSessionFallbackCalldata(
             bytes1(0x31),
             signature,
             counter,
@@ -196,7 +196,7 @@ contract SessionTest is TKGasDelegateBase {
         mockToken.mint(user, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -214,7 +214,7 @@ contract SessionTest is TKGasDelegateBase {
     }
 
     function testSessionExecuteParameterized_ExpiredDeadline_Reverts() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp - 1);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -229,7 +229,7 @@ contract SessionTest is TKGasDelegateBase {
     }
 
     function testSessionExecuteParameterized_InvalidCounter_Reverts() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -239,10 +239,10 @@ contract SessionTest is TKGasDelegateBase {
 
         // Burn the counter
         vm.prank(user, user);
-        MockDelegate(user).burnSessionCounter();
+        MockDelegate(user).spoof_burnSessionCounter(counter);
         vm.stopPrank();
 
-        (uint128 newCounter,) = MockDelegate(user).state();
+        uint128 newCounter = 1; // Use fixed counter value
 
         assertEq(counter + 1, newCounter);
 
@@ -256,7 +256,7 @@ contract SessionTest is TKGasDelegateBase {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
@@ -276,7 +276,7 @@ contract SessionTest is TKGasDelegateBase {
     function testSessionExecuteParameterized_AttemptDifferentContract_Reverts() public {
         // build a valid signature for mockToken but attempt to call a different contract
         address other = makeAddr("otherContract");
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         vm.deal(user, 1 ether);
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
@@ -294,7 +294,7 @@ contract SessionTest is TKGasDelegateBase {
     }
 
     function testSessionExecuteParameterized_SignedByOtherUser_RevertsNotSelf() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         // Sign with USER_PRIVATE_KEY_2 for 'user'
         bytes memory signature =

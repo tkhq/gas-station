@@ -158,7 +158,7 @@ contract TKGasStation is ITKGasStation {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        (, uint128 nonce) = ITKGasDelegate(_targetEoA).state();
+        uint128 nonce = ITKGasDelegate(_targetEoA).nonce();
         return nonce;
     }
 

@@ -39,7 +39,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         uint256 swapAmount = 100 * 10 ** 18;
         uint256 expectedOutput = 95 * 10 ** 18; // 5% slippage
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
@@ -60,7 +60,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         // Construct calldata
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
+            signature, nonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
         );
 
         // Execute approve then execute
@@ -76,7 +76,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         assertEq(tokenA.balanceOf(address(mockSwap)), 10100 * 10 ** 18); // 10000 + 100
         assertEq(tokenB.balanceOf(address(mockSwap)), 9905 * 10 ** 18); // 10000 - 95
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Approve Then Execute Swap Gas ===");
@@ -92,7 +92,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         // Fund the user with ETH
         vm.deal(user, 1 ether);
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
@@ -113,7 +113,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         // Construct calldata
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, address(tokenA), address(mockSwap), swapAmount, address(mockSwap), ethAmount, swapData
+            signature, nonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), swapAmount, address(mockSwap), ethAmount, swapData
         );
 
         // Execute approve then execute with ETH
@@ -130,7 +130,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         assertEq(tokenA.balanceOf(address(mockSwap)), 10050 * 10 ** 18); // 10000 + 50
         assertEq(tokenB.balanceOf(address(mockSwap)), 9953 * 10 ** 18); // 10000 - 47
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Approve Then Execute Swap with ETH Gas ===");
@@ -153,7 +153,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         // Verify initial allowance
         assertEq(usdt.allowance(user, address(mockSwap)), 50 * 10 ** 6);
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         // Simple transfer to mockSwap (no swap, just approve and transfer)
         bytes memory transferData = abi.encodeWithSelector(usdt.transfer.selector, address(mockSwap), approveAmount);
@@ -173,7 +173,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         // Construct calldata
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, address(usdt), address(mockSwap), approveAmount, address(usdt), 0, transferData
+            signature, nonce, uint32(block.timestamp + 86400), address(usdt), address(mockSwap), approveAmount, address(usdt), 0, transferData
         );
 
         // Execute approve then execute - this should handle USDT's special approval logic
@@ -189,7 +189,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         assertEq(usdt.balanceOf(address(mockSwap)), 100 * 10 ** 6); // 0 + 100
         assertEq(usdt.allowance(user, address(mockSwap)), approveAmount); // Should be updated to new amount
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Approve Then Execute with USDT Gas ===");
@@ -203,7 +203,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         uint256 swapAmount = 100 * 10 ** 18;
         uint256 expectedOutput = 95 * 10 ** 18;
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
 
         bytes memory swapData = abi.encodeWithSelector(
@@ -223,7 +223,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, wrongNonce, address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
+            signature, wrongNonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
         );
 
         vm.prank(paymaster);
@@ -234,7 +234,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
     function testApproveThenExecuteReplayNonceReverts() public {
         uint256 swapAmount = 10 * 10 ** 18;
         uint256 expectedOutput = 9 * 10 ** 18;
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
@@ -253,7 +253,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
+            signature, nonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
         );
 
         bytes memory result;
@@ -270,7 +270,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
     function testApproveThenExecuteSignedByOtherUserRevertsNotSelf() public {
         uint256 approveAmount = 10 * 10 ** 18;
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), approveAmount, 9 * 10 ** 18
@@ -290,7 +290,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, address(tokenA), address(mockSwap), approveAmount, address(mockSwap), 0, swapData
+            signature, nonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), approveAmount, address(mockSwap), 0, swapData
         );
 
         vm.prank(paymaster);
@@ -304,7 +304,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         MockDelegate(user).spoof_Nonce(5000);
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
@@ -327,6 +327,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             0x10,
             signature,
             nonce,
+            uint32(block.timestamp + 86400),
             abi.encodePacked(
                 address(tokenA), address(mockSwap), swapAmount, address(mockSwap), _fallbackEncodeEth(0), swapData
             )
@@ -347,7 +348,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         assertEq(tokenA.balanceOf(address(mockSwap)), 10100 * 10 ** 18); // 10000 + 100
         assertEq(tokenB.balanceOf(address(mockSwap)), 9905 * 10 ** 18); // 10000 - 95
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Approve Then Execute Swap Gas ===");
@@ -360,7 +361,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         MockDelegate(user).spoof_Nonce(5000);
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
@@ -383,6 +384,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             0x11,
             signature,
             nonce,
+            uint32(block.timestamp + 86400),
             abi.encodePacked(
                 address(tokenA), address(mockSwap), swapAmount, address(mockSwap), _fallbackEncodeEth(0), swapData
             )
@@ -406,7 +408,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         uint256 returnedAmount = abi.decode(result, (uint256));
         assertEq(returnedAmount, expectedOutput);
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Approve Then Execute Swap Gas ===");
@@ -419,7 +421,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         uint256 swapAmount = 100 * 10 ** 18;
         uint256 expectedOutput = 95 * 10 ** 18;
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
@@ -438,7 +440,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Create data manually: [signature(65)][nonce(16)][args]
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), swapData);
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
 
         bytes memory result;
         vm.prank(paymaster);
@@ -457,7 +459,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         uint256 returnedAmount = abi.decode(result, (uint256));
         assertEq(returnedAmount, expectedOutput);
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Approve Then Execute Parameterized Swap Gas ===");
@@ -470,7 +472,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         uint256 ethAmount = 0.1 ether;
 
         vm.deal(user, 1 ether);
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
@@ -489,7 +491,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Create data manually: [signature(65)][nonce(16)][args]
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), swapData);
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
 
         bytes memory result;
         vm.prank(paymaster);
@@ -508,7 +510,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         uint256 returnedAmount = abi.decode(result, (uint256));
         assertEq(returnedAmount, expectedOutput);
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Approve Then Execute Parameterized Swap With ETH Gas ===");
@@ -519,7 +521,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         uint256 swapAmount = 100 * 10 ** 18;
         uint256 expectedOutput = 95 * 10 ** 18;
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
 
         bytes memory swapData = abi.encodeWithSelector(
@@ -561,7 +563,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         uint256 swapAmount = 100 * 10 ** 18;
         uint256 expectedOutput = 95 * 10 ** 18;
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
@@ -602,7 +604,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
     function testApproveThenExecuteParameterizedReplayNonceReverts() public {
         uint256 swapAmount = 10 * 10 ** 18;
         uint256 expectedOutput = 9 * 10 ** 18;
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
 
         bytes memory swapData = abi.encodeWithSelector(
             mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
@@ -621,7 +623,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Create data manually: [signature(65)][nonce(16)][args]
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), swapData);
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
 
         bytes memory result;
         // First execution succeeds

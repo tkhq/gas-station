@@ -34,7 +34,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
         });
 
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
         bytes memory data = abi.encodePacked(signature, counter, deadline, abi.encode(calls));
@@ -49,7 +49,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
     function testArbitraryBatchSession_ExpiredDeadline_Reverts() public {
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp - 1);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
         bytes memory data = abi.encodePacked(signature, counter, deadline, abi.encode(calls));
@@ -62,13 +62,13 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
     function testArbitraryBatchSession_InvalidCounter_Reverts() public {
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
         bytes memory data = abi.encodePacked(signature, counter, deadline, abi.encode(calls));
 
         vm.prank(user);
-        MockDelegate(user).spoof_Counter(counter + 1);
+        MockDelegate(user).spoof_burnSessionCounter(1); // Use fixed counter value
         vm.stopPrank();
 
         vm.prank(paymaster);
@@ -88,7 +88,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 2 ether)
         });
 
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
         bytes memory data = abi.encodePacked(signature, counter, deadline, abi.encode(calls));
@@ -117,12 +117,12 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
         });
 
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
         bytes memory data =
-            _constructFallbackCalldata(bytes1(0x60), signature, counter, abi.encodePacked(deadline, abi.encode(calls)));
+            _constructSessionFallbackCalldata(bytes1(0x60), signature, counter, abi.encodePacked(deadline, abi.encode(calls)));
 
         vm.prank(paymaster);
         (bool success,) = user.call(data);
@@ -148,12 +148,12 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
         });
 
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
         bytes memory data =
-            _constructFallbackCalldata(bytes1(0x61), signature, counter, abi.encodePacked(deadline, abi.encode(calls)));
+            _constructSessionFallbackCalldata(bytes1(0x61), signature, counter, abi.encodePacked(deadline, abi.encode(calls)));
 
         vm.prank(paymaster);
         (bool success, bytes memory result) = user.call(data);
@@ -185,7 +185,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
         });
 
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
@@ -206,7 +206,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
     function testArbitraryBatchSessionExecuteParameterized_ExpiredDeadline_Reverts() public {
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp - 1);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
@@ -220,7 +220,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
     function testArbitraryBatchSessionExecuteParameterized_InvalidCounter_Reverts() public {
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
@@ -229,7 +229,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
         // Burn the counter
         vm.prank(user, user);
-        MockDelegate(user).burnSessionCounter();
+        MockDelegate(user).burnSessionCounter(counter);
         vm.stopPrank();
 
         vm.prank(paymaster);
@@ -248,7 +248,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 3 ether)
         });
 
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
@@ -265,7 +265,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
     function testArbitraryBatchSessionExecuteParameterized_SignedByOtherUser_RevertsNotSelf() public {
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         // Sign with USER_PRIVATE_KEY_2 instead of the user's key
         bytes memory signature = _signArbitraryWithKey(USER_PRIVATE_KEY_2, counter, deadline, paymaster);
@@ -290,7 +290,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
             });
         }
 
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
@@ -315,7 +315,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
             });
         }
 
-        (, uint128 counter) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 

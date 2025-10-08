@@ -34,14 +34,14 @@ contract BatchExecutionTest is TKGasDelegateBase {
         });
 
         // Build signed batch
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
 
         // Encode as abi.encode(IBatchExecution.Call[])
         bytes memory callsEncoded = abi.encode(calls);
 
         // Construct calldata: [sig(65)][nonce(16)][abi.encode(calls)]
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), callsEncoded);
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), callsEncoded);
 
         // Execute
         bytes[] memory results;
@@ -85,9 +85,9 @@ contract BatchExecutionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 0)
         });
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
 
         vm.prank(paymaster);
         vm.expectRevert();
@@ -105,9 +105,9 @@ contract BatchExecutionTest is TKGasDelegateBase {
                 data: abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, i)
             });
         }
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.BatchSizeExceeded.selector);
@@ -127,9 +127,9 @@ contract BatchExecutionTest is TKGasDelegateBase {
             });
         }
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
 
         bytes[] memory results;
         vm.prank(paymaster);
@@ -162,7 +162,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.mint.selector, user, 20 ether)
         });
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
 
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, wrongNonce, calls);
@@ -182,9 +182,9 @@ contract BatchExecutionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.mint.selector, user, 1 ether)
         });
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
 
         // First execution succeeds
         vm.prank(paymaster);
@@ -205,11 +205,11 @@ contract BatchExecutionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.mint.selector, user, 1)
         });
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         // Sign with a different private key than `user`
         uint256 OTHER_PRIVATE_KEY = 0xBEEF01;
         bytes memory signature = _signBatch(OTHER_PRIVATE_KEY, user, nonce, calls);
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.NotSelf.selector);
@@ -233,9 +233,9 @@ contract BatchExecutionTest is TKGasDelegateBase {
         // Record initial balance
         uint256 initialBalance = mockToken.balanceOf(user);
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
-        bytes memory fallbackData = _constructFallbackCalldata(bytes1(0x20), signature, nonce, abi.encode(calls));
+        bytes memory fallbackData = _constructFallbackCalldata(bytes1(0x20), signature, nonce, uint32(block.timestamp + 86400), abi.encode(calls));
 
         vm.prank(paymaster);
         (bool success,) = user.call(fallbackData);
@@ -262,9 +262,9 @@ contract BatchExecutionTest is TKGasDelegateBase {
         // Record initial balance
         uint256 initialBalance = mockToken.balanceOf(user);
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
-        bytes memory fallbackData = _constructFallbackCalldata(bytes1(0x21), signature, nonce, abi.encode(calls));
+        bytes memory fallbackData = _constructFallbackCalldata(bytes1(0x21), signature, nonce, uint32(block.timestamp + 86400), abi.encode(calls));
 
         vm.prank(paymaster);
         (bool success, bytes memory result) = user.call(fallbackData);
@@ -305,11 +305,11 @@ contract BatchExecutionTest is TKGasDelegateBase {
         });
 
         // Build signed batch
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
 
         // Execute using parameterized version - signature and nonce go in _data
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
@@ -351,10 +351,10 @@ contract BatchExecutionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 0)
         });
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
 
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
         vm.prank(paymaster);
         vm.expectRevert();
         MockDelegate(user).executeBatch(calls, data);
@@ -371,10 +371,10 @@ contract BatchExecutionTest is TKGasDelegateBase {
                 data: abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, i)
             });
         }
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
 
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.BatchSizeExceeded.selector);
         MockDelegate(user).executeBatch(calls, data);
@@ -393,10 +393,10 @@ contract BatchExecutionTest is TKGasDelegateBase {
             });
         }
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
 
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
@@ -428,7 +428,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.mint.selector, user, 20 ether)
         });
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
 
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, wrongNonce, calls);
@@ -448,10 +448,10 @@ contract BatchExecutionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.mint.selector, user, 1 ether)
         });
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
 
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce));
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
         // First execution succeeds
         vm.prank(paymaster);
         MockDelegate(user).executeBatch(calls, data);

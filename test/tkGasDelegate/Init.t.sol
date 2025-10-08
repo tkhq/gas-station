@@ -17,8 +17,7 @@ contract InitTest is TKGasDelegateBase {
     function testGassyDelegationInit() public view {
         bytes memory code = address(user).code;
         assertGt(code.length, 0);
-        (uint128 sessionCounter, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         assertEq(nonce, 0);
-        assertEq(sessionCounter, 0);
     }
 }

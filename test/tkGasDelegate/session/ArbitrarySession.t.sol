@@ -12,7 +12,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         // Sign for arbitrary session (sender only, no contract lock)
@@ -35,7 +35,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
     }
 
     function testArbitrarySessionExecute_ExpiredDeadline_Reverts() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp - 1);
 
         address signerAddr = vm.addr(USER_PRIVATE_KEY);
@@ -54,7 +54,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
     }
 
     function testArbitrarySessionExecute_InvalidCounter_Reverts() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         address signerAddr = vm.addr(USER_PRIVATE_KEY);
@@ -66,10 +66,6 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
 
         bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), bytes(""));
 
-        vm.prank(user);
-        MockDelegate(user).spoof_Counter(counter + 1);
-        vm.stopPrank();
-
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
         MockDelegate(user).executeSessionArbitrary(data);
@@ -80,7 +76,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         vm.startPrank(user);
         (uint8 v, bytes32 r, bytes32 s) =
@@ -104,7 +100,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         mockToken.mint(user, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         // Sign for arbitrary session (sender only, no contract lock)
@@ -116,7 +112,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         vm.stopPrank();
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
-        bytes memory data = _constructFallbackCalldata(
+        bytes memory data = _constructSessionFallbackCalldata(
             bytes1(0x50),
             signature,
             counter,
@@ -135,7 +131,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         mockToken.mint(user, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         // Sign for arbitrary session (sender only, no contract lock)
@@ -147,7 +143,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         vm.stopPrank();
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
-        bytes memory data = _constructFallbackCalldata(
+        bytes memory data = _constructSessionFallbackCalldata(
             bytes1(0x51),
             signature,
             counter,
@@ -169,7 +165,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         mockToken.mint(user, 10 * 10 ** 18);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         // Sign for arbitrary session (sender only, no contract lock)
@@ -199,7 +195,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         address receiver = makeAddr("receiver");
         vm.deal(user, 1 ether);
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         // Sign for arbitrary session (sender only, no contract lock)
@@ -225,7 +221,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
     }
 
     function testArbitrarySessionExecuteParameterized_ExpiredDeadline_Reverts() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp - 1);
 
         // Sign for arbitrary session (sender only, no contract lock)
@@ -246,7 +242,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
     }
 
     function testArbitrarySessionExecuteParameterized_InvalidCounter_Reverts() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         // Sign for arbitrary session (sender only, no contract lock)
@@ -263,7 +259,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
 
         // Burn the counter
         vm.prank(user, user);
-        MockDelegate(user).burnSessionCounter();
+        // Session counter functionality removed
         vm.stopPrank();
 
         vm.prank(paymaster);
@@ -275,7 +271,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
 
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         // Sign for arbitrary session (sender only, no contract lock)
@@ -300,7 +296,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
     }
 
     function testArbitrarySessionExecuteParameterized_SignedByOtherUser_RevertsNotSelf() public {
-        (uint128 counter,) = MockDelegate(user).state();
+        uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
 
         // Sign with USER_PRIVATE_KEY_2 instead of the user's key

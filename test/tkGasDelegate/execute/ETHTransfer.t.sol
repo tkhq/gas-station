@@ -15,11 +15,11 @@ contract ETHTransferTest is TKGasDelegateBase {
         vm.deal(user, 2 ether);
         assertEq(receiver.balance, 0);
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = "";
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, receiver, ethAmount, args);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), receiver, ethAmount, args);
 
-        bytes memory executeData = _constructExecuteBytes(signature, nonce, receiver, ethAmount, args);
+        bytes memory executeData = _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), receiver, ethAmount, args);
 
         bytes memory result;
         vm.prank(paymaster);
@@ -31,7 +31,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(result.length, 0);
         assertEq(receiver.balance, ethAmount);
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== execute(bytes) ETH Transfer Gas ===");
@@ -45,8 +45,8 @@ contract ETHTransferTest is TKGasDelegateBase {
         vm.deal(user, 2 ether);
         assertEq(address(receiver).balance, 0 ether);
 
-        (, uint128 nonce) = MockDelegate(user).state();
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, receiver, ethAmount, "");
+        uint128 nonce = MockDelegate(user).nonce();
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), receiver, ethAmount, "");
 
         console.log("=== ETH Transfer Test ===");
         console.log("Nonce: %s", nonce);
@@ -54,7 +54,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         console.log("ETH Amount: %s", ethAmount);
         console.log("Receiver: %s", receiver);
 
-        bytes memory fallbackData = _constructFallbackCalldataWithETH(nonce, signature, receiver, ethAmount, "");
+        bytes memory fallbackData = _constructFallbackCalldataWithETH(nonce, signature, uint32(block.timestamp + 86400), receiver, ethAmount, "");
 
         console.log("=== Fallback Function Calldata (ETH Transfer) ===");
         console.log("Calldata length: %s bytes", fallbackData.length);
@@ -71,7 +71,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         uint256 receiverBalance = receiver.balance;
         assertEq(receiverBalance, ethAmount);
         assertEq(success, true);
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
         console.log("=== Fallback Function ETH Transfer Analysis ===");
@@ -85,12 +85,12 @@ contract ETHTransferTest is TKGasDelegateBase {
 
         vm.deal(user, 2 ether);
 
-        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 currentNonce = MockDelegate(user).nonce();
         uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
 
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, wrongNonce, receiver, ethAmount, "");
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, wrongNonce, uint32(block.timestamp + 86400), receiver, ethAmount, "");
 
-        bytes memory executeData = _constructExecuteBytes(signature, wrongNonce, receiver, ethAmount, "");
+        bytes memory executeData = _constructExecuteBytes(signature, wrongNonce, uint32(block.timestamp + 86400), receiver, ethAmount, "");
 
         vm.prank(paymaster);
         vm.expectRevert();
@@ -102,10 +102,10 @@ contract ETHTransferTest is TKGasDelegateBase {
         uint256 ethAmount = 1 ether;
         vm.deal(user, 2 ether);
 
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         uint256 OTHER_PRIVATE_KEY = 0xBEEF04;
-        bytes memory signature = _signExecute(OTHER_PRIVATE_KEY, user, nonce, receiver, ethAmount, "");
-        bytes memory executeData = _constructExecuteBytes(signature, nonce, receiver, ethAmount, "");
+        bytes memory signature = _signExecute(OTHER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), receiver, ethAmount, "");
+        bytes memory executeData = _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), receiver, ethAmount, "");
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.NotSelf.selector);
@@ -114,11 +114,11 @@ contract ETHTransferTest is TKGasDelegateBase {
 
     function testFallbackExecuteSendEthNoReturn() public {
         address receiver = makeAddr("receiver");
-        (, uint128 nonce) = MockDelegate(user).state();
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, receiver, 1 ether, bytes(""));
+        uint128 nonce = MockDelegate(user).nonce();
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), receiver, 1 ether, bytes(""));
 
-        bytes memory fallbackData = _constructFallbackCalldata(
-            bytes1(0x00), signature, nonce, abi.encodePacked(receiver, _fallbackEncodeEth(1 ether), bytes(""))
+        bytes memory fallbackData = _constructFallbackCalldataWithETH(
+            nonce, signature, uint32(block.timestamp + 86400), receiver, 1 ether, bytes("")
         );
 
         vm.prank(paymaster);
@@ -131,14 +131,14 @@ contract ETHTransferTest is TKGasDelegateBase {
 
     function testFallbackExecuteSendEthWithReturn() public {
         MockContractInteractions mockSwap = new MockContractInteractions();
-        (, uint128 nonce) = MockDelegate(user).state();
+        uint128 nonce = MockDelegate(user).nonce();
         vm.deal(user, 2 ether);
 
         bytes memory data = abi.encodeWithSelector(mockSwap.mockDepositEth.selector);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockSwap), 2 ether, data);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockSwap), 2 ether, data);
 
         bytes memory fallbackData = _constructFallbackCalldata(
-            bytes1(0x01), signature, nonce, abi.encodePacked(address(mockSwap), _fallbackEncodeEth(2 ether), data)
+            bytes1(0x01), signature, nonce, uint32(block.timestamp + 86400), abi.encodePacked(address(mockSwap), _fallbackEncodeEth(2 ether), data)
         );
 
         vm.prank(paymaster);
