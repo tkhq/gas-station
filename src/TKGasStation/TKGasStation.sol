@@ -73,105 +73,56 @@ contract TKGasStation is ITKGasStation {
         return delegatedTo == tkGasDelegate;
     }
 
-    function execute(address _target, bytes calldata data) external returns (bool, bytes memory) {
+    // Execute functions
+    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external returns (bytes memory) {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(_target).execute(data);
+        (, bytes memory result) = ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
+        return result;
     }
 
-    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
+    function executeNoReturn(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
+        ITKGasDelegate(_target).executeNoReturn(_to, _ethAmount, _data);
+        
+        //ITKGasDelegate(_target).executeNoReturn(abi.encodePacked(_data[0:81], _to, _ethAmount, _data[81:]));
+        
     }
 
-    function approveThenExecute(address _target, bytes calldata data) external returns (bool, bytes memory) {
+    // ApproveThenExecute functions
+    function approveThenExecute(address _target, address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external returns (bytes memory) {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(_target).approveThenExecute(data);
+        (, bytes memory result) = ITKGasDelegate(_target).approveThenExecute(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
+        return result;
     }
 
-
-    function approveThenExecute(address _target, address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external returns (bool, bytes memory) {
+    function approveThenExecuteNoReturn(address _target, address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(_target).approveThenExecute(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
+        ITKGasDelegate(_target).approveThenExecuteNoReturn(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
     }
 
-    function executeSession(address _target, bytes calldata data) external returns (bool, bytes memory) {
+    // Batch execute functions
+    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bytes[] memory) {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(_target).executeSession(data);
+        (, bytes[] memory results) = ITKGasDelegate(_target).executeBatch(_calls, _data);
+        return results;
     }
 
-    function executeSession(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
+    function executeBatchNoReturn(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(_target).executeSession(_to, _ethAmount, _data);
+        ITKGasDelegate(_target).executeBatchNoReturn(_calls, _data);
     }
-
-    function executeBatch(address _target, bytes calldata data) external returns (bool, bytes[] memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeBatch(data);
-    }
-
-    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeBatch(_calls, _data);
-    }
-
-    function executeBatchSession(address _target, bytes calldata data) external returns (bool, bytes[] memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeBatchSession(data);
-    }
-
-    function executeBatchSession(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeBatchSession(_calls, _data);
-    }
-
-    function executeSessionArbitrary(address _target, bytes calldata data) external returns (bool, bytes memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeSessionArbitrary(data);
-    }
-
-    function executeSessionArbitrary(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeSessionArbitrary(_to, _ethAmount, _data);
-    }
-
-    function executeBatchSessionArbitrary(address _target, bytes calldata data) external returns (bool, bytes[] memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeBatchSessionArbitrary(data);
-    }
-
-    function executeBatchSessionArbitrary(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeBatchSessionArbitrary(_calls, _data);
-    }
-
 
     function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external {
         if (!_isDelegated(_targetEoA)) {

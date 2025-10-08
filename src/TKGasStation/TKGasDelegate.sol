@@ -352,6 +352,22 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             : _executeWithValue(data[0:65], data[65:81], to, value, data[133:]);
     }
 
+    function executeNoReturn(bytes calldata data) external {
+        address to;
+        uint256 value;
+        assembly {
+            // address is 20 bytes immediately after nonce
+            to := shr(96, calldataload(add(data.offset, 81)))
+            // value is 32 bytes immediately after address
+            value := calldataload(add(data.offset, 101))
+        }
+        if (value == 0) {
+            _executeNoValueNoReturn(data[0:65], data[65:81], to, data[133:]);
+        } else {
+            _executeWithValueNoReturn(data[0:65], data[65:81], to, value, data[133:]);
+        }
+    }
+
     function executeNoValueNoReturn(bytes calldata data) external {
         address to;
         assembly {

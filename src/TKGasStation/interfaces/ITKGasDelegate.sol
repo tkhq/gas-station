@@ -17,6 +17,8 @@ interface ITKGasDelegate is IBatchExecution {
      // Execute functions
     function execute(bytes calldata data) external returns (bool, bytes memory);
 
+    function executeNoReturn(bytes calldata data) external;
+
     function execute(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory);
 
     function executeNoReturn(address _to, uint256 _ethAmount, bytes calldata _data) external;
