@@ -56,10 +56,6 @@ contract SessionTest is TKGasDelegateBase {
         MockDelegate(user).spoof_burnSessionCounter(counter);
         vm.stopPrank();
 
-        uint128 newCounter = 1; // Use fixed counter value
-
-        assertEq(counter + 1, newCounter);
-
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
         MockDelegate(user).executeSession(data);
@@ -152,7 +148,8 @@ contract SessionTest is TKGasDelegateBase {
             bytes1(0x30),
             signature,
             counter,
-            abi.encodePacked(deadline, address(mockToken), _fallbackEncodeEth(0), args)
+            deadline,
+            abi.encodePacked(address(mockToken), _fallbackEncodeEth(0), args)
         );
 
         vm.prank(paymaster);
@@ -178,7 +175,8 @@ contract SessionTest is TKGasDelegateBase {
             bytes1(0x31),
             signature,
             counter,
-            abi.encodePacked(deadline, address(mockToken), _fallbackEncodeEth(0), args)
+            deadline,
+            abi.encodePacked(address(mockToken), _fallbackEncodeEth(0), args)
         );
 
         vm.prank(paymaster);
@@ -241,10 +239,6 @@ contract SessionTest is TKGasDelegateBase {
         vm.prank(user, user);
         MockDelegate(user).spoof_burnSessionCounter(counter);
         vm.stopPrank();
-
-        uint128 newCounter = 1; // Use fixed counter value
-
-        assertEq(counter + 1, newCounter);
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);

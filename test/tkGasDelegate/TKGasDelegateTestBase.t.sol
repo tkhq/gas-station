@@ -55,7 +55,8 @@ contract TKGasDelegateTestBase is Test {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _privateKey, MockDelegate(_publicKey).hashExecution(_nonce, _deadline, _outputContract, _ethAmount, _arguments)
+            _privateKey,
+            MockDelegate(_publicKey).hashExecution(_nonce, _deadline, _outputContract, _ethAmount, _arguments)
         );
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
@@ -118,21 +119,25 @@ contract TKGasDelegateTestBase is Test {
         return abi.encodePacked(_signature, nonce16, bytes4(_deadline), to20, value32, _args);
     }
 
-    function _constructFallbackCalldata(bytes1 _selector, bytes memory _signature, uint128 _nonce, uint32 _deadline, bytes memory _data)
-        internal
-        pure
-        returns (bytes memory)
-    {
+    function _constructFallbackCalldata(
+        bytes1 _selector,
+        bytes memory _signature,
+        uint128 _nonce,
+        uint32 _deadline,
+        bytes memory _data
+    ) internal pure returns (bytes memory) {
         bytes16 nonce16 = bytes16(uint128(_nonce));
         return abi.encodePacked(hex"00", _selector, _signature, nonce16, bytes4(_deadline), _data);
     }
 
-    function _constructSessionFallbackCalldata(bytes1 _selector, bytes memory _signature, uint128 _nonce, bytes memory _data)
-        internal
-        pure
-        returns (bytes memory)
-    {
-        return abi.encodePacked(hex"00", _selector, _signature, _nonce, _data);
+    function _constructSessionFallbackCalldata(
+        bytes1 _selector,
+        bytes memory _signature,
+        uint128 _nonce,
+        uint32 _deadline,
+        bytes memory _data
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(hex"00", _selector, _signature, bytes16(_nonce), bytes4(_deadline), _data);
     }
 
     function _constructFallbackCalldata(
@@ -147,7 +152,9 @@ contract TKGasDelegateTestBase is Test {
             bytes memory padding = new bytes(16 - nonceBytes.length);
             nonceBytes = abi.encodePacked(nonceBytes, padding);
         }
-        return abi.encodePacked(bytes1(0x00), bytes1(0x00), _signature, nonceBytes, bytes4(_deadline), _outputContract, _arguments);
+        return abi.encodePacked(
+            bytes1(0x00), bytes1(0x00), _signature, nonceBytes, bytes4(_deadline), _outputContract, _arguments
+        );
     }
 
     function _constructFallbackCalldataWithETH(
@@ -165,8 +172,9 @@ contract TKGasDelegateTestBase is Test {
         }
         uint80 ethAmount80 = uint80(_ethAmount);
         bytes memory ethBytes = abi.encodePacked(ethAmount80);
-        return
-            abi.encodePacked(bytes1(0x00), bytes1(0x00), _signature, nonceBytes, bytes4(_deadline), _outputContract, ethBytes, _arguments);
+        return abi.encodePacked(
+            bytes1(0x00), bytes1(0x00), _signature, nonceBytes, bytes4(_deadline), _outputContract, ethBytes, _arguments
+        );
     }
 
     function _bytesToHexString(bytes memory _bytes) internal pure returns (string memory) {
@@ -365,12 +373,13 @@ contract TKGasDelegateTestBase is Test {
         uint256 _privateKey,
         address payable _publicKey,
         uint128 _nonce,
+        uint32 _deadline,
         IBatchExecution.Call[] memory _calls
     ) internal returns (bytes memory) {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(_privateKey, MockDelegate(_publicKey).hashBatchExecution(_nonce, uint32(block.timestamp + 86400), _calls));
+            vm.sign(_privateKey, MockDelegate(_publicKey).hashBatchExecution(_nonce, _deadline, _calls));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;
@@ -380,6 +389,7 @@ contract TKGasDelegateTestBase is Test {
         uint256 _privateKey,
         address payable _publicKey,
         uint128 _nonce,
+        uint32 _deadline,
         address _erc20Contract,
         address _spender,
         uint256 _approveAmount,
@@ -392,7 +402,7 @@ contract TKGasDelegateTestBase is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(
             _privateKey,
             MockDelegate(_publicKey).hashApproveThenExecute(
-                _nonce, uint32(block.timestamp + 86400), _erc20Contract, _spender, _approveAmount, _outputContract, _ethAmount, _arguments
+                _nonce, _deadline, _erc20Contract, _spender, _approveAmount, _outputContract, _ethAmount, _arguments
             )
         );
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -421,7 +431,15 @@ contract TKGasDelegateTestBase is Test {
         bytes32 ethAmountBytes = bytes32(_ethAmount);
 
         return abi.encodePacked(
-            _signature, nonce16, deadlineBytes, erc20Bytes, spenderBytes, approveAmountBytes, outputBytes, ethAmountBytes, _arguments
+            _signature,
+            nonce16,
+            deadlineBytes,
+            erc20Bytes,
+            spenderBytes,
+            approveAmountBytes,
+            outputBytes,
+            ethAmountBytes,
+            _arguments
         );
     }
 }

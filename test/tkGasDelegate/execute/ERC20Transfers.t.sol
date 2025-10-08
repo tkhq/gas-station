@@ -31,9 +31,11 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
-        bytes memory executeData = _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory executeData =
+            _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         bytes memory result;
         vm.prank(paymaster);
@@ -63,9 +65,11 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         MockDelegate(user).spoof_Nonce(1);
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
-        bytes memory executeData = _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory executeData =
+            _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         bytes memory result;
         vm.prank(paymaster);
@@ -96,9 +100,12 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, wrongNonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature = _signExecute(
+            USER_PRIVATE_KEY, user, wrongNonce, uint32(block.timestamp + 86400), address(mockToken), 0, args
+        );
 
-        bytes memory executeData = _constructExecuteBytes(signature, wrongNonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory executeData =
+            _constructExecuteBytes(signature, wrongNonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         vm.prank(paymaster);
         vm.expectRevert();
@@ -111,8 +118,10 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
-        bytes memory executeData = _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory executeData =
+            _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // First execution succeeds
         bytes memory result;
@@ -135,8 +144,10 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
 
         uint256 OTHER_PRIVATE_KEY = 0xBEEF03;
-        bytes memory signature = _signExecute(OTHER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
-        bytes memory executeData = _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(OTHER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory executeData =
+            _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.NotSelf.selector);
@@ -265,7 +276,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         MockDelegate(user).spoof_Nonce(1);
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -294,7 +306,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         MockDelegate(user).spoof_Nonce(1);
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -322,7 +335,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -342,7 +356,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
         // Sign with USER_PRIVATE_KEY_2 instead of the user's key
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY_2, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY_2, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -358,7 +373,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -380,7 +396,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         MockDelegate(user).spoof_Nonce(1);
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -408,7 +425,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -428,7 +446,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
         // Sign with USER_PRIVATE_KEY_2 instead of the user's key
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY_2, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY_2, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -444,7 +463,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -483,10 +503,15 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         uint128 nonce2 = MockDelegate(user).nonce();
         address receiver2 = makeAddr("receiver2");
         bytes memory args2 = abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 10 * 10 ** 18);
-        bytes memory signature2 = _signExecute(USER_PRIVATE_KEY, user, nonce2, uint32(block.timestamp + 86400), address(mockToken), 0, args2);
+        bytes memory signature2 =
+            _signExecute(USER_PRIVATE_KEY, user, nonce2, uint32(block.timestamp + 86400), address(mockToken), 0, args2);
 
         bytes memory fallbackData = _constructFallbackCalldata(
-            bytes1(0x00), signature2, nonce2, uint32(block.timestamp + 86400), abi.encodePacked(address(mockToken), _fallbackEncodeEth(0), args2)
+            bytes1(0x00),
+            signature2,
+            nonce2,
+            uint32(block.timestamp + 86400),
+            abi.encodePacked(address(mockToken), _fallbackEncodeEth(0), args2)
         );
 
         vm.prank(paymaster);
@@ -539,7 +564,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         MockDelegate(user).spoof_Nonce(1);
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
@@ -556,5 +582,24 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         console.log("=== executeNoReturn(address, uint256, bytes) ERC20 No Return Gas ===");
         console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testExecuteWithExpiredDeadlineReverts() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        uint128 nonce = MockDelegate(user).nonce();
+        uint32 expiredDeadline = uint32(block.timestamp - 1); // Deadline in the past
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, expiredDeadline, address(mockToken), 0, args);
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(expiredDeadline), address(mockToken), args);
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.DeadlineExceeded.selector);
+        MockDelegate(user).execute(address(mockToken), 0, data);
+        vm.stopPrank();
     }
 }

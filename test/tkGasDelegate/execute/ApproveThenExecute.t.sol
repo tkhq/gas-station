@@ -50,6 +50,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -60,7 +61,15 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         // Construct calldata
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
+            signature,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
         );
 
         // Execute approve then execute
@@ -103,6 +112,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -113,7 +123,15 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         // Construct calldata
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), swapAmount, address(mockSwap), ethAmount, swapData
+            signature,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            ethAmount,
+            swapData
         );
 
         // Execute approve then execute with ETH
@@ -163,6 +181,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(usdt),
             address(mockSwap),
             approveAmount,
@@ -173,7 +192,15 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         // Construct calldata
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, uint32(block.timestamp + 86400), address(usdt), address(mockSwap), approveAmount, address(usdt), 0, transferData
+            signature,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(usdt),
+            address(mockSwap),
+            approveAmount,
+            address(usdt),
+            0,
+            transferData
         );
 
         // Execute approve then execute - this should handle USDT's special approval logic
@@ -214,6 +241,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             wrongNonce, // Wrong nonce
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -223,7 +251,15 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, wrongNonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
+            signature,
+            wrongNonce,
+            uint32(block.timestamp + 86400),
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
         );
 
         vm.prank(paymaster);
@@ -244,6 +280,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -253,7 +290,15 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
+            signature,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
         );
 
         bytes memory result;
@@ -281,6 +326,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             OTHER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             approveAmount,
@@ -290,7 +336,15 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         bytes memory executeData = _constructApproveThenExecuteBytes(
-            signature, nonce, uint32(block.timestamp + 86400), address(tokenA), address(mockSwap), approveAmount, address(mockSwap), 0, swapData
+            signature,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(tokenA),
+            address(mockSwap),
+            approveAmount,
+            address(mockSwap),
+            0,
+            swapData
         );
 
         vm.prank(paymaster);
@@ -315,6 +369,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -372,6 +427,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -431,6 +487,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -440,7 +497,8 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Create data manually: [signature(65)][nonce(16)][args]
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
 
         bytes memory result;
         vm.prank(paymaster);
@@ -482,6 +540,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -491,7 +550,8 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Create data manually: [signature(65)][nonce(16)][args]
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
 
         bytes memory result;
         vm.prank(paymaster);
@@ -532,6 +592,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             wrongNonce, // Wrong nonce
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -574,6 +635,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY_2,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -614,6 +676,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             USER_PRIVATE_KEY,
             user,
             nonce,
+            uint32(block.timestamp + 86400),
             address(tokenA),
             address(mockSwap),
             swapAmount,
@@ -623,7 +686,8 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Create data manually: [signature(65)][nonce(16)][args]
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
 
         bytes memory result;
         // First execution succeeds
@@ -639,5 +703,47 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         MockDelegate(user).approveThenExecute(
             address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
+    }
+
+    function testApproveThenExecuteWithExpiredDeadlineReverts() public {
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint256 expectedOutput = 95 * 10 ** 18;
+
+        uint128 nonce = MockDelegate(user).nonce();
+        uint32 expiredDeadline = uint32(block.timestamp - 1); // Deadline in the past
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            expiredDeadline,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        bytes memory data = abi.encodePacked(
+            signature,
+            bytes16(nonce),
+            bytes4(expiredDeadline),
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            _fallbackEncodeEth(0),
+            swapData
+        );
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.DeadlineExceeded.selector);
+        MockDelegate(user).approveThenExecute(data);
+        vm.stopPrank();
     }
 }

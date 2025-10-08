@@ -85,10 +85,12 @@ contract TKGasStationTest is Test {
 
         // Create signature
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _sign(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Build data for parameterized execute (signature + nonce + args)
-        bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
+        bytes memory paramData =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
 
         uint256 gasBefore = gasleft();
         bytes memory result = tkGasStation.execute(user, address(mockToken), 0, paramData);
@@ -112,10 +114,12 @@ contract TKGasStationTest is Test {
 
         // Create signature
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _sign(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         // Build data for parameterized execute (signature + nonce + args)
-        bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
+        bytes memory paramData =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
 
         // Execute ERC20 transfer through TKGasStation (parameterized API, no return)
         vm.prank(paymaster);
@@ -141,7 +145,8 @@ contract TKGasStationTest is Test {
 
         // Create signature
         uint32 deadline = uint32(block.timestamp + 86400);
-        bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), receiver, transferAmount, "");
+        bytes memory signature =
+            _sign(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), receiver, transferAmount, "");
 
         // Execute ETH transfer through TKGasStation (parameterized API with value)
         vm.prank(paymaster);
@@ -168,8 +173,10 @@ contract TKGasStationTest is Test {
         MockDelegate(payable(address(tkGasDelegate))).spoof_Nonce(1);
         uint128 nonce1 = MockDelegate(payable(user)).nonce();
         bytes memory args1 = abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18);
-        bytes memory signature1 = _sign(USER_PRIVATE_KEY, user, nonce1, uint32(block.timestamp + 86400), address(mockToken), 0, args1);
-        bytes memory paramData1 = abi.encodePacked(signature1, bytes16(nonce1), bytes4(uint32(block.timestamp + 86400)), args1);
+        bytes memory signature1 =
+            _sign(USER_PRIVATE_KEY, user, nonce1, uint32(block.timestamp + 86400), address(mockToken), 0, args1);
+        bytes memory paramData1 =
+            abi.encodePacked(signature1, bytes16(nonce1), bytes4(uint32(block.timestamp + 86400)), args1);
 
         vm.prank(paymaster);
         uint256 gasBefore1 = gasleft();
@@ -180,8 +187,10 @@ contract TKGasStationTest is Test {
         MockDelegate(payable(address(tkGasDelegate))).spoof_Nonce(1);
         uint128 nonce2 = MockDelegate(payable(user)).nonce();
         bytes memory args2 = abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 10 * 10 ** 18);
-        bytes memory signature2 = _sign(USER_PRIVATE_KEY, user, nonce2, uint32(block.timestamp + 86400), address(mockToken), 0, args2);
-        bytes memory paramData2 = abi.encodePacked(signature2, bytes16(nonce2), bytes4(uint32(block.timestamp + 86400)), args2);
+        bytes memory signature2 =
+            _sign(USER_PRIVATE_KEY, user, nonce2, uint32(block.timestamp + 86400), address(mockToken), 0, args2);
+        bytes memory paramData2 =
+            abi.encodePacked(signature2, bytes16(nonce2), bytes4(uint32(block.timestamp + 86400)), args2);
 
         vm.prank(paymaster);
         uint256 gasBefore2 = gasleft();
@@ -260,7 +269,8 @@ contract TKGasStationTest is Test {
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(newUserPrivateKey, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
-        bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
+        bytes memory paramData =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
 
         vm.expectRevert();
         tkGasStation.execute(newUser, address(mockToken), 0, paramData);
@@ -340,7 +350,8 @@ contract TKGasStationTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // Build data for approveThenExecuteNoReturn (use simple format like execute)
-        bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
+        bytes memory paramData =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
 
         // Execute through TKGasStation
         vm.prank(paymaster);
@@ -388,7 +399,8 @@ contract TKGasStationTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // Build data for executeBatchNoReturn (use simple format like execute)
-        bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
+        bytes memory paramData =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
 
         // Execute through TKGasStation
         vm.prank(paymaster);
@@ -432,7 +444,8 @@ contract TKGasStationTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // Build data for approveThenExecute
-        bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
+        bytes memory paramData =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
 
         // Execute through TKGasStation
         vm.prank(paymaster);
@@ -481,7 +494,8 @@ contract TKGasStationTest is Test {
         bytes memory signature = abi.encodePacked(r, s, v);
 
         // Build data for executeBatch
-        bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
+        bytes memory paramData =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
 
         // Execute through TKGasStation
         vm.prank(paymaster);

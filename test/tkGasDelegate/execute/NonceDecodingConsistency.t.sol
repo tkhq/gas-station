@@ -16,9 +16,11 @@ contract NonceDecodingConsistencyTest is TKGasDelegateTestBase {
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
 
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
-        bytes memory executeData = _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory executeData =
+            _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         bytes memory result;
         vm.prank(paymaster);
@@ -42,7 +44,8 @@ contract NonceDecodingConsistencyTest is TKGasDelegateTestBase {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, wrongHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        bytes memory executeData = _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+        bytes memory executeData =
+            _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
 
         vm.prank(paymaster);
         vm.expectRevert(abi.encodeWithSelector(TKGasDelegate.NotSelf.selector));

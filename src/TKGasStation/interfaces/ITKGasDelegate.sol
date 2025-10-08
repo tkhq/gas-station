@@ -4,8 +4,9 @@ pragma solidity ^0.8.30;
 import {IBatchExecution} from "./IBatchExecution.sol";
 
 interface ITKGasDelegate is IBatchExecution {
-
     function nonce() external view returns (uint128);
+
+    function checkSessionCounterExpired(uint128 _counter) external view returns (bool);
 
     // Execute functions
     function execute(bytes calldata data) external returns (bytes memory);

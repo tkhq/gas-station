@@ -87,6 +87,11 @@ contract BatchSessionTest is TKGasDelegateBase {
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
         bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), abi.encode(calls));
 
+        // Burn the counter
+        vm.prank(user, user);
+        MockDelegate(user).burnSessionCounter(counter);
+        vm.stopPrank();
+
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
         MockDelegate(user).executeBatchSession(data);
@@ -172,7 +177,7 @@ contract BatchSessionTest is TKGasDelegateBase {
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
         bytes memory data = _constructSessionFallbackCalldata(
-            bytes1(0x40), signature, counter, abi.encodePacked(deadline, address(mockToken), abi.encode(calls))
+            bytes1(0x40), signature, counter, deadline, abi.encodePacked(address(mockToken), abi.encode(calls))
         );
 
         vm.prank(paymaster);
@@ -205,7 +210,7 @@ contract BatchSessionTest is TKGasDelegateBase {
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
         bytes memory data = _constructSessionFallbackCalldata(
-            bytes1(0x41), signature, counter, abi.encodePacked(deadline, address(mockToken), abi.encode(calls))
+            bytes1(0x41), signature, counter, deadline, abi.encodePacked(address(mockToken), abi.encode(calls))
         );
 
         vm.prank(paymaster);
@@ -303,6 +308,11 @@ contract BatchSessionTest is TKGasDelegateBase {
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
         // Create data manually: [signature(65)][nonce(16)][deadline(4)][outputContract(20)]
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
+
+        // Burn the counter
+        vm.prank(user, user);
+        MockDelegate(user).burnSessionCounter(counter);
+        vm.stopPrank();
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);

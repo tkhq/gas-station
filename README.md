@@ -52,8 +52,7 @@ The fall back function can call the execute and session execution functions. It 
 To use it:
 The first byte should be a null byte 0x00
 The second byte is a combination of the first nibble that acts as the function selector and the second nibble that acts as a boolean that says whether or not to return values or not
-The eth value must be exactly 10 bytes, since it will be treated as a uint80
-Otherwise the order is exactly the same, simply encode it packed and it will parse for you
+The eth value is 10 bytes, a uint80
 
 Function selectors without to return or not:
 * 00 - Execute

@@ -66,6 +66,11 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
 
         bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), bytes(""));
 
+        // Burn the counter
+        vm.prank(user, user);
+        MockDelegate(user).burnSessionCounter(counter);
+        vm.stopPrank();
+
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
         MockDelegate(user).executeSessionArbitrary(data);
@@ -116,7 +121,8 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
             bytes1(0x50),
             signature,
             counter,
-            abi.encodePacked(deadline, address(mockToken), _fallbackEncodeEth(0), args)
+            deadline,
+            abi.encodePacked(address(mockToken), _fallbackEncodeEth(0), args)
         );
 
         vm.prank(paymaster);
@@ -147,7 +153,8 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
             bytes1(0x51),
             signature,
             counter,
-            abi.encodePacked(deadline, address(mockToken), _fallbackEncodeEth(0), args)
+            deadline,
+            abi.encodePacked(address(mockToken), _fallbackEncodeEth(0), args)
         );
 
         vm.prank(paymaster);
@@ -259,7 +266,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
 
         // Burn the counter
         vm.prank(user, user);
-        // Session counter functionality removed
+        MockDelegate(user).burnSessionCounter(counter);
         vm.stopPrank();
 
         vm.prank(paymaster);

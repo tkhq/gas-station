@@ -9,9 +9,11 @@ import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
 contract FallbackExecutionFailureTest is TKGasDelegateBase {
     function testFallbackUnexpectedExecutionMode() public {
         uint128 nonce = MockDelegate(user).nonce();
-        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(0), 0, bytes(""));
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(0), 0, bytes(""));
 
-        bytes memory fallbackData = _constructFallbackCalldata(bytes1(0xFF), signature, nonce, uint32(block.timestamp + 86400), bytes(""));
+        bytes memory fallbackData =
+            _constructFallbackCalldata(bytes1(0xFF), signature, nonce, uint32(block.timestamp + 86400), bytes(""));
 
         bool success;
         bytes memory result;

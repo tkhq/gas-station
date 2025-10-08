@@ -122,7 +122,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
         bytes memory data =
-            _constructSessionFallbackCalldata(bytes1(0x60), signature, counter, abi.encodePacked(deadline, abi.encode(calls)));
+            _constructSessionFallbackCalldata(bytes1(0x60), signature, counter, deadline, abi.encode(calls));
 
         vm.prank(paymaster);
         (bool success,) = user.call(data);
@@ -153,7 +153,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
         bytes memory data =
-            _constructSessionFallbackCalldata(bytes1(0x61), signature, counter, abi.encodePacked(deadline, abi.encode(calls)));
+            _constructSessionFallbackCalldata(bytes1(0x61), signature, counter, deadline, abi.encode(calls));
 
         vm.prank(paymaster);
         (bool success, bytes memory result) = user.call(data);
@@ -235,6 +235,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
         MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        vm.stopPrank();
     }
 
     function testArbitraryBatchSessionExecuteParameterized_Replayability_AllowsMultipleExecutions() public {
