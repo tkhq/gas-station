@@ -1276,15 +1276,19 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         internal
         returns (bool, bytes[] memory)
     {
-        // Hash the calls array directly
+        // Hash the calls array to match the calldata version exactly
+        // The calldata version uses keccak256(_calls) where _calls is abi.encode(IBatchExecution.Call[])
+        // So we need to hash the encoded calls array
         bytes32 executionsHash = keccak256(abi.encode(_calls));
         bytes32 hash;
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, BATCH_EXECUTION_TYPEHASH)
-            mstore(add(ptr, 0x20), executionsHash)
-            hash := keccak256(ptr, 0x40)
-            mstore(0x40, add(ptr, 0x40)) // Update free memory pointer
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
+            mstore(add(ptr, 0x40), executionsHash)
+            hash := keccak256(ptr, 0x60)
+            mstore(0x40, add(ptr, 0x60)) // Update free memory pointer
         }
         hash = _hashTypedData(hash);
         _validateExecute(hash, _signature, _nonceBytes);
