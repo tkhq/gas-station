@@ -102,7 +102,7 @@ contract BurnTest is TKGasDelegateBase {
             0,
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
-        result = MockDelegate(user).execute(execData);
+        result = MockDelegate(user).executeReturns(execData);
         vm.stopPrank();
 
         assertEq(mockToken.balanceOf(receiver), 0);
@@ -175,7 +175,7 @@ contract BurnTest is TKGasDelegateBase {
             0,
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
-        result = MockDelegate(user).execute(execData2);
+        result = MockDelegate(user).executeReturns(execData2);
         vm.stopPrank();
 
         assertEq(mockToken.balanceOf(receiver), 0);

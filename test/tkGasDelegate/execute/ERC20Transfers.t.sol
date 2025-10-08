@@ -40,7 +40,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).execute(executeData);
+        result = MockDelegate(user).executeReturns(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -74,7 +74,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).execute(executeData);
+        result = MockDelegate(user).executeReturns(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -126,7 +126,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         // First execution succeeds
         bytes memory result;
         vm.prank(paymaster);
-        result = MockDelegate(user).execute(executeData);
+        result = MockDelegate(user).executeReturns(executeData);
         // First execution succeeds - if we get here without reverting, it succeeded
         assertEq(result.length, 32);
 
@@ -285,7 +285,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).execute(address(mockToken), 0, data);
+        result = MockDelegate(user).executeReturns(address(mockToken), 0, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -315,7 +315,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).execute(address(mockToken), 0, data);
+        result = MockDelegate(user).executeReturns(address(mockToken), 0, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -405,7 +405,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).execute(address(mockToken), 0, data);
+        result = MockDelegate(user).executeReturns(address(mockToken), 0, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -572,7 +572,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        MockDelegate(user).executeNoReturn(address(mockToken), 0, data);
+        MockDelegate(user).execute(address(mockToken), 0, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -580,7 +580,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
 
-        console.log("=== executeNoReturn(address, uint256, bytes) ERC20 No Return Gas ===");
+        console.log("=== execute(address, uint256, bytes) ERC20 No Return Gas ===");
         console.log("Total Gas Used: %s", gasUsed);
     }
 

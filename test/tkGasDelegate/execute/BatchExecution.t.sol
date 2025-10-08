@@ -48,7 +48,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        results = MockDelegate(user).executeBatch(data);
+        results = MockDelegate(user).executeBatchReturns(data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -138,7 +138,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        results = MockDelegate(user).executeBatch(data);
+        results = MockDelegate(user).executeBatchReturns(data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -323,7 +323,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        results = MockDelegate(user).executeBatch(calls, data);
+        results = MockDelegate(user).executeBatchReturns(calls, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -410,7 +410,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        results = MockDelegate(user).executeBatch(calls, data);
+        results = MockDelegate(user).executeBatchReturns(calls, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 

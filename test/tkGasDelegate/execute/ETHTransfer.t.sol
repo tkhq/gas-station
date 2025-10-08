@@ -26,7 +26,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).execute(executeData);
+        result = MockDelegate(user).executeReturns(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 

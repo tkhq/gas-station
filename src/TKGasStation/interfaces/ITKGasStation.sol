@@ -7,13 +7,13 @@ interface ITKGasStation is IBatchExecution {
     function tkGasDelegate() external view returns (address);
 
     // Execute functions
-    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
+    function executeReturns(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
         external
         returns (bytes memory);
-    function executeNoReturn(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external;
+    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external;
 
     // ApproveThenExecute functions
-    function approveThenExecute(
+    function approveThenExecuteReturns(
         address _target,
         address _to,
         uint256 _ethAmount,
@@ -22,7 +22,7 @@ interface ITKGasStation is IBatchExecution {
         uint256 _approveAmount,
         bytes calldata _data
     ) external returns (bytes memory);
-    function approveThenExecuteNoReturn(
+    function approveThenExecute(
         address _target,
         address _to,
         uint256 _ethAmount,
@@ -33,10 +33,10 @@ interface ITKGasStation is IBatchExecution {
     ) external;
 
     // Batch execute functions
-    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+    function executeBatchReturns(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
         external
         returns (bytes[] memory);
-    function executeBatchNoReturn(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
         external;
 
     function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external;

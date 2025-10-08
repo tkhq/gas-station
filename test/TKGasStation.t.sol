@@ -93,7 +93,7 @@ contract TKGasStationTest is Test {
             abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
 
         uint256 gasBefore = gasleft();
-        bytes memory result = tkGasStation.execute(user, address(mockToken), 0, paramData);
+        bytes memory result = tkGasStation.executeReturns(user, address(mockToken), 0, paramData);
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
@@ -124,7 +124,7 @@ contract TKGasStationTest is Test {
         // Execute ERC20 transfer through TKGasStation (parameterized API, no return)
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        tkGasStation.executeNoReturn(user, address(mockToken), 0, paramData);
+        tkGasStation.execute(user, address(mockToken), 0, paramData);
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
@@ -152,7 +152,7 @@ contract TKGasStationTest is Test {
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
         bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), "");
-        bytes memory result = tkGasStation.execute(user, receiver, transferAmount, paramData);
+        bytes memory result = tkGasStation.executeReturns(user, receiver, transferAmount, paramData);
 
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
@@ -160,74 +160,6 @@ contract TKGasStationTest is Test {
         assertEq(address(receiver).balance, transferAmount);
 
         console.log("TKGasStation ETH transfer gas: %s", gasUsed);
-    }
-
-    function testGasComparisonTable() public {
-        console.log("=== COMPREHENSIVE GAS COMPARISON TABLE ===");
-
-        mockToken.mint(user, 30 * 10 ** 18);
-        address receiver1 = makeAddr("receiver_1");
-        address receiver2 = makeAddr("receiver_2");
-
-        // Test 1: execute (parameterized, with return)
-        MockDelegate(payable(address(tkGasDelegate))).spoof_Nonce(1);
-        uint128 nonce1 = MockDelegate(payable(user)).nonce();
-        bytes memory args1 = abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 10 * 10 ** 18);
-        bytes memory signature1 =
-            _sign(USER_PRIVATE_KEY, user, nonce1, uint32(block.timestamp + 86400), address(mockToken), 0, args1);
-        bytes memory paramData1 =
-            abi.encodePacked(signature1, bytes16(nonce1), bytes4(uint32(block.timestamp + 86400)), args1);
-
-        vm.prank(paymaster);
-        uint256 gasBefore1 = gasleft();
-        bytes memory result1 = tkGasStation.execute(user, address(mockToken), 0, paramData1);
-        uint256 gasUsed1 = gasBefore1 - gasleft();
-
-        // Test 2: executeNoReturn (parameterized, no return)
-        MockDelegate(payable(address(tkGasDelegate))).spoof_Nonce(1);
-        uint128 nonce2 = MockDelegate(payable(user)).nonce();
-        bytes memory args2 = abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 10 * 10 ** 18);
-        bytes memory signature2 =
-            _sign(USER_PRIVATE_KEY, user, nonce2, uint32(block.timestamp + 86400), address(mockToken), 0, args2);
-        bytes memory paramData2 =
-            abi.encodePacked(signature2, bytes16(nonce2), bytes4(uint32(block.timestamp + 86400)), args2);
-
-        vm.prank(paymaster);
-        uint256 gasBefore2 = gasleft();
-        tkGasStation.executeNoReturn(user, address(mockToken), 0, paramData2);
-        uint256 gasUsed2 = gasBefore2 - gasleft();
-
-        // Verify transfers worked
-        assertEq(mockToken.balanceOf(receiver1), 10 * 10 ** 18);
-        assertEq(mockToken.balanceOf(receiver2), 10 * 10 ** 18);
-
-        // Log results
-        console.log("");
-        console.log("+---------------------------------------------------+");
-        console.log("| Function Type           | Gas Used | vs Base      |");
-        console.log("+---------------------------------------------------+");
-        console.log("| execute(param)          | %s |   base      |", gasUsed1);
-        console.log(
-            "| executeNoReturn(param)  | %s | %s |",
-            gasUsed2,
-            gasUsed2 > gasUsed1 ? gasUsed2 - gasUsed1 : gasUsed1 - gasUsed2
-        );
-        console.log("+---------------------------------------------------+");
-        console.log("");
-
-        if (gasUsed1 < gasUsed2) {
-            console.log(
-                "execute is %s gas more efficient (%s%% savings)",
-                gasUsed2 - gasUsed1,
-                ((gasUsed2 - gasUsed1) * 100) / gasUsed2
-            );
-        } else {
-            console.log(
-                "executeNoReturn is %s gas more efficient (%s%% savings)",
-                gasUsed1 - gasUsed2,
-                ((gasUsed1 - gasUsed2) * 100) / gasUsed1
-            );
-        }
     }
 
     function testNotDelegatedRevert() public {
@@ -356,14 +288,14 @@ contract TKGasStationTest is Test {
         // Execute through TKGasStation
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        tkGasStation.approveThenExecuteNoReturn(
+        tkGasStation.approveThenExecute(
             user, address(mockToken), 0, address(mockToken), address(mockToken), 10 * 10 ** 18, paramData
         );
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
 
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
-        console.log("approveThenExecuteNoReturn gas: %s", gasUsed);
+        console.log("approveThenExecute gas: %s", gasUsed);
     }
 
     function testExecuteBatchNoReturn() public {
@@ -405,13 +337,13 @@ contract TKGasStationTest is Test {
         // Execute through TKGasStation
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        tkGasStation.executeBatchNoReturn(user, calls, paramData);
+        tkGasStation.executeBatch(user, calls, paramData);
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
 
         assertEq(mockToken.balanceOf(receiver1), 5 * 10 ** 18);
         assertEq(mockToken.balanceOf(receiver2), 5 * 10 ** 18);
-        console.log("executeBatchNoReturn gas: %s", gasUsed);
+        console.log("executeBatch gas: %s", gasUsed);
     }
 
     function testApproveThenExecute() public {
@@ -450,7 +382,7 @@ contract TKGasStationTest is Test {
         // Execute through TKGasStation
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        bytes memory result = tkGasStation.approveThenExecute(
+        bytes memory result = tkGasStation.approveThenExecuteReturns(
             user, address(mockToken), 0, address(mockToken), address(mockToken), 10 * 10 ** 18, paramData
         );
         uint256 gasAfter = gasleft();
@@ -500,7 +432,7 @@ contract TKGasStationTest is Test {
         // Execute through TKGasStation
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        bytes[] memory results = tkGasStation.executeBatch(user, calls, paramData);
+        bytes[] memory results = tkGasStation.executeBatchReturns(user, calls, paramData);
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
 

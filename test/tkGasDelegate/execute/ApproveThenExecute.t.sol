@@ -75,7 +75,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         // Execute approve then execute
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        bytes memory result = MockDelegate(user).approveThenExecute(executeData);
+        bytes memory result = MockDelegate(user).approveThenExecuteReturns(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -138,7 +138,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).approveThenExecute(executeData);
+        result = MockDelegate(user).approveThenExecuteReturns(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -207,7 +207,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).approveThenExecute(executeData);
+        result = MockDelegate(user).approveThenExecuteReturns(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -304,7 +304,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         bytes memory result;
         // First execution succeeds
         vm.prank(paymaster);
-        result = MockDelegate(user).approveThenExecute(executeData);
+        result = MockDelegate(user).approveThenExecuteReturns(executeData);
         // Success is implicit - if we get here without reverting, the call succeeded
 
         // Replay must revert
@@ -503,7 +503,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).approveThenExecute(
+        result = MockDelegate(user).approveThenExecuteReturns(
             address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
         uint256 gasUsed = gasBefore - gasleft();
@@ -556,7 +556,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        result = MockDelegate(user).approveThenExecute(
+        result = MockDelegate(user).approveThenExecuteReturns(
             address(mockSwap), ethAmount, address(tokenA), address(mockSwap), swapAmount, data
         );
         uint256 gasUsed = gasBefore - gasleft();
@@ -692,7 +692,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         bytes memory result;
         // First execution succeeds
         vm.prank(paymaster);
-        result = MockDelegate(user).approveThenExecute(
+        result = MockDelegate(user).approveThenExecuteReturns(
             address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
         // Success is implicit - if we get here without reverting, the call succeeded

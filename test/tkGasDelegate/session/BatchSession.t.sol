@@ -34,7 +34,7 @@ contract BatchSessionTest is TKGasDelegateBase {
 
         bytes[] memory results;
         vm.prank(paymaster);
-        results = MockDelegate(user).executeBatchSession(data);
+        results = MockDelegate(user).executeBatchSessionReturns(data);
         vm.stopPrank();
         // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 10 ether);
@@ -80,21 +80,27 @@ contract BatchSessionTest is TKGasDelegateBase {
     }
 
     function testBatchSessionExecute_InvalidCounter_Reverts() public {
-        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, makeAddr("receiver"), 1 ether)
+        });
         uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), abi.encode(calls));
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, makeAddr("receiver"), 1 ether);
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken), args);
 
         // Burn the counter
         vm.prank(user, user);
-        MockDelegate(user).burnSessionCounter(counter);
+        MockDelegate(user).spoof_burnSessionCounter(counter);
         vm.stopPrank();
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
-        MockDelegate(user).executeBatchSession(data);
+        MockDelegate(user).executeBatchSession(calls, data);
         vm.stopPrank();
     }
 
@@ -147,11 +153,11 @@ contract BatchSessionTest is TKGasDelegateBase {
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
-        MockDelegate(user).executeBatchSession(data);
+        MockDelegate(user).executeBatchSession(calls, data);
         vm.stopPrank();
     }
 
@@ -253,7 +259,7 @@ contract BatchSessionTest is TKGasDelegateBase {
 
         bytes[] memory results;
         vm.prank(paymaster);
-        results = MockDelegate(user).executeBatchSession(calls, data);
+        results = MockDelegate(user).executeBatchSessionReturns(calls, data);
         vm.stopPrank();
         // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 10 ether);

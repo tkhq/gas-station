@@ -64,7 +64,8 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
 
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), bytes(""));
+        bytes memory args = bytes("");
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
 
         // Burn the counter
         vm.prank(user, user);
@@ -73,7 +74,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
-        MockDelegate(user).executeSessionArbitrary(data);
+        MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
         vm.stopPrank();
     }
 
@@ -189,7 +190,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
 
         bytes memory result;
         vm.prank(paymaster);
-        result = MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
+        result = MockDelegate(user).executeSessionArbitraryReturns(address(mockToken), 0, data);
         vm.stopPrank();
 
         // Success is implicit - if we get here without reverting, the call succeeded
@@ -219,7 +220,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
 
         bytes memory result;
         vm.prank(paymaster);
-        result = MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
+        result = MockDelegate(user).executeSessionArbitraryReturns(address(mockToken), 0, data);
         vm.stopPrank();
 
         // Success is implicit - if we get here without reverting, the call succeeded

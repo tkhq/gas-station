@@ -73,26 +73,26 @@ contract TKGasStation is ITKGasStation {
     }
 
     // Execute functions
-    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
+    function executeReturns(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
         external
         returns (bytes memory)
     {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        bytes memory result = ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
+        bytes memory result = ITKGasDelegate(_target).executeReturns(_to, _ethAmount, _data);
         return result;
     }
 
-    function executeNoReturn(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external {
+    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        ITKGasDelegate(_target).executeNoReturn(_to, _ethAmount, _data);
+        ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
     }
 
     // ApproveThenExecute functions
-    function approveThenExecute(
+    function approveThenExecuteReturns(
         address _target,
         address _to,
         uint256 _ethAmount,
@@ -105,11 +105,11 @@ contract TKGasStation is ITKGasStation {
             revert NotDelegated();
         }
         bytes memory result =
-            ITKGasDelegate(_target).approveThenExecute(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
+            ITKGasDelegate(_target).approveThenExecuteReturns(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
         return result;
     }
 
-    function approveThenExecuteNoReturn(
+    function approveThenExecute(
         address _target,
         address _to,
         uint256 _ethAmount,
@@ -121,28 +121,28 @@ contract TKGasStation is ITKGasStation {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        ITKGasDelegate(_target).approveThenExecuteNoReturn(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
+        ITKGasDelegate(_target).approveThenExecute(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
     }
 
     // Batch execute functions
-    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+    function executeBatchReturns(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
         external
         returns (bytes[] memory)
     {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        bytes[] memory results = ITKGasDelegate(_target).executeBatch(_calls, _data);
+        bytes[] memory results = ITKGasDelegate(_target).executeBatchReturns(_calls, _data);
         return results;
     }
 
-    function executeBatchNoReturn(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
         external
     {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        ITKGasDelegate(_target).executeBatchNoReturn(_calls, _data);
+        ITKGasDelegate(_target).executeBatch(_calls, _data);
     }
 
     function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external {

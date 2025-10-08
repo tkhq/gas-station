@@ -41,7 +41,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
         bytes[] memory results;
         vm.prank(paymaster);
-        results = MockDelegate(user).executeBatchSessionArbitrary(data);
+        results = MockDelegate(user).executeBatchSessionArbitraryReturns(data);
         vm.stopPrank();
         // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 10 ether);
@@ -194,7 +194,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
         bytes[] memory results;
         vm.prank(paymaster);
-        results = MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        results = MockDelegate(user).executeBatchSessionArbitraryReturns(calls, data);
         vm.stopPrank();
 
         // Success is implicit - if we get here without reverting, the call succeeded
@@ -325,7 +325,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
         bytes[] memory results;
         vm.prank(paymaster);
-        results = MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        results = MockDelegate(user).executeBatchSessionArbitraryReturns(calls, data);
         vm.stopPrank();
 
         // Success is implicit - if we get here without reverting, the call succeeded
