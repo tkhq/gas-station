@@ -44,16 +44,14 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), callsEncoded);
 
         // Execute
-        bool success;
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, results) = MockDelegate(user).executeBatch(data);
+        results = MockDelegate(user).executeBatch(data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         // Balance should be 30 ether total minted
         assertEq(mockToken.balanceOf(user), 30 ether);
         // Third call returned value encoded; decode and check >= 1
@@ -133,16 +131,14 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), abi.encode(calls));
 
-        bool success;
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, results) = MockDelegate(user).executeBatch(data);
+        results = MockDelegate(user).executeBatch(data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(results.length, maxSize);
         assertEq(mockToken.balanceOf(user), maxSize * 1 ether);
 
@@ -192,8 +188,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
 
         // First execution succeeds
         vm.prank(paymaster);
-        (bool success,) = MockDelegate(user).executeBatch(data);
-        assertTrue(success);
+        MockDelegate(user).executeBatch(data);
 
         // Second execution with the same calldata must revert (nonce already consumed)
         vm.prank(paymaster);
@@ -315,16 +310,14 @@ contract BatchExecutionTest is TKGasDelegateBase {
 
         // Execute using parameterized version - signature and nonce go in _data
         bytes memory data = abi.encodePacked(signature, bytes16(nonce));
-        bool success;
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, results) = MockDelegate(user).executeBatch(calls, data);
+        results = MockDelegate(user).executeBatch(calls, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         // Balance should be 30 ether total minted
         assertEq(mockToken.balanceOf(user), 30 ether);
         // Third call returned value encoded; decode and check >= 1
@@ -404,16 +397,14 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
 
         bytes memory data = abi.encodePacked(signature, bytes16(nonce));
-        bool success;
         bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, results) = MockDelegate(user).executeBatch(calls, data);
+        results = MockDelegate(user).executeBatch(calls, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(results.length, maxSize);
         assertEq(mockToken.balanceOf(user), maxSize * 1 ether);
 
@@ -463,8 +454,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, bytes16(nonce));
         // First execution succeeds
         vm.prank(paymaster);
-        (bool success,) = MockDelegate(user).executeBatch(calls, data);
-        assertTrue(success);
+        MockDelegate(user).executeBatch(calls, data);
 
         // Second execution with the same parameters must revert (nonce already consumed)
         vm.prank(paymaster);

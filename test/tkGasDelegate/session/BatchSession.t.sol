@@ -32,10 +32,11 @@ contract BatchSessionTest is TKGasDelegateBase {
 
         bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), abi.encode(calls));
 
+        bytes[] memory results;
         vm.prank(paymaster);
-        (bool success, bytes[] memory results) = MockDelegate(user).executeBatchSession(data);
+        results = MockDelegate(user).executeBatchSession(data);
         vm.stopPrank();
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 
@@ -249,10 +250,11 @@ contract BatchSessionTest is TKGasDelegateBase {
         // Create data manually: [signature(65)][nonce(16)][deadline(4)][outputContract(20)]
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
 
+        bytes[] memory results;
         vm.prank(paymaster);
-        (bool success, bytes[] memory results) = MockDelegate(user).executeBatchSession(calls, data);
+        results = MockDelegate(user).executeBatchSession(calls, data);
         vm.stopPrank();
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 

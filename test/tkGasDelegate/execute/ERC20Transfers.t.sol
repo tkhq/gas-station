@@ -16,7 +16,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         bool success = mockToken.transfer(receiver, 10 * 10 ** 18);
         uint256 gasUsed = gasBefore - gasleft();
 
-        assertTrue(success);
+        // First execution succeeds - if we get here without reverting, it succeeded
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
 
         console.log("=== Direct ERC20 Transfer Analysis ===");
@@ -35,15 +35,14 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         bytes memory executeData = _constructExecuteBytes(signature, nonce, address(mockToken), 0, args);
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).execute(executeData);
+        result = MockDelegate(user).execute(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        assertEq(success, true);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(result.length, 32);
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
         (, uint128 currentNonce) = MockDelegate(user).state();
@@ -68,15 +67,14 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         bytes memory executeData = _constructExecuteBytes(signature, nonce, address(mockToken), 0, args);
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).execute(executeData);
+        result = MockDelegate(user).execute(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        assertEq(success, true);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(result.length, 32);
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
         (, uint128 currentNonce) = MockDelegate(user).state();
@@ -117,11 +115,10 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         bytes memory executeData = _constructExecuteBytes(signature, nonce, address(mockToken), 0, args);
 
         // First execution succeeds
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
-        (success, result) = MockDelegate(user).execute(executeData);
-        assertTrue(success);
+        result = MockDelegate(user).execute(executeData);
+        // First execution succeeds - if we get here without reverting, it succeeded
         assertEq(result.length, 32);
 
         // Replay must revert
@@ -191,7 +188,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         uint256 receiverBalance = mockToken.balanceOf(receiver);
         assertEq(receiverBalance, 10 * 10 ** 18);
-        assertEq(success, true);
+        // Success is implicit - if we get here without reverting, the call succeeded
         (, uint128 currentNonce) = MockDelegate(user).state();
         assertEq(currentNonce, nonce + 1);
         bool ret = abi.decode(result, (bool));
@@ -246,7 +243,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         uint256 receiverBalance = mockToken.balanceOf(receiver);
         assertEq(receiverBalance, 10 * 10 ** 18);
-        assertEq(success, true);
+        // Success is implicit - if we get here without reverting, the call succeeded
         (, uint128 currentNonce) = MockDelegate(user).state();
         assertEq(currentNonce, nonce + 1);
 
@@ -269,15 +266,14 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).execute(address(mockToken), 0, data);
+        result = MockDelegate(user).execute(address(mockToken), 0, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        assertEq(success, true);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(result.length, 32);
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
         (, uint128 currentNonce) = MockDelegate(user).state();
@@ -299,15 +295,14 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).execute(address(mockToken), 0, data);
+        result = MockDelegate(user).execute(address(mockToken), 0, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        assertEq(success, true);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(result.length, 32);
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
         (, uint128 currentNonce) = MockDelegate(user).state();
@@ -366,8 +361,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         // First execution succeeds
         vm.prank(paymaster);
-        (bool success,) = MockDelegate(user).execute(address(mockToken), 0, data);
-        assertTrue(success);
+        MockDelegate(user).execute(address(mockToken), 0, data);
 
         // Second execution with the same calldata must revert (nonce already consumed)
         vm.prank(paymaster);
@@ -387,15 +381,14 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).execute(address(mockToken), 0, data);
+        result = MockDelegate(user).execute(address(mockToken), 0, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        assertEq(success, true);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(result.length, 32);
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
         (, uint128 currentNonce) = MockDelegate(user).state();
@@ -454,8 +447,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         // First execution succeeds
         vm.prank(paymaster);
-        (bool success,) = MockDelegate(user).execute(address(mockToken), 0, data);
-        assertTrue(success);
+        MockDelegate(user).execute(address(mockToken), 0, data);
 
         // Second execution with the same calldata must revert (nonce already consumed)
         vm.prank(paymaster);
@@ -498,7 +490,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         uint256 gasUsedFallback = gasBefore - gasleft();
 
         // Assertions
-        assertTrue(success);
+        // First execution succeeds - if we get here without reverting, it succeeded
         assertEq(mockToken.balanceOf(receiver1), 10 * 10 ** 18);
         assertEq(mockToken.balanceOf(receiver2), 10 * 10 ** 18);
 

@@ -22,10 +22,10 @@ contract SessionTest is TKGasDelegateBase {
         bytes memory data = _constructSessionExecuteBytes(signature, counter, deadline, address(mockToken), 0, args);
 
         vm.prank(paymaster);
-        (bool success,) = MockDelegate(user).executeSession(data);
+        MockDelegate(user).executeSession(data);
         vm.stopPrank();
 
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
     }
 
@@ -78,11 +78,11 @@ contract SessionTest is TKGasDelegateBase {
         bytes memory data = _constructSessionExecuteBytes(signature, counter, deadline, address(mockToken), 0, args);
 
         vm.startPrank(paymaster);
-        (bool s1,) = MockDelegate(user).executeSession(data);
-        (bool s2,) = MockDelegate(user).executeSession(data); // replay with same counter
+        MockDelegate(user).executeSession(data);
+        MockDelegate(user).executeSession(data); // replay with same counter
         vm.stopPrank();
 
-        assertTrue(s1 && s2);
+        assertTrue(true); // Both calls succeeded (no revert)
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 
@@ -206,10 +206,10 @@ contract SessionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
 
         vm.prank(paymaster);
-        (bool success,) = MockDelegate(user).executeSession(address(mockToken), 0, data);
+        MockDelegate(user).executeSession(address(mockToken), 0, data);
         vm.stopPrank();
 
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
     }
 
@@ -265,11 +265,11 @@ contract SessionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
 
         vm.startPrank(paymaster);
-        (bool s1,) = MockDelegate(user).executeSession(address(mockToken), 0, data);
-        (bool s2,) = MockDelegate(user).executeSession(address(mockToken), 0, data); // replay with same counter
+        MockDelegate(user).executeSession(address(mockToken), 0, data);
+        MockDelegate(user).executeSession(address(mockToken), 0, data); // replay with same counter
         vm.stopPrank();
 
-        assertTrue(s1 && s2);
+        assertTrue(true); // Both calls succeeded (no revert)
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 

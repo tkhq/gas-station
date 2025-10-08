@@ -39,10 +39,11 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
         bytes memory data = abi.encodePacked(signature, counter, deadline, abi.encode(calls));
 
+        bytes[] memory results;
         vm.prank(paymaster);
-        (bool success, bytes[] memory results) = MockDelegate(user).executeBatchSessionArbitrary(data);
+        results = MockDelegate(user).executeBatchSessionArbitrary(data);
         vm.stopPrank();
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 
@@ -191,11 +192,12 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         // Create data manually: [signature(65)][counter(16)][deadline(4)]
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
 
+        bytes[] memory results;
         vm.prank(paymaster);
-        (bool success, bytes[] memory results) = MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        results = MockDelegate(user).executeBatchSessionArbitrary(calls, data);
         vm.stopPrank();
 
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(results.length, 2);
         assertTrue(abi.decode(results[0], (bool)));
         assertTrue(abi.decode(results[1], (bool)));
@@ -320,12 +322,12 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         // Create data manually: [signature(65)][counter(16)][deadline(4)]
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
 
+        bytes[] memory results;
         vm.prank(paymaster);
-        (bool success, bytes[] memory results) = MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        results = MockDelegate(user).executeBatchSessionArbitrary(calls, data);
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(results.length, maxSize);
         assertEq(mockToken.balanceOf(user), maxSize * 1 ether);
     }

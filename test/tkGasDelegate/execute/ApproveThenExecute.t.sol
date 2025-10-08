@@ -64,16 +64,13 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Execute approve then execute
-        bool success;
-        bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).approveThenExecute(executeData);
+        bytes memory result = MockDelegate(user).approveThenExecute(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(tokenA.balanceOf(user), 900 * 10 ** 18); // 1000 - 100
         assertEq(tokenB.balanceOf(user), 1095 * 10 ** 18); // 1000 + 95
         assertEq(tokenA.balanceOf(address(mockSwap)), 10100 * 10 ** 18); // 10000 + 100
@@ -120,16 +117,14 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Execute approve then execute with ETH
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).approveThenExecute(executeData);
+        result = MockDelegate(user).approveThenExecute(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(tokenA.balanceOf(user), 950 * 10 ** 18); // 1000 - 50
         assertEq(tokenB.balanceOf(user), 1047 * 10 ** 18); // 1000 + 47
         assertEq(tokenA.balanceOf(address(mockSwap)), 10050 * 10 ** 18); // 10000 + 50
@@ -182,16 +177,14 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Execute approve then execute - this should handle USDT's special approval logic
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).approveThenExecute(executeData);
+        result = MockDelegate(user).approveThenExecute(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(usdt.balanceOf(user), 900 * 10 ** 6); // 1000 - 100
         assertEq(usdt.balanceOf(address(mockSwap)), 100 * 10 ** 6); // 0 + 100
         assertEq(usdt.allowance(user, address(mockSwap)), approveAmount); // Should be updated to new amount
@@ -263,10 +256,11 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             signature, nonce, address(tokenA), address(mockSwap), swapAmount, address(mockSwap), 0, swapData
         );
 
+        bytes memory result;
         // First execution succeeds
         vm.prank(paymaster);
-        (bool success,) = MockDelegate(user).approveThenExecute(executeData);
-        assertTrue(success);
+        result = MockDelegate(user).approveThenExecute(executeData);
+        // Success is implicit - if we get here without reverting, the call succeeded
 
         // Replay must revert
         vm.prank(paymaster);
@@ -446,18 +440,16 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), swapData);
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).approveThenExecute(
+        result = MockDelegate(user).approveThenExecute(
             address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(tokenA.balanceOf(user), 900 * 10 ** 18); // 1000 - 100
         assertEq(tokenB.balanceOf(user), 1095 * 10 ** 18); // 1000 + 95
         assertEq(tokenA.balanceOf(address(mockSwap)), 10100 * 10 ** 18); // 10000 + 100
@@ -499,18 +491,16 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), swapData);
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).approveThenExecute(
+        result = MockDelegate(user).approveThenExecute(
             address(mockSwap), ethAmount, address(tokenA), address(mockSwap), swapAmount, data
         );
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        // Assertions
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(tokenA.balanceOf(user), 950 * 10 ** 18); // 1000 - 50
         assertEq(tokenB.balanceOf(user), 1047 * 10 ** 18); // 1000 + 47
         assertEq(tokenA.balanceOf(address(mockSwap)), 10050 * 10 ** 18); // 10000 + 50
@@ -633,12 +623,13 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         // Create data manually: [signature(65)][nonce(16)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), swapData);
 
+        bytes memory result;
         // First execution succeeds
         vm.prank(paymaster);
-        (bool success,) = MockDelegate(user).approveThenExecute(
+        result = MockDelegate(user).approveThenExecute(
             address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
 
         // Second execution with the same calldata must revert (nonce already consumed)
         vm.prank(paymaster);

@@ -27,10 +27,10 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), args);
 
         vm.prank(paymaster);
-        (bool success,) = MockDelegate(user).executeSessionArbitrary(data);
+        MockDelegate(user).executeSessionArbitrary(data);
         vm.stopPrank();
 
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 
@@ -92,11 +92,11 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), args);
 
         vm.startPrank(paymaster);
-        (bool s1,) = MockDelegate(user).executeSessionArbitrary(data);
-        (bool s2,) = MockDelegate(user).executeSessionArbitrary(data);
+        MockDelegate(user).executeSessionArbitrary(data);
+        MockDelegate(user).executeSessionArbitrary(data);
         vm.stopPrank();
 
-        assertTrue(s1 && s2);
+        assertTrue(true); // Both calls succeeded (no revert)
         assertEq(mockToken.balanceOf(receiver), 8 ether);
     }
 
@@ -184,11 +184,12 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         // Create data manually: [signature(65)][counter(16)][deadline(4)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
 
+        bytes memory result;
         vm.prank(paymaster);
-        (bool success, bytes memory result) = MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
+        result = MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
         vm.stopPrank();
 
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(abi.decode(result, (bool)), true);
         assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
     }
@@ -213,11 +214,12 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         // Create data manually: [signature(65)][counter(16)][deadline(4)][args]
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
 
+        bytes memory result;
         vm.prank(paymaster);
-        (bool success, bytes memory result) = MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
+        result = MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
         vm.stopPrank();
 
-        assertTrue(success);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(abi.decode(result, (bool)), true);
         assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
     }
@@ -289,11 +291,11 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
 
         vm.startPrank(paymaster);
-        (bool s1,) = MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
-        (bool s2,) = MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data); // replay with same counter
+        MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
+        MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data); // replay with same counter
         vm.stopPrank();
 
-        assertTrue(s1 && s2);
+        assertTrue(true); // Both calls succeeded (no revert)
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 

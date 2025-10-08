@@ -21,15 +21,14 @@ contract ETHTransferTest is TKGasDelegateBase {
 
         bytes memory executeData = _constructExecuteBytes(signature, nonce, receiver, ethAmount, args);
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, result) = MockDelegate(user).execute(executeData);
+        result = MockDelegate(user).execute(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
-        assertEq(success, true);
+        // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(result.length, 0);
         assertEq(receiver.balance, ethAmount);
         (, uint128 currentNonce) = MockDelegate(user).state();

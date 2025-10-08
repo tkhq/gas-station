@@ -20,12 +20,11 @@ contract NonceDecodingConsistencyTest is TKGasDelegateTestBase {
 
         bytes memory executeData = _constructExecuteBytes(signature, nonce, address(mockToken), 0, args);
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
-        (success, result) = MockDelegate(user).execute(executeData);
+        result = MockDelegate(user).execute(executeData);
 
-        assertTrue(success, "Execute should succeed with consistent nonce decoding");
+        // Success is implicit - if we get here without reverting, the call succeeded
 
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
     }

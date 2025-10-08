@@ -80,7 +80,7 @@ contract TKGasStation is ITKGasStation {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        (, bytes memory result) = ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
+        bytes memory result = ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
         return result;
     }
 
@@ -104,7 +104,7 @@ contract TKGasStation is ITKGasStation {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        (, bytes memory result) =
+        bytes memory result =
             ITKGasDelegate(_target).approveThenExecute(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
         return result;
     }
@@ -132,7 +132,7 @@ contract TKGasStation is ITKGasStation {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        (, bytes[] memory results) = ITKGasDelegate(_target).executeBatch(_calls, _data);
+        bytes[] memory results = ITKGasDelegate(_target).executeBatch(_calls, _data);
         return results;
     }
 
