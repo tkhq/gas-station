@@ -61,11 +61,16 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
     }
 
     function testArbitraryBatchSession_InvalidCounter_Reverts() public {
-        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, makeAddr("receiver"), 1 ether)
+        });
         uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
-        bytes memory data = abi.encodePacked(signature, counter, deadline, abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
 
         vm.prank(user);
         MockDelegate(user).spoof_burnSessionCounter(1); // Use fixed counter value
@@ -73,7 +78,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
-        MockDelegate(user).executeBatchSessionArbitrary(data);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
         vm.stopPrank();
     }
 
@@ -91,11 +96,11 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
-        bytes memory data = abi.encodePacked(signature, counter, deadline, abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
 
         vm.startPrank(paymaster);
-        MockDelegate(user).executeBatchSessionArbitrary(data);
-        MockDelegate(user).executeBatchSessionArbitrary(data);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
         vm.stopPrank();
 
         assertEq(mockToken.balanceOf(receiver), 4 ether);

@@ -69,7 +69,9 @@ interface ITKGasDelegate is IBatchExecution {
 
     function executeSession(bytes calldata data) external;
 
-    function executeSessionReturns(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bytes memory);
+    function executeSessionReturns(address _to, uint256 _ethAmount, bytes calldata _data)
+        external
+        returns (bytes memory);
 
     function executeSession(address _to, uint256 _ethAmount, bytes calldata _data) external;
 
@@ -94,8 +96,7 @@ interface ITKGasDelegate is IBatchExecution {
         external
         returns (bytes[] memory);
 
-    function executeBatchSessionArbitrary(IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external;
+    function executeBatchSessionArbitrary(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external;
 
     // Burn functions
     function burnNonce(bytes calldata _signature, uint128 _nonce) external;

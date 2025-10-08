@@ -57,11 +57,11 @@ contract BatchSessionTest is TKGasDelegateBase {
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
-        MockDelegate(user).executeBatchSession(data);
+        MockDelegate(user).executeBatchSession(calls, data);
         vm.stopPrank();
     }
 
@@ -119,11 +119,11 @@ contract BatchSessionTest is TKGasDelegateBase {
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), abi.encode(calls));
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
 
         vm.startPrank(paymaster);
-        MockDelegate(user).executeBatchSession(data);
-        MockDelegate(user).executeBatchSession(data); // Replay
+        MockDelegate(user).executeBatchSession(calls, data);
+        MockDelegate(user).executeBatchSession(calls, data); // Replay
         vm.stopPrank();
 
         assertEq(mockToken.balanceOf(receiver), 6 ether);

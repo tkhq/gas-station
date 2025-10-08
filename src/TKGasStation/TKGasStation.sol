@@ -136,9 +136,7 @@ contract TKGasStation is ITKGasStation {
         return results;
     }
 
-    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external
-    {
+    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }

@@ -36,8 +36,7 @@ interface ITKGasStation is IBatchExecution {
     function executeBatchReturns(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
         external
         returns (bytes[] memory);
-    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external;
+    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external;
 
     function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external;
 

@@ -1252,12 +1252,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             uint256 ethAmount = execution.value;
             address outputContract = execution.to;
             bytes calldata _callData = execution.data;
-            
+
             // Validate that all calls are to the same output contract
             if (outputContract != _outputContract) {
                 revert InvalidOutputContract();
             }
-            
+
             assembly {
                 let ptr := mload(0x40)
                 calldatacopy(ptr, _callData.offset, _callData.length)
@@ -1579,7 +1579,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return result;
     }
 
-    function executeSessionReturns(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bytes memory) {
+    function executeSessionReturns(address _to, uint256 _ethAmount, bytes calldata _data)
+        external
+        returns (bytes memory)
+    {
         bytes memory result =
             _executeSessionWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
         return result;
@@ -1672,9 +1675,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return results;
     }
 
-    function executeBatchSessionArbitrary(IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external
-    {
+    function executeBatchSessionArbitrary(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {
         _executeBatchSessionArbitraryNoReturn(_data[0:65], _data[65:81], _data[81:85], _calls);
     }
 
