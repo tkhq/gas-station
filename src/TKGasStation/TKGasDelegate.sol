@@ -548,7 +548,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         bytes calldata _ethAmountBytes,
         bytes calldata _arguments
     ) internal {
-        //bytes32 argsHash = keccak256(_arguments);
         bytes32 hash;
         assembly {
             let ptr := mload(0x40)
