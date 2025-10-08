@@ -176,7 +176,7 @@ contract BatchSessionTest is TKGasDelegateBase {
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
         bytes memory data = _constructFallbackCalldata(
-            bytes1(0x50),
+            bytes1(0x40),
             signature,
             counter,
             abi.encodePacked(
@@ -216,7 +216,7 @@ contract BatchSessionTest is TKGasDelegateBase {
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
         bytes memory data = _constructFallbackCalldata(
-            bytes1(0x51),
+            bytes1(0x41),
             signature,
             counter,
             abi.encodePacked(

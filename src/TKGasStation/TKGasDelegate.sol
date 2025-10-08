@@ -78,21 +78,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
         // NO RETURN PATHS (0xX0) - Checked first
         if (functionSelector == bytes1(0x00)) {
-            // execute (no value) no return
-            bytes calldata outputContractBytes;
-            bytes calldata arguments;
-            assembly {
-                outputContractBytes.offset := nonceEnd
-                outputContractBytes.length := 20
-                arguments.offset := add(nonceEnd, 20)
-                arguments.length := sub(calldatasize(), add(nonceEnd, 20))
-            }
-            _executeNoValueNoReturn(signature, nonceBytes, outputContractBytes, arguments);
-            assembly {
-                return(0x00, 0x00)
-            }
-        } else if (functionSelector == bytes1(0x10)) {
-            // executeWithValue no return
+            // execute (no return) - handles both with and without value
             bytes calldata outputContractBytes;
             uint256 ethAmount;
             bytes calldata arguments;
@@ -104,11 +90,15 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 arguments.offset := add(nonceEnd, 30)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 30))
             }
-            _executeWithValueNoReturn(signature, nonceBytes, outputContractBytes, ethAmount, arguments);
+            if (ethAmount == 0) {
+                _executeNoValueNoReturn(signature, nonceBytes, outputContractBytes, arguments);
+            } else {
+                _executeWithValueNoReturn(signature, nonceBytes, outputContractBytes, ethAmount, arguments);
+            }
             assembly {
                 return(0x00, 0x00)
             }
-        } else if (functionSelector == bytes1(0x20)) {
+        } else if (functionSelector == bytes1(0x10)) {
             // approveThenExecute no return
             _approveThenExecuteNoReturn(
                 signature,
@@ -123,13 +113,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             assembly {
                 return(0x00, 0x00)
             }
-        } else if (functionSelector == bytes1(0x30)) {
+        } else if (functionSelector == bytes1(0x20)) {
             // executeBatch no return
             _executeBatchNoReturn(signature, nonceBytes, msg.data[nonceEnd:]);
             assembly {
                 return(0x00, 0x00)
             }
-        } else if (functionSelector == bytes1(0x40)) {
+        } else if (functionSelector == bytes1(0x30)) {
             uint256 ethAmount;
             assembly {
                 let w := calldataload(107)
@@ -141,7 +131,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             assembly {
                 return(0x00, 0x00)
             }
-        } else if (functionSelector == bytes1(0x50)) {
+        } else if (functionSelector == bytes1(0x40)) {
             // executeBatchSession no return
             IBatchExecution.Call[] calldata calls;
             assembly {
@@ -152,7 +142,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             assembly {
                 return(0x00, 0x00)
             }
-        } else if (functionSelector == bytes1(0x60)) {
+        } else if (functionSelector == bytes1(0x50)) {
             // executeSessionArbitraryWithValue no return
             uint256 ethAmount;
             assembly {
@@ -165,7 +155,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             assembly {
                 return(0x00, 0x00)
             }
-        } else if (functionSelector == bytes1(0x70)) {
+        } else if (functionSelector == bytes1(0x60)) {
             // executeBatchSessionArbitrary
             IBatchExecution.Call[] calldata calls;
             assembly {
@@ -179,18 +169,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         // RETURN PATHS (0xX1) - Checked after no-return paths
         else if (functionSelector == bytes1(0x01)) {
-            // execute (no value) with return
-            address outputContract;
-            bytes calldata arguments;
-            assembly {
-                outputContract := shr(96, calldataload(nonceEnd))
-                arguments.offset := add(nonceEnd, 20)
-                arguments.length := sub(calldatasize(), add(nonceEnd, 20))
-            }
-            (, bytes memory result) = _executeNoValue(signature, nonceBytes, outputContract, arguments);
-            return result;
-        } else if (functionSelector == bytes1(0x11)) {
-            // executeWithValue with return
+            // execute (with return) - handles both with and without value
             address outputContract;
             uint256 ethAmount;
             bytes calldata arguments;
@@ -202,9 +181,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 arguments.offset := add(nonceEnd, 30)
                 arguments.length := sub(calldatasize(), add(nonceEnd, 30))
             }
-            (, bytes memory result) = _executeWithValue(signature, nonceBytes, outputContract, ethAmount, arguments);
+            bytes memory result;
+            if (ethAmount == 0) {
+                (, result) = _executeNoValue(signature, nonceBytes, outputContract, arguments);
+            } else {
+                (, result) = _executeWithValue(signature, nonceBytes, outputContract, ethAmount, arguments);
+            }
             return result;
-        } else if (functionSelector == bytes1(0x21)) {
+        } else if (functionSelector == bytes1(0x11)) {
             // approveThenExecute with return
 
             address outputContract;
@@ -225,11 +209,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 msg.data[185:] //arguments
             );
             return result;
-        } else if (functionSelector == bytes1(0x31)) {
+        } else if (functionSelector == bytes1(0x21)) {
             // executeBatch with return
             (, bytes[] memory result) = _executeBatch(signature, nonceBytes, msg.data[nonceEnd:]);
             return abi.encode(result);
-        } else if (functionSelector == bytes1(0x41)) {
+        } else if (functionSelector == bytes1(0x31)) {
             address outputContract;
             uint256 ethAmount;
             assembly {
@@ -241,7 +225,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             (, bytes memory result) =
                 _executeSessionWithValue(signature, nonceBytes, msg.data[nonceEnd:87], outputContract, ethAmount, msg.data[117:]);
             return result;
-        } else if (functionSelector == bytes1(0x51)) {
+        } else if (functionSelector == bytes1(0x41)) {
             // executeBatchSession with return
             address outputContract;
             IBatchExecution.Call[] calldata calls;
@@ -254,7 +238,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             (, bytes[] memory result) =
                 _executeBatchSession(signature, nonceBytes, msg.data[nonceEnd:87], outputContract, calls);
             return abi.encode(result);
-        } else if (functionSelector == bytes1(0x61)) {
+        } else if (functionSelector == bytes1(0x51)) {
             // executeSessionArbitraryWithValue with return
             address outputContract;
             uint256 ethAmount;
@@ -267,7 +251,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 signature, nonceBytes, msg.data[nonceEnd:87], outputContract, ethAmount, msg.data[117:]
             );
             return result;
-        } else if (functionSelector == bytes1(0x71)) {
+        } else if (functionSelector == bytes1(0x61)) {
             // executeBatchSessionArbitrary with return
             IBatchExecution.Call[] calldata calls;
             assembly {
@@ -362,17 +346,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             : _executeWithValue(data[0:65], data[65:81], to, value, data[133:]);
     }
 
-    function executeNoValue(bytes calldata data) external returns (bool, bytes memory) {
+    function executeNoValueNoReturn(bytes calldata data) external {
         address to;
         assembly {
             // address is 20 bytes immediately after nonce
             to := shr(96, calldataload(add(data.offset, 81)))
         }
-        return _executeNoValue(data[0:65], data[65:81], to, data[101:]);
-    }
-
-    function executeNoValue(address _to, bytes calldata _data) external returns (bool, bytes memory) {
-        return _executeNoValue(_data[0:65], _data[65:81], _to, _data[81:]);
+        _executeNoValueNoReturn(data[0:65], data[65:81], data[81:101], data[101:]);
     }
 
     function approveThenExecute(bytes calldata _data) external returns (bool, bytes memory) {

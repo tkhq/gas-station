@@ -117,7 +117,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
         bytes memory data = _constructFallbackCalldata(
-            bytes1(0x60),
+            bytes1(0x50),
             signature,
             counter,
             abi.encodePacked(
@@ -153,7 +153,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
 
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
         bytes memory data = _constructFallbackCalldata(
-            bytes1(0x61),
+            bytes1(0x51),
             signature,
             counter,
             abi.encodePacked(

@@ -153,7 +153,7 @@ contract TKGasDelegateTestBase is Test {
         uint80 ethAmount80 = uint80(_ethAmount);
         bytes memory ethBytes = abi.encodePacked(ethAmount80);
         return
-            abi.encodePacked(bytes1(0x00), bytes1(0x10), _signature, nonceBytes, _outputContract, ethBytes, _arguments);
+            abi.encodePacked(bytes1(0x00), bytes1(0x00), _signature, nonceBytes, _outputContract, ethBytes, _arguments);
     }
 
     function _bytesToHexString(bytes memory _bytes) internal pure returns (string memory) {

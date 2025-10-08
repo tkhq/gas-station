@@ -121,7 +121,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
         bytes memory data = _constructFallbackCalldata(
-            bytes1(0x70),
+            bytes1(0x60),
             signature,
             counter,
             abi.encodePacked(
@@ -159,7 +159,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
         bytes memory data = _constructFallbackCalldata(
-            bytes1(0x71),
+            bytes1(0x61),
             signature,
             counter,
             abi.encodePacked(

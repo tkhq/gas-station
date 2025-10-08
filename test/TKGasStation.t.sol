@@ -107,14 +107,15 @@ contract TKGasStationTest is Test {
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
 
-        bytes memory data = _buildExecuteNoValueData(
+        bytes memory data = _buildExecuteWithValueData(
             signature,
             nonce,
             address(mockToken),
+            0,
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
 
-        (bool success,) = tkGasStation.executeNoValue(user, data);
+        (bool success,) = tkGasStation.execute(user, data);
 
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
@@ -174,13 +175,14 @@ contract TKGasStationTest is Test {
         // This should revert because newUser is not delegated (bytes-only API)
         vm.prank(paymaster);
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        bytes memory data = _buildExecuteNoValueData(
+        bytes memory data = _buildExecuteWithValueData(
             signature,
             nonce,
             address(mockToken),
+            0,
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18)
         );
-        tkGasStation.executeNoValue(newUser, data);
+        tkGasStation.execute(newUser, data);
     }
 
     function testNotDelegatedToRightContractRevertAll() public {
@@ -191,7 +193,7 @@ contract TKGasStationTest is Test {
         vm.prank(paymaster);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.executeNoValue(user, data);
+        tkGasStation.execute(user, data);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
         tkGasStation.execute(user, data);
@@ -213,7 +215,7 @@ contract TKGasStationTest is Test {
         tkGasStation.execute(user, data);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.executeNoValue(user, data);
+        tkGasStation.execute(user, data);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
         tkGasStation.approveThenExecute(user, data);
@@ -238,7 +240,7 @@ contract TKGasStationTest is Test {
         tkGasStation.execute(user, user, 0, data);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
-        tkGasStation.executeNoValue(user, user, data);
+        tkGasStation.execute(user, user, 0, data);
 
         vm.expectRevert(TKGasStation.NotDelegated.selector);
         tkGasStation.approveThenExecute(user, user, 0, address(mockToken), user, 1000, data);

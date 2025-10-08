@@ -33,7 +33,7 @@ contract TKGasStation is ITKGasStation {
         bytes1 functionSelector = bytes1(data[22] & 0xf0);  // mask the last nibble 
 
         // only allow execute functions, no session functions 
-        if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20 || functionSelector == 0x30) { 
+        if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20) { 
             (bool success, bytes memory result) = target.call(data[21:]);
             if (success) {
                 return result;
@@ -86,21 +86,6 @@ contract TKGasStation is ITKGasStation {
         }
         return ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
     }
-
-    function executeNoValue(address _target, bytes calldata data) external returns (bool, bytes memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeNoValue(data);
-    }
-
-    function executeNoValue(address _target, address _to, bytes calldata _data) external returns (bool, bytes memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_target).executeNoValue(_to, _data);
-    }
-
 
     function approveThenExecute(address _target, bytes calldata data) external returns (bool, bytes memory) {
         if (!_isDelegated(_target)) {

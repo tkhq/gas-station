@@ -119,7 +119,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, receiver, 1 ether, bytes(""));
 
         bytes memory fallbackData = _constructFallbackCalldata(
-            bytes1(0x10), 
+            bytes1(0x00), 
             signature, 
             nonce, 
             abi.encodePacked(
@@ -147,7 +147,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockSwap), 2 ether, data);
 
         bytes memory fallbackData = _constructFallbackCalldata(
-            bytes1(0x11), 
+            bytes1(0x01), 
             signature, 
             nonce, 
             abi.encodePacked(
