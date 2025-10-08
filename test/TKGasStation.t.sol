@@ -319,19 +319,19 @@ contract TKGasStationTest is Test {
 
         // Create signature for approveThenExecute
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        
+
         vm.startPrank(user);
         bytes32 hash = MockDelegate(payable(user)).hashApproveThenExecute(
             nonce,
-            address(mockToken),  // erc20
-            address(mockToken),  // spender
-            10 * 10 ** 18,  // approveAmount
-            address(mockToken),  // outputContract
-            0,  // ethAmount
+            address(mockToken), // erc20
+            address(mockToken), // spender
+            10 * 10 ** 18, // approveAmount
+            address(mockToken), // outputContract
+            0, // ethAmount
             args
         );
         vm.stopPrank();
-        
+
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -379,7 +379,7 @@ contract TKGasStationTest is Test {
         vm.startPrank(user);
         bytes32 hash = MockDelegate(payable(user)).hashBatchExecution(nonce, calls);
         vm.stopPrank();
-        
+
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, hash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -396,5 +396,100 @@ contract TKGasStationTest is Test {
         assertEq(mockToken.balanceOf(receiver1), 5 * 10 ** 18);
         assertEq(mockToken.balanceOf(receiver2), 5 * 10 ** 18);
         console.log("executeBatchNoReturn gas: %s", gasUsed);
+    }
+
+    function testApproveThenExecute() public {
+        console.log("=== TESTING approveThenExecute (with return) ===");
+
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        // Spoof nonce
+        MockDelegate(payable(address(tkGasDelegate))).spoof_Nonce(5);
+        (, uint128 nonce) = MockDelegate(payable(user)).state();
+
+        // Create signature for approveThenExecute
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+
+        vm.startPrank(user);
+        bytes32 hash = MockDelegate(payable(user)).hashApproveThenExecute(
+            nonce,
+            address(mockToken), // erc20
+            address(mockToken), // spender
+            10 * 10 ** 18, // approveAmount
+            address(mockToken), // outputContract
+            0, // ethAmount
+            args
+        );
+        vm.stopPrank();
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, hash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Build data for approveThenExecute
+        bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), args);
+
+        // Execute through TKGasStation
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        bytes memory result = tkGasStation.approveThenExecute(
+            user, address(mockToken), 0, address(mockToken), address(mockToken), 10 * 10 ** 18, paramData
+        );
+        uint256 gasAfter = gasleft();
+        uint256 gasUsed = gasBefore - gasAfter;
+
+        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
+        assertTrue(abi.decode(result, (bool)));
+        console.log("approveThenExecute gas: %s", gasUsed);
+    }
+
+    function testExecuteBatch() public {
+        console.log("=== TESTING executeBatch (with return) ===");
+
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver1 = makeAddr("receiver1");
+        address receiver2 = makeAddr("receiver2");
+
+        // Spoof nonce
+        MockDelegate(payable(address(tkGasDelegate))).spoof_Nonce(6);
+        (, uint128 nonce) = MockDelegate(payable(user)).state();
+
+        // Create batch calls
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver1, 5 * 10 ** 18)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver2, 5 * 10 ** 18)
+        });
+
+        // Create signature
+        vm.startPrank(user);
+        bytes32 hash = MockDelegate(payable(user)).hashBatchExecution(nonce, calls);
+        vm.stopPrank();
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, hash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Build data for executeBatch
+        bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), abi.encode(calls));
+
+        // Execute through TKGasStation
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        bytes[] memory results = tkGasStation.executeBatch(user, calls, paramData);
+        uint256 gasAfter = gasleft();
+        uint256 gasUsed = gasBefore - gasAfter;
+
+        assertEq(mockToken.balanceOf(receiver1), 5 * 10 ** 18);
+        assertEq(mockToken.balanceOf(receiver2), 5 * 10 ** 18);
+        assertEq(results.length, 2);
+        assertTrue(abi.decode(results[0], (bool)));
+        assertTrue(abi.decode(results[1], (bool)));
+        console.log("executeBatch gas: %s", gasUsed);
     }
 }
