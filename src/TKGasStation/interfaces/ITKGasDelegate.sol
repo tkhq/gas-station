@@ -10,6 +10,10 @@ interface ITKGasDelegate is IBatchExecution {
         uint128 nonce;
     }
 
+    function nonce() external view returns (uint128);
+
+    function sessionCounter() external view returns (uint128);
+
      // Execute functions
     function execute(bytes calldata data) external returns (bool, bytes memory);
 
@@ -53,5 +57,5 @@ interface ITKGasDelegate is IBatchExecution {
     function burnSessionCounter() external;
 
     // State access
-    function state() external view returns (uint128 sessionCounter, uint128 nonce);
+    function state() external view returns (uint128 _sessionCounter, uint128 _nonce);
 }

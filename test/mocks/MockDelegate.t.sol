@@ -7,10 +7,19 @@ contract MockDelegate is TKGasDelegate {
     constructor() TKGasDelegate() {}
 
     function spoof_Nonce(uint128 _nonce) external {
-        state.nonce = _nonce;
+        gasDelegateState.nonce = _nonce;
     }
 
     function spoof_Counter(uint128 _counter) external {
-        state.sessionCounter = _counter;
+        gasDelegateState.sessionCounter = _counter;
     }
+
+    function external_consumeNonce(bytes calldata _nonceBytes) external {
+        _consumeNonce(_nonceBytes);
+    }
+
+    function external_requireCounter(bytes calldata _counterBytes) external {
+        _requireCounter(_counterBytes);
+    }
+
 }

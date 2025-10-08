@@ -53,7 +53,19 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     // Original: keccak256("BurnSessionCounter(uint128 counter,address sender)")
 
     //bytes4 private constant APPROVE_SELECTOR = 0x095ea7b3;
-    State public state;
+    State public gasDelegateState;
+
+    function state() external view returns (uint128, uint128) {
+        return (gasDelegateState.sessionCounter, gasDelegateState.nonce);
+    }
+
+    function nonce() external view returns (uint128) {
+        return gasDelegateState.nonce;
+    }
+
+    function sessionCounter() external view returns (uint128) {
+        return gasDelegateState.sessionCounter;
+    }
 
     constructor() EIP712() {}
 
@@ -288,42 +300,39 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     }
 
     function _consumeNonce(bytes calldata _nonceBytes) internal {
-        // Compare raw calldata bytes with current nonce
-        uint128 currentNonce = state.nonce;
         uint128 nonceValue;
         assembly {
             nonceValue := shr(128, calldataload(_nonceBytes.offset))
         }
-        if (nonceValue != currentNonce) {
+        if (nonceValue != gasDelegateState.nonce) {
             revert InvalidNonce();
         }
         unchecked {
-            ++state.nonce;
+            ++gasDelegateState.nonce;
         }
     }
 
     function _consumeNonce(uint128 _nonce) internal {
-        if (_nonce != state.nonce) {
+        if (_nonce != gasDelegateState.nonce) {
             revert InvalidNonce();
         }
         unchecked {
-            ++state.nonce;
+            ++gasDelegateState.nonce;
         }
     }
 
     function _requireCounter(bytes calldata _counterBytes) internal view {
-        // Parse counter from calldata and compare
         uint128 counterValue;
         assembly {
             counterValue := shr(128, calldataload(_counterBytes.offset))
         }
-        if (counterValue != state.sessionCounter) {
+        if (counterValue != gasDelegateState.sessionCounter) {
             revert InvalidCounter();
         }
     }
 
     function _requireCounter(uint128 _counter) internal view {
-        if (_counter != state.sessionCounter) {
+        if (_counter != gasDelegateState.sessionCounter) {
             revert InvalidCounter();
         }
     }
@@ -766,7 +775,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             revert NotSelf();
         }
         unchecked {
-            ++state.nonce;
+            ++gasDelegateState.nonce;
         }
     }
 
@@ -1185,7 +1194,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             revert NotSelf();
         }
         unchecked {
-            ++state.sessionCounter;
+            ++gasDelegateState.sessionCounter;
         }
     }
 
@@ -1194,7 +1203,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             revert NotSelf();
         }
         unchecked {
-            ++state.sessionCounter;
+            ++gasDelegateState.sessionCounter;
         }
     }
 
