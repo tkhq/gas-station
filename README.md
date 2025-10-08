@@ -26,7 +26,7 @@ TK Gas Station lets a user have all their gas paid for by another party using me
     - The nonce for execute and batch execute will naturally protect against re-entrancy, but this should not be relied upon 
     - There is no built in re-entrancy protection for session based auth since it is meant to be replayed
 * Both the delegate and the gas station are not using DRY to avoid doing internal calls. This is a purpsoseful design choice to save gas during run time
-* Paymasters (and anyone else) can only interact with TKGasDelegate through the TKGasStation
+* Paymasters (and anyone else) can interact with TKGasDelegate through the TKGasStation or directly through the delegate itself
 * The gas station has helper external functions for hashing for the type hash. This is just to help for external development and testing, and are not used during execution
 * There are session metatransactions that give one particular wallet unlimited execution on behalf of a user
     - This is a footgun and should be used carefully
@@ -39,7 +39,7 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 * All execute will revert if it gets a failure. Anything interacting with the gas station should be able to handle that
 * Batch transactions are capped at 50 per batch currently
 * Burning a nonce or a counter only burns the current nonce/counter. Ones that are premade will be valid
-* Nonces and session counters are sequential and can only be used sequentially
+* Nonces are sequential and can only be used sequentially
 * A user can burn their own counter or nonce without a 712
 * The gas delegate implements recievers for ERC-721 and ERC-1155
 * The Gas station cannot use session based auth. This is because authorizing the gas station to send arbitrary messages would enable anyone to send arbitrary messages through the gas station
@@ -49,7 +49,6 @@ TK Gas Station lets a user have all their gas paid for by another party using me
     2. The user then delegates to a contract that changes the nonce or resets it to 0 since that storage slot stays with the user's address, not the delegated contract
     3. The user then delegates back to TKGasDelegate
     4. Since the nonce is reset, old transactions can be replayed. 
-
 
 ## Packing data for calling the fallback function
 
