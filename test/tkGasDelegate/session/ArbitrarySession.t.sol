@@ -323,4 +323,65 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         vm.expectRevert(TKGasDelegate.NotSelf.selector);
         MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
     }
+
+    function testArbitrarySessionExecute_ValidSignatureWrongSender_RevertsNotSelf() public {
+        // This test verifies that even with a valid signature from the user,
+        // if someone other than the authorized sender tries to execute, it should revert
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+        address unauthorizedSender = makeAddr("unauthorizedSender");
+
+        uint128 counter = 1;
+        uint32 deadline = uint32(block.timestamp + 1 days);
+
+        // Create a valid signature where 'paymaster' is the authorized sender
+        address signerAddr = vm.addr(USER_PRIVATE_KEY);
+        vm.startPrank(signerAddr);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(USER_PRIVATE_KEY, MockDelegate(user).hashArbitrarySessionExecution(counter, deadline, paymaster));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether);
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), args);
+
+        // Attempt to execute from unauthorizedSender instead of paymaster
+        vm.prank(unauthorizedSender);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeSessionArbitrary(data);
+        vm.stopPrank();
+
+        // Verify the transaction did not go through
+        assertEq(mockToken.balanceOf(receiver), 0);
+    }
+
+    function testArbitrarySessionExecuteParameterized_ValidSignatureWrongSender_RevertsNotSelf() public {
+        // Same test as above but using the parameterized version
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+        address unauthorizedSender = makeAddr("unauthorizedSender");
+
+        uint128 counter = 1;
+        uint32 deadline = uint32(block.timestamp + 1 days);
+
+        // Create a valid signature where 'paymaster' is the authorized sender
+        address signerAddr = vm.addr(USER_PRIVATE_KEY);
+        vm.startPrank(signerAddr);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(USER_PRIVATE_KEY, MockDelegate(user).hashArbitrarySessionExecution(counter, deadline, paymaster));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether);
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
+
+        // Attempt to execute from unauthorizedSender instead of paymaster
+        vm.prank(unauthorizedSender);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeSessionArbitrary(address(mockToken), 0, data);
+        vm.stopPrank();
+
+        // Verify the transaction did not go through
+        assertEq(mockToken.balanceOf(receiver), 0);
+    }
 }

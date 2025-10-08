@@ -351,4 +351,66 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         vm.stopPrank();
         return signature;
     }
+
+    function testArbitraryBatchSession_ValidSignatureWrongSender_RevertsNotSelf() public {
+        // This test verifies that even with a valid signature from the user,
+        // if someone other than the authorized sender tries to execute, it should revert
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+        address unauthorizedSender = makeAddr("unauthorizedSender");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        uint128 counter = 1;
+        uint32 deadline = uint32(block.timestamp + 1 days);
+
+        // Create a valid signature where 'paymaster' is the authorized sender
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+        // Use parameterized version to avoid batch size parsing issues
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
+
+        // Attempt to execute from unauthorizedSender instead of paymaster
+        vm.prank(unauthorizedSender);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        vm.stopPrank();
+
+        // Verify the transaction did not go through
+        assertEq(mockToken.balanceOf(receiver), 0);
+    }
+
+    function testArbitraryBatchSessionExecuteParameterized_ValidSignatureWrongSender_RevertsNotSelf() public {
+        // Same test as above but using the parameterized version
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+        address unauthorizedSender = makeAddr("unauthorizedSender");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        uint128 counter = 1;
+        uint32 deadline = uint32(block.timestamp + 1 days);
+
+        // Create a valid signature where 'paymaster' is the authorized sender
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
+
+        // Attempt to execute from unauthorizedSender instead of paymaster
+        vm.prank(unauthorizedSender);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        vm.stopPrank();
+
+        // Verify the transaction did not go through
+        assertEq(mockToken.balanceOf(receiver), 0);
+    }
 }

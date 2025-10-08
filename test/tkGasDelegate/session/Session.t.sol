@@ -303,4 +303,58 @@ contract SessionTest is TKGasDelegateBase {
         MockDelegate(user).executeSession(address(mockToken), 0, data);
         vm.stopPrank();
     }
+
+    function testSessionExecute_ValidSignatureWrongSender_RevertsNotSelf() public {
+        // This test verifies that even with a valid signature from the user,
+        // if someone other than the authorized sender (specified in the signature)
+        // tries to execute, it should revert
+        mockToken.mint(user, 10 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+        address unauthorizedSender = makeAddr("unauthorizedSender");
+
+        uint128 counter = 1;
+        uint32 deadline = uint32(block.timestamp + 1 days);
+
+        // Create a valid signature where 'paymaster' is the authorized sender
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
+        bytes memory data = _constructSessionExecuteBytes(signature, counter, deadline, address(mockToken), 0, args);
+
+        // Attempt to execute from unauthorizedSender instead of paymaster
+        vm.prank(unauthorizedSender);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeSession(data);
+        vm.stopPrank();
+
+        // Verify the transaction did not go through
+        assertEq(mockToken.balanceOf(receiver), 0);
+    }
+
+    function testSessionExecuteParameterized_ValidSignatureWrongSender_RevertsNotSelf() public {
+        // Same test as above but using the parameterized version of executeSession
+        mockToken.mint(user, 10 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+        address unauthorizedSender = makeAddr("unauthorizedSender");
+
+        uint128 counter = 1;
+        uint32 deadline = uint32(block.timestamp + 1 days);
+
+        // Create a valid signature where 'paymaster' is the authorized sender
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
+
+        // Attempt to execute from unauthorizedSender instead of paymaster
+        vm.prank(unauthorizedSender);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeSession(address(mockToken), 0, data);
+        vm.stopPrank();
+
+        // Verify the transaction did not go through
+        assertEq(mockToken.balanceOf(receiver), 0);
+    }
 }
