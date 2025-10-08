@@ -6,6 +6,8 @@ import {IBatchExecution} from "./IBatchExecution.sol";
 interface ITKGasDelegate is IBatchExecution {
     function nonce() external view returns (uint128);
 
+    function validateSignature(bytes32 _hash, bytes calldata _signature) external view returns (bool);
+
     function checkSessionCounterExpired(uint128 _counter) external view returns (bool);
 
     // Execute functions
@@ -103,4 +105,48 @@ interface ITKGasDelegate is IBatchExecution {
     function burnSessionCounter(bytes calldata _signature, uint128 _counter, address _sender) external;
     function burnNonce() external;
     function burnSessionCounter(uint128 _counter) external;
+
+    // Hash functions
+    function hashExecution(
+        uint128 _nonce,
+        uint32 _deadline,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) external view returns (bytes32);
+
+    function hashBurnNonce(uint128 _nonce) external view returns (bytes32);
+
+    function hashApproveThenExecute(
+        uint128 _nonce,
+        uint32 _deadline,
+        address _erc20Contract,
+        address _spender,
+        uint256 _approveAmount,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) external view returns (bytes32);
+
+    function hashSessionExecution(uint128 _counter, uint32 _deadline, address _sender, address _outputContract)
+        external
+        view
+        returns (bytes32);
+
+    function hashArbitrarySessionExecution(uint128 _counter, uint32 _deadline, address _sender)
+        external
+        view
+        returns (bytes32);
+
+    function hashBatchExecution(uint128 _nonce, uint32 _deadline, IBatchExecution.Call[] calldata _calls)
+        external
+        view
+        returns (bytes32);
+
+    function hashBurnSessionCounter(uint128 _counter, address _sender) external view returns (bytes32);
+
+    function hashBatchExecution(uint128 _nonce, IBatchExecution.Call[] calldata _calls)
+        external
+        view
+        returns (bytes32);
 }

@@ -26,26 +26,26 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     bytes4 private constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
     uint8 public constant MAX_BATCH_SIZE = 20;
 
-    bytes32 private constant EXECUTION_TYPEHASH = 0xf342a640ceb29b8efb221c199bb7b59ed4422b705e5fa6d2ca069eabba2f4b8f;
+    bytes32 private constant EXECUTION_TYPEHASH = 0x57302c9443fd61915dc047bbb218f4d7a49414900b195b59a018caf55444c792;
     // Original: keccak256("Execution(uint128 nonce,uint32 deadline,address outputContract,uint256 ethAmount,bytes arguments)")
 
     bytes32 private constant APPROVE_THEN_EXECUTE_TYPEHASH =
-        0xc6b111904b55b8a28f95502108623774bd0bef971a10cd80986276a9e4811a00;
+        0x5307a057487d127f168eaec165127bc70635758316af883df210876a14cac22a;
     // Original: keccak256("ApproveThenExecute(uint128 nonce,uint32 deadline,address erc20Contract,address spender,uint256 approveAmount,address outputContract,uint256 ethAmount,bytes arguments)")
 
     bytes32 private constant BATCH_EXECUTION_TYPEHASH =
-        0x8a8a12c0eff75d801ac6d1108ddc441a26161f325d165eba3974ef7a82971244;
+        0x14007e8c5dd696e52899952d0c28098ab95c056d082adc0d757f91c1306c7f55;
     // Original: keccak256("BatchExecution(uint128 nonce,uint32 deadline,Call[] calls)Call(address to,uint256 value,bytes data)")
 
     bytes32 private constant BURN_NONCE_TYPEHASH = 0x1abb8920e48045adda3ed0ce4be4357be95d4aa21af287280f532fc031584bda;
     // Original: keccak256("BurnNonce(uint128 nonce)")
 
     bytes32 private constant SESSION_EXECUTION_TYPEHASH =
-        0x1c1a5c77ab875e7fe5a91ab8e934d9df1a571b81355d94824440b02d107da50a;
+        0x0e5dde950fa96b3a45206cd316b87614dbb6a0c5533671a098088b0b3bb72aff;
     // Original: keccak256("SessionExecution(uint128 counter,uint32 deadline,address sender,address outputContract)")
 
     bytes32 private constant ARBITRARY_SESSION_EXECUTION_TYPEHASH =
-        0x92edb8c108800040df8284e5de724971aa76a1967778739a97c3d6fc6204b8f7;
+        0x37c1343675452b4c8f9477fbedff7bcc1e7fa8b3bc97a1e58d4e371c86bd64bb;
     // Original: keccak256("ArbitrarySessionExecution(uint128 counter,uint32 deadline,address sender)")
 
     bytes32 private constant BURN_SESSION_COUNTER_TYPEHASH =
@@ -298,6 +298,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
     }
 
+    function validateSignature(bytes32 _hash, bytes calldata _signature) external view returns (bool) {
+        _requireSelf(_hash, _signature);
+        return true;
+    }
+
     function _consumeNonce(bytes calldata _nonceBytes) internal {
         uint128 nonceValue;
         assembly {
@@ -334,6 +339,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         if (expiredSessionCounters[_counter]) {
             revert InvalidCounter();
         }
+    }
+
+    function getDomainSeparator() external view returns (bytes32) {
+        return _domainSeparator();
     }
 
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {

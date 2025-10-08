@@ -163,4 +163,114 @@ contract TKGasStation is ITKGasStation {
     function isDelegated(address _targetEoA) external view returns (bool) {
         return _isDelegated(_targetEoA);
     }
+
+    function validateSignature(address _targetEoA, bytes32 _hash, bytes calldata _signature)
+        external
+        view
+        returns (bool)
+    {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).validateSignature(_hash, _signature);
+    }
+
+    // Hash function lenses
+    function hashExecution(
+        address _targetEoA,
+        uint128 _nonce,
+        uint32 _deadline,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) external view returns (bytes32) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).hashExecution(_nonce, _deadline, _outputContract, _ethAmount, _arguments);
+    }
+
+    function hashBurnNonce(address _targetEoA, uint128 _nonce) external view returns (bytes32) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).hashBurnNonce(_nonce);
+    }
+
+    function hashApproveThenExecute(
+        address _targetEoA,
+        uint128 _nonce,
+        uint32 _deadline,
+        address _erc20Contract,
+        address _spender,
+        uint256 _approveAmount,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) external view returns (bytes32) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).hashApproveThenExecute(
+            _nonce, _deadline, _erc20Contract, _spender, _approveAmount, _outputContract, _ethAmount, _arguments
+        );
+    }
+
+    function hashSessionExecution(
+        address _targetEoA,
+        uint128 _counter,
+        uint32 _deadline,
+        address _sender,
+        address _outputContract
+    ) external view returns (bytes32) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).hashSessionExecution(_counter, _deadline, _sender, _outputContract);
+    }
+
+    function hashArbitrarySessionExecution(address _targetEoA, uint128 _counter, uint32 _deadline, address _sender)
+        external
+        view
+        returns (bytes32)
+    {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).hashArbitrarySessionExecution(_counter, _deadline, _sender);
+    }
+
+    function hashBatchExecution(
+        address _targetEoA,
+        uint128 _nonce,
+        uint32 _deadline,
+        IBatchExecution.Call[] calldata _calls
+    ) external view returns (bytes32) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).hashBatchExecution(_nonce, _deadline, _calls);
+    }
+
+    function hashBurnSessionCounter(address _targetEoA, uint128 _counter, address _sender)
+        external
+        view
+        returns (bytes32)
+    {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).hashBurnSessionCounter(_counter, _sender);
+    }
+
+    function hashBatchExecution(address _targetEoA, uint128 _nonce, IBatchExecution.Call[] calldata _calls)
+        external
+        view
+        returns (bytes32)
+    {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).hashBatchExecution(_nonce, _calls);
+    }
 }
