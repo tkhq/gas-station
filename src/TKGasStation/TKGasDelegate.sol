@@ -204,7 +204,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 msg.data[nonceEnd:103], //erc20Bytes
                 msg.data[103:123], //spenderBytes
                 msg.data[123:155], //approveAmountBytes
-                outputContract, 
+                outputContract,
                 ethAmount,
                 msg.data[185:] //arguments
             );
@@ -222,8 +222,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 ethAmount := shr(176, w) // (32-10)*8
             }
 
-            (, bytes memory result) =
-                _executeSessionWithValue(signature, nonceBytes, msg.data[nonceEnd:87], outputContract, ethAmount, msg.data[117:]);
+            (, bytes memory result) = _executeSessionWithValue(
+                signature, nonceBytes, msg.data[nonceEnd:87], outputContract, ethAmount, msg.data[117:]
+            );
             return result;
         } else if (functionSelector == bytes1(0x41)) {
             // executeBatchSession with return
@@ -255,10 +256,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             // executeBatchSessionArbitrary with return
             IBatchExecution.Call[] calldata calls;
             assembly {
-               calls.offset := add(87, 0x40)
+                calls.offset := add(87, 0x40)
                 calls.length := calldataload(add(87, 0x20))
             }
-            (, bytes[] memory result) = _executeBatchSessionArbitrary(signature, nonceBytes, msg.data[nonceEnd:87], calls);
+            (, bytes[] memory result) =
+                _executeBatchSessionArbitrary(signature, nonceBytes, msg.data[nonceEnd:87], calls);
             return abi.encode(result);
         }
 
@@ -327,17 +329,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     }
 
     function execute(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
-        return _ethAmount == 0 
+        return _ethAmount == 0
             ? _executeNoValue(_data[0:65], _data[65:81], _to, _data[81:])
             : _executeWithValue(_data[0:65], _data[65:81], _to, _ethAmount, _data[81:]);
     }
 
     function executeNoReturn(address _to, uint256 _ethAmount, bytes calldata _data) external {
-        _ethAmount == 0 
+        _ethAmount == 0
             ? _executeNoValueNoReturn(_data[0:65], _data[65:81], _to, _data[81:])
             : _executeWithValueNoReturn(_data[0:65], _data[65:81], _to, _ethAmount, _data[81:]);
     }
-    
+
     function execute(bytes calldata data) external returns (bool, bytes memory) {
         address to;
         uint256 value;
@@ -397,29 +399,29 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         );
     }
 
-    function approveThenExecute(address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external returns (bool, bytes memory) {
+    function approveThenExecute(
+        address _to,
+        uint256 _ethAmount,
+        address _erc20,
+        address _spender,
+        uint256 _approveAmount,
+        bytes calldata _data
+    ) external returns (bool, bytes memory) {
         return _approveThenExecuteWithParams(
-            _data[0:65],
-            _data[65:81],
-            _erc20,
-            _spender,
-            _approveAmount,
-            _to,
-            _ethAmount,
-            _data[81:]
+            _data[0:65], _data[65:81], _erc20, _spender, _approveAmount, _to, _ethAmount, _data[81:]
         );
     }
 
-    function approveThenExecuteNoReturn(address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external {
+    function approveThenExecuteNoReturn(
+        address _to,
+        uint256 _ethAmount,
+        address _erc20,
+        address _spender,
+        uint256 _approveAmount,
+        bytes calldata _data
+    ) external {
         _approveThenExecuteNoReturnWithParams(
-            _data[0:65],
-            _data[65:81],
-            _erc20,
-            _spender,
-            _approveAmount,
-            _to,
-            _ethAmount,
-            _data[81:]
+            _data[0:65], _data[65:81], _erc20, _spender, _approveAmount, _to, _ethAmount, _data[81:]
         );
     }
 
@@ -528,7 +530,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         hash = _hashTypedData(hash);
 
         _validateExecute(hash, _signature, _nonceBytes);
-        
+
         // Build calldata for approve(spender, amount) and call token
         assembly {
             let ptr := mload(0x40)
@@ -594,7 +596,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         hash = _hashTypedData(hash);
 
         _validateExecute(hash, _signature, _nonceBytes);
-        
+
         // Build calldata for approve(spender, amount) and call token
         assembly {
             let ptr := mload(0x40)
@@ -1518,7 +1520,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeSessionWithValue(data[0:65], data[65:81], data[81:85], output, ethAmount, data[137:]);
     }
 
-    function executeSession(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
+    function executeSession(address _to, uint256 _ethAmount, bytes calldata _data)
+        external
+        returns (bool, bytes memory)
+    {
         return _executeSessionWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
     }
 
@@ -1540,7 +1545,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeBatchSession(data[0:65], data[65:81], data[81:85], output, calls);
     }
 
-    function executeBatchSession(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
+    function executeBatchSession(IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+        external
+        returns (bool, bytes[] memory)
+    {
         address output;
         assembly {
             output := shr(96, calldataload(add(_data.offset, 85)))
@@ -1568,7 +1576,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeSessionArbitraryWithValue(data[0:65], data[65:81], data[81:85], output, ethAmount, data[137:]);
     }
 
-    function executeSessionArbitrary(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory) {
+    function executeSessionArbitrary(address _to, uint256 _ethAmount, bytes calldata _data)
+        external
+        returns (bool, bytes memory)
+    {
         return _executeSessionArbitraryWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
     }
 
@@ -1588,11 +1599,16 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeBatchSessionArbitrary(data[0:65], data[65:81], data[81:85], calls);
     }
 
-    function executeBatchSessionArbitrary(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
+    function executeBatchSessionArbitrary(IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+        external
+        returns (bool, bytes[] memory)
+    {
         return _executeBatchSessionArbitrary(_data[0:65], _data[65:81], _data[81:85], _calls);
     }
 
-    function executeBatchSessionArbitraryNoReturn(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {
+    function executeBatchSessionArbitraryNoReturn(IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+        external
+    {
         _executeBatchSessionArbitraryNoReturn(_data[0:65], _data[65:81], _data[81:85], _calls);
     }
 
@@ -1601,7 +1617,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _executeBatch(data[0:65], data[65:81], data[81:]);
     }
 
-    function executeBatch(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
+    function executeBatch(IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+        external
+        returns (bool, bytes[] memory)
+    {
         return _executeBatchWithCalls(_data[0:65], _data[65:81], _calls);
     }
 
@@ -1609,10 +1628,69 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         _executeBatchWithCallsNoReturn(_data[0:65], _data[65:81], _calls);
     }
 
-    function _executeBatchWithCalls(bytes calldata _signature, bytes calldata _nonceBytes, IBatchExecution.Call[] calldata _calls)
-        internal
-        returns (bool, bytes[] memory)
-    {
+    // Missing bytes-only no-return functions
+    function approveThenExecuteNoReturn(bytes calldata data) external {
+        _approveThenExecuteNoReturn(
+            data[0:65],
+            data[65:81],
+            data[81:101],
+            data[101:121],
+            data[121:153],
+            data[153:173],
+            data[173:205],
+            data[205:]
+        );
+    }
+
+    function executeBatchNoReturn(bytes calldata data) external {
+        _executeBatchNoReturn(data[0:65], data[65:81], data[81:]);
+    }
+
+    function executeBatchSessionNoReturn(bytes calldata data) external {
+        IBatchExecution.Call[] calldata calls;
+        assembly {
+            calls.offset := add(105, 0x40)
+            calls.length := calldataload(add(105, 0x20))
+        }
+        _executeBatchSessionNoReturn(data[0:65], data[65:81], data[81:85], data[85:105], calls);
+    }
+
+    function executeBatchSessionArbitraryNoReturn(bytes calldata data) external {
+        IBatchExecution.Call[] calldata calls;
+        assembly {
+            calls.offset := add(85, 0x40)
+            calls.length := calldataload(add(85, 0x20))
+        }
+        _executeBatchSessionArbitraryNoReturn(data[0:65], data[65:81], data[81:85], calls);
+    }
+
+    function executeSessionNoReturn(bytes calldata data) external {
+        // Parse data to extract parameters and call appropriate internal function
+        address to;
+        uint256 value;
+        assembly {
+            to := shr(96, calldataload(add(data.offset, 81)))
+            value := calldataload(add(data.offset, 101))
+        }
+        _executeSessionWithValueNoReturn(data[0:65], data[65:81], data[81:85], to, value, data[133:]);
+    }
+
+    function executeSessionArbitraryNoReturn(bytes calldata data) external {
+        // Parse data to extract parameters and call appropriate internal function
+        address to;
+        uint256 value;
+        assembly {
+            to := shr(96, calldataload(add(data.offset, 81)))
+            value := calldataload(add(data.offset, 101))
+        }
+        _executeSessionArbitraryWithValueNoReturn(data[0:65], data[65:81], data[81:85], to, value, data[133:]);
+    }
+
+    function _executeBatchWithCalls(
+        bytes calldata _signature,
+        bytes calldata _nonceBytes,
+        IBatchExecution.Call[] calldata _calls
+    ) internal returns (bool, bytes[] memory) {
         // Hash the calls array to match the calldata version exactly
         // The calldata version uses keccak256(_calls) where _calls is abi.encode(IBatchExecution.Call[])
         // So we need to hash the encoded calls array
@@ -1650,9 +1728,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return (true, results);
     }
 
-    function _executeBatchWithCallsNoReturn(bytes calldata _signature, bytes calldata _nonceBytes, IBatchExecution.Call[] calldata _calls)
-        internal
-    {
+    function _executeBatchWithCallsNoReturn(
+        bytes calldata _signature,
+        bytes calldata _nonceBytes,
+        IBatchExecution.Call[] calldata _calls
+    ) internal {
         // Hash the calls array to match the calldata version exactly
         // The calldata version uses keccak256(_calls) where _calls is abi.encode(IBatchExecution.Call[])
         // So we need to hash the encoded calls array

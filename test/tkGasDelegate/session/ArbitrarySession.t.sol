@@ -120,12 +120,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
             bytes1(0x50),
             signature,
             counter,
-            abi.encodePacked(
-                deadline,
-                address(mockToken),
-                _fallbackEncodeEth(0),
-                args
-            )
+            abi.encodePacked(deadline, address(mockToken), _fallbackEncodeEth(0), args)
         );
 
         vm.prank(paymaster);
@@ -156,12 +151,7 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
             bytes1(0x51),
             signature,
             counter,
-            abi.encodePacked(
-                deadline,
-                address(mockToken),
-                _fallbackEncodeEth(0),
-                args
-            )
+            abi.encodePacked(deadline, address(mockToken), _fallbackEncodeEth(0), args)
         );
 
         vm.prank(paymaster);

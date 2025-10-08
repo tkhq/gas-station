@@ -240,12 +240,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
 
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
-        bytes memory fallbackData = _constructFallbackCalldata(
-            bytes1(0x20),
-            signature,
-            nonce,
-            abi.encode(calls)
-        );
+        bytes memory fallbackData = _constructFallbackCalldata(bytes1(0x20), signature, nonce, abi.encode(calls));
 
         vm.prank(paymaster);
         (bool success,) = user.call(fallbackData);
@@ -274,12 +269,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
 
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, calls);
-        bytes memory fallbackData = _constructFallbackCalldata(
-            bytes1(0x21),
-            signature,
-            nonce,
-            abi.encode(calls)
-        );
+        bytes memory fallbackData = _constructFallbackCalldata(bytes1(0x21), signature, nonce, abi.encode(calls));
 
         vm.prank(paymaster);
         (bool success, bytes memory result) = user.call(fallbackData);

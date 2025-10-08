@@ -199,5 +199,4 @@ contract BurnTest is TKGasDelegateBase {
 
         assertEq(nonceAfterSignature, nonceAfterDirect + 1);
     }
-
 }

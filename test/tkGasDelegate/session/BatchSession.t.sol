@@ -9,7 +9,6 @@ import {TKGasDelegateTestBase as TKGasDelegateBase} from "../TKGasDelegateTestBa
 import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
 
 contract BatchSessionTest is TKGasDelegateBase {
-
     function testBatchSessionExecute_Succeeds() public {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
@@ -176,18 +175,11 @@ contract BatchSessionTest is TKGasDelegateBase {
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
         bytes memory data = _constructFallbackCalldata(
-            bytes1(0x40),
-            signature,
-            counter,
-            abi.encodePacked(
-                deadline,
-                address(mockToken),
-                abi.encode(calls)
-            )
+            bytes1(0x40), signature, counter, abi.encodePacked(deadline, address(mockToken), abi.encode(calls))
         );
 
         vm.prank(paymaster);
-        (bool success, ) = user.call(data);
+        (bool success,) = user.call(data);
         vm.stopPrank();
 
         assertTrue(success);
@@ -216,14 +208,7 @@ contract BatchSessionTest is TKGasDelegateBase {
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
         bytes memory data = _constructFallbackCalldata(
-            bytes1(0x41),
-            signature,
-            counter,
-            abi.encodePacked(
-                deadline,
-                address(mockToken),
-                abi.encode(calls)
-            )
+            bytes1(0x41), signature, counter, abi.encodePacked(deadline, address(mockToken), abi.encode(calls))
         );
 
         vm.prank(paymaster);

@@ -120,18 +120,11 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
-        bytes memory data = _constructFallbackCalldata(
-            bytes1(0x60),
-            signature,
-            counter,
-            abi.encodePacked(
-                deadline,
-                abi.encode(calls)
-            )
-        );
+        bytes memory data =
+            _constructFallbackCalldata(bytes1(0x60), signature, counter, abi.encodePacked(deadline, abi.encode(calls)));
 
         vm.prank(paymaster);
-        (bool success, ) = user.call(data);
+        (bool success,) = user.call(data);
         vm.stopPrank();
 
         assertTrue(success);
@@ -158,15 +151,8 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
 
-        bytes memory data = _constructFallbackCalldata(
-            bytes1(0x61),
-            signature,
-            counter,
-            abi.encodePacked(
-                deadline,
-                abi.encode(calls)
-            )
-        );
+        bytes memory data =
+            _constructFallbackCalldata(bytes1(0x61), signature, counter, abi.encodePacked(deadline, abi.encode(calls)));
 
         vm.prank(paymaster);
         (bool success, bytes memory result) = user.call(data);
@@ -345,7 +331,10 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
     }
 
     // Helper function for signing with different private key
-    function _signArbitraryWithKey(uint256 _privateKey, uint128 _counter, uint32 _deadline, address _sender) internal returns (bytes memory) {
+    function _signArbitraryWithKey(uint256 _privateKey, uint128 _counter, uint32 _deadline, address _sender)
+        internal
+        returns (bytes memory)
+    {
         address signerAddr = vm.addr(_privateKey);
         vm.startPrank(signerAddr);
         (uint8 v, bytes32 r, bytes32 s) =

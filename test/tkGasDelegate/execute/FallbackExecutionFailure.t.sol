@@ -7,8 +7,6 @@ import {TKGasDelegateTestBase as TKGasDelegateBase} from "../TKGasDelegateTestBa
 import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
 
 contract FallbackExecutionFailureTest is TKGasDelegateBase {
-
-
     function testFallbackUnexpectedExecutionMode() public {
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(0), 0, bytes(""));

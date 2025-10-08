@@ -119,14 +119,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, receiver, 1 ether, bytes(""));
 
         bytes memory fallbackData = _constructFallbackCalldata(
-            bytes1(0x00), 
-            signature, 
-            nonce, 
-            abi.encodePacked(
-                receiver, 
-                _fallbackEncodeEth(1 ether), 
-                bytes("")
-            )
+            bytes1(0x00), signature, nonce, abi.encodePacked(receiver, _fallbackEncodeEth(1 ether), bytes(""))
         );
 
         vm.prank(paymaster);
@@ -137,7 +130,6 @@ contract ETHTransferTest is TKGasDelegateBase {
         assertTrue(success);
     }
 
-
     function testFallbackExecuteSendEthWithReturn() public {
         MockContractInteractions mockSwap = new MockContractInteractions();
         (, uint128 nonce) = MockDelegate(user).state();
@@ -147,14 +139,7 @@ contract ETHTransferTest is TKGasDelegateBase {
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockSwap), 2 ether, data);
 
         bytes memory fallbackData = _constructFallbackCalldata(
-            bytes1(0x01), 
-            signature, 
-            nonce, 
-            abi.encodePacked(
-                address(mockSwap), 
-                _fallbackEncodeEth(2 ether), 
-                data
-            )
+            bytes1(0x01), signature, nonce, abi.encodePacked(address(mockSwap), _fallbackEncodeEth(2 ether), data)
         );
 
         vm.prank(paymaster);

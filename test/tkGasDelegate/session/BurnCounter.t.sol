@@ -28,7 +28,7 @@ contract BurnSessionTest is TKGasDelegateBase {
         (uint128 sessionCounter2,) = MockDelegate(user).state();
         assertEq(sessionCounter2, 2);
 
-        vm.startPrank(user); // not tx origin 
+        vm.startPrank(user); // not tx origin
         vm.expectRevert();
         MockDelegate(user).burnSessionCounter();
         vm.stopPrank();

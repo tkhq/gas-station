@@ -22,6 +22,6 @@ contract InternalsTest is TKGasDelegateBase {
         assertEq(c, counter);
         MockDelegate(user).external_requireCounter(abi.encodePacked(counter));
         (uint128 currentCounter, uint128 newNonce) = MockDelegate(user).state();
-        assertEq(currentCounter, counter); // counter does not increment 
+        assertEq(currentCounter, counter); // counter does not increment
     }
 }

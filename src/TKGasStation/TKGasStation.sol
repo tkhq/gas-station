@@ -30,10 +30,10 @@ contract TKGasStation is ITKGasStation {
             revert NotDelegated();
         }
 
-        bytes1 functionSelector = bytes1(data[22] & 0xf0);  // mask the last nibble 
+        bytes1 functionSelector = bytes1(data[22] & 0xf0); // mask the last nibble
 
-        // only allow execute functions, no session functions 
-        if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20) { 
+        // only allow execute functions, no session functions
+        if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20) {
             (bool success, bytes memory result) = target.call(data[21:]);
             if (success) {
                 return result;
@@ -43,7 +43,6 @@ contract TKGasStation is ITKGasStation {
 
         revert InvalidFunctionSelector();
     }
-    
 
     function _isDelegated(address _targetEoA) internal view returns (bool) {
         uint256 size;
@@ -74,7 +73,10 @@ contract TKGasStation is ITKGasStation {
     }
 
     // Execute functions
-    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external returns (bytes memory) {
+    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
+        external
+        returns (bytes memory)
+    {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
@@ -87,21 +89,35 @@ contract TKGasStation is ITKGasStation {
             revert NotDelegated();
         }
         ITKGasDelegate(_target).executeNoReturn(_to, _ethAmount, _data);
-        
-        //ITKGasDelegate(_target).executeNoReturn(abi.encodePacked(_data[0:81], _to, _ethAmount, _data[81:]));
-        
     }
 
     // ApproveThenExecute functions
-    function approveThenExecute(address _target, address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external returns (bytes memory) {
+    function approveThenExecute(
+        address _target,
+        address _to,
+        uint256 _ethAmount,
+        address _erc20,
+        address _spender,
+        uint256 _approveAmount,
+        bytes calldata _data
+    ) external returns (bytes memory) {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
-        (, bytes memory result) = ITKGasDelegate(_target).approveThenExecute(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
+        (, bytes memory result) =
+            ITKGasDelegate(_target).approveThenExecute(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
         return result;
     }
 
-    function approveThenExecuteNoReturn(address _target, address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external {
+    function approveThenExecuteNoReturn(
+        address _target,
+        address _to,
+        uint256 _ethAmount,
+        address _erc20,
+        address _spender,
+        uint256 _approveAmount,
+        bytes calldata _data
+    ) external {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
@@ -109,7 +125,10 @@ contract TKGasStation is ITKGasStation {
     }
 
     // Batch execute functions
-    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bytes[] memory) {
+    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+        external
+        returns (bytes[] memory)
+    {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
@@ -117,7 +136,9 @@ contract TKGasStation is ITKGasStation {
         return results;
     }
 
-    function executeBatchNoReturn(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {
+    function executeBatchNoReturn(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
+        external
+    {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }

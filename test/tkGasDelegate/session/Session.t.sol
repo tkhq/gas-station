@@ -152,12 +152,7 @@ contract SessionTest is TKGasDelegateBase {
             bytes1(0x30),
             signature,
             counter,
-            abi.encodePacked(
-                deadline,
-                address(mockToken),
-                _fallbackEncodeEth(0),
-                args
-            )
+            abi.encodePacked(deadline, address(mockToken), _fallbackEncodeEth(0), args)
         );
 
         vm.prank(paymaster);
@@ -183,16 +178,11 @@ contract SessionTest is TKGasDelegateBase {
             bytes1(0x31),
             signature,
             counter,
-            abi.encodePacked(
-                deadline,
-                address(mockToken),
-                _fallbackEncodeEth(0),
-                args
-            )
+            abi.encodePacked(deadline, address(mockToken), _fallbackEncodeEth(0), args)
         );
 
         vm.prank(paymaster);
-        (bool success,bytes memory result) = user.call(data);
+        (bool success, bytes memory result) = user.call(data);
         vm.stopPrank();
 
         assertTrue(success);

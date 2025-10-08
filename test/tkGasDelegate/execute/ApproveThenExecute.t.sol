@@ -305,7 +305,6 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
     }
 
     function testFallbackExecutionNoReturn() public {
-
         uint256 swapAmount = 100 * 10 ** 18;
         uint256 expectedOutput = 95 * 10 ** 18; // 5% slippage
 
@@ -335,12 +334,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             signature,
             nonce,
             abi.encodePacked(
-                address(tokenA),
-                address(mockSwap),
-                swapAmount,
-                address(mockSwap),
-                _fallbackEncodeEth(0),
-                swapData
+                address(tokenA), address(mockSwap), swapAmount, address(mockSwap), _fallbackEncodeEth(0), swapData
             )
         );
 
@@ -348,7 +342,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         bool success;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        (success, ) = user.call(fallbackExecuteData);
+        (success,) = user.call(fallbackExecuteData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -367,7 +361,6 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
     }
 
     function testFallbackExecutionWithReturn() public {
-
         uint256 swapAmount = 100 * 10 ** 18;
         uint256 expectedOutput = 95 * 10 ** 18; // 5% slippage
 
@@ -397,12 +390,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             signature,
             nonce,
             abi.encodePacked(
-                address(tokenA),
-                address(mockSwap),
-                swapAmount,
-                address(mockSwap),
-                _fallbackEncodeEth(0),
-                swapData
+                address(tokenA), address(mockSwap), swapAmount, address(mockSwap), _fallbackEncodeEth(0), swapData
             )
         );
 
@@ -456,23 +444,14 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Create data manually: [signature(65)][nonce(16)][args]
-        bytes memory data = abi.encodePacked(
-            signature,
-            bytes16(nonce),
-            swapData
-        );
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), swapData);
 
         bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
         (success, result) = MockDelegate(user).approveThenExecute(
-            address(mockSwap),
-            0,
-            address(tokenA),
-            address(mockSwap),
-            swapAmount,
-            data
+            address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
@@ -518,23 +497,14 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Create data manually: [signature(65)][nonce(16)][args]
-        bytes memory data = abi.encodePacked(
-            signature,
-            bytes16(nonce),
-            swapData
-        );
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), swapData);
 
         bool success;
         bytes memory result;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
         (success, result) = MockDelegate(user).approveThenExecute(
-            address(mockSwap),
-            ethAmount,
-            address(tokenA),
-            address(mockSwap),
-            swapAmount,
-            data
+            address(mockSwap), ethAmount, address(tokenA), address(mockSwap), swapAmount, data
         );
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
@@ -593,12 +563,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         vm.prank(paymaster);
         vm.expectRevert();
         MockDelegate(user).approveThenExecute(
-            address(mockSwap),
-            0,
-            address(tokenA),
-            address(mockSwap),
-            swapAmount,
-            data
+            address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
     }
 
@@ -640,12 +605,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.NotSelf.selector);
         MockDelegate(user).approveThenExecute(
-            address(mockSwap),
-            0,
-            address(tokenA),
-            address(mockSwap),
-            swapAmount,
-            data
+            address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
     }
 
@@ -671,21 +631,12 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         );
 
         // Create data manually: [signature(65)][nonce(16)][args]
-        bytes memory data = abi.encodePacked(
-            signature,
-            bytes16(nonce),
-            swapData
-        );
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), swapData);
 
         // First execution succeeds
         vm.prank(paymaster);
         (bool success,) = MockDelegate(user).approveThenExecute(
-            address(mockSwap),
-            0,
-            address(tokenA),
-            address(mockSwap),
-            swapAmount,
-            data
+            address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
         assertTrue(success);
 
@@ -693,12 +644,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         vm.prank(paymaster);
         vm.expectRevert();
         MockDelegate(user).approveThenExecute(
-            address(mockSwap),
-            0,
-            address(tokenA),
-            address(mockSwap),
-            swapAmount,
-            data
+            address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
         );
     }
 }
