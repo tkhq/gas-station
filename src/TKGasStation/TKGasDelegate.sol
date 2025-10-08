@@ -1228,7 +1228,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     }
 
     function executeBatchSession(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory) {
-        return _executeBatchSession(_data[0:65], _data[65:81], _data[81:85], address(0), _calls);
+        address output;
+        assembly {
+            output := shr(96, calldataload(add(_data.offset, 85)))
+        }
+        return _executeBatchSession(_data[0:65], _data[65:81], _data[81:85], output, _calls);
     }
 
     function executeSessionArbitrary(bytes calldata data) external returns (bool, bytes memory) {
@@ -1573,5 +1577,68 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(0x40, add(ptr, 0x60)) // Update free memory pointer
         }
         return _hashTypedData(hash);
+    }
+
+    function _executeNoValueParameterized(
+        bytes calldata _signature,
+        bytes calldata _nonceBytes,
+        address _outputContract,
+        bytes calldata _arguments
+    ) internal returns (bool, bytes memory) {
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, EXECUTION_TYPEHASH)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
+            mstore(add(ptr, 0x40), _outputContract)
+            mstore(add(ptr, 0x60), 0) // ethAmount = 0
+            // Compute argsHash in assembly
+            let argsPtr := add(ptr, 0x80)
+            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
+            let argsHash := keccak256(argsPtr, _arguments.length)
+            mstore(add(ptr, 0x80), argsHash)
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+
+        _validateExecute(hash, _signature, _nonceBytes);
+        (bool success, bytes memory result) = _outputContract.call(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
+    }
+
+    function _executeWithValueParameterized(
+        bytes calldata _signature,
+        bytes calldata _nonceBytes,
+        address _outputContract,
+        uint256 _ethAmount,
+        bytes calldata _arguments
+    ) internal returns (bool, bytes memory) {
+        bytes32 hash;
+        assembly {
+            let ptr := mload(0x40) // Get free memory pointer
+            mstore(ptr, EXECUTION_TYPEHASH)
+            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            mstore(add(ptr, 0x20), nonceValue)
+            mstore(add(ptr, 0x40), _outputContract)
+            mstore(add(ptr, 0x60), _ethAmount)
+            // Compute argsHash in assembly
+            let argsPtr := add(ptr, 0x80)
+            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
+            let argsHash := keccak256(argsPtr, _arguments.length)
+            mstore(add(ptr, 0x80), argsHash)
+            hash := keccak256(ptr, 0xa0)
+        }
+        hash = _hashTypedData(hash);
+
+        _validateExecute(hash, _signature, _nonceBytes);
+        (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
+        if (success) {
+            return (success, result);
+        }
+        revert ExecutionFailed();
     }
 }

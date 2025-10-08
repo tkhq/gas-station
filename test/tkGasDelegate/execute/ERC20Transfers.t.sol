@@ -252,4 +252,210 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         console.log("Total Gas Used: %s", gasUsed);
         console.log("Transfer Amount: %s", uint256(10 * 10 ** 18));
     }
+
+    // ========== PARAMETERIZED VERSIONS ==========
+
+    function testExecuteParameterizedERC20Gas() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver_execute_param");
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = MockDelegate(user).execute(address(mockToken), 0, data);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        assertEq(success, true);
+        assertEq(result.length, 32);
+        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
+
+        console.log("=== execute(address, uint256, bytes) ERC20 Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testExecuteParameterizedERC20WithValueGas() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver_execute_param_value");
+        vm.deal(user, 1 ether);
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = MockDelegate(user).execute(address(mockToken), 0, data);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        assertEq(success, true);
+        assertEq(result.length, 32);
+        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
+
+        console.log("=== execute(address, uint256, bytes) ERC20 With Value Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testExecuteParameterizedERC20WrongNonceReverts() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        // Spoof nonce to make it wrong
+        MockDelegate(user).spoof_Nonce(nonce + 1);
+
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).execute(address(mockToken), 0, data);
+    }
+
+    function testExecuteParameterizedERC20SignedByOtherUserRevertsNotSelf() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        // Sign with USER_PRIVATE_KEY_2 instead of the user's key
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY_2, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).execute(address(mockToken), 0, data);
+    }
+
+    function testExecuteParameterizedERC20ReplayNonceReverts() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        // First execution succeeds
+        vm.prank(paymaster);
+        (bool success,) = MockDelegate(user).execute(address(mockToken), 0, data);
+        assertTrue(success);
+
+        // Second execution with the same calldata must revert (nonce already consumed)
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).execute(address(mockToken), 0, data);
+    }
+
+    function testExecuteNoValueParameterizedERC20Gas() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver_execute_no_value_param");
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = MockDelegate(user).executeNoValue(address(mockToken), data);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        assertEq(success, true);
+        assertEq(result.length, 32);
+        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
+
+        console.log("=== executeNoValue(address, bytes) ERC20 Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testExecuteNoValueParameterizedERC20WrongNonceReverts() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        // Spoof nonce to make it wrong
+        MockDelegate(user).spoof_Nonce(nonce + 1);
+
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).executeNoValue(address(mockToken), data);
+    }
+
+    function testExecuteNoValueParameterizedERC20SignedByOtherUserRevertsNotSelf() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        // Sign with USER_PRIVATE_KEY_2 instead of the user's key
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY_2, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeNoValue(address(mockToken), data);
+    }
+
+    function testExecuteNoValueParameterizedERC20ReplayNonceReverts() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        // First execution succeeds
+        vm.prank(paymaster);
+        (bool success,) = MockDelegate(user).executeNoValue(address(mockToken), data);
+        assertTrue(success);
+
+        // Second execution with the same calldata must revert (nonce already consumed)
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).executeNoValue(address(mockToken), data);
+    }
 }

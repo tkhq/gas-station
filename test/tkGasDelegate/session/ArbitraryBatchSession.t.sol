@@ -179,4 +179,179 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         assertTrue(abi.decode(results[1], (bool)));
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
+
+    // ========== PARAMETERIZED VERSIONS ==========
+
+    function testArbitraryBatchSessionExecuteParameterized_Succeeds() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        (, uint128 counter) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+
+        // Create data manually: [signature(65)][counter(16)][deadline(4)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
+
+        vm.prank(paymaster);
+        (bool success, bytes[] memory results) = MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        assertEq(results.length, 2);
+        assertTrue(abi.decode(results[0], (bool)));
+        assertTrue(abi.decode(results[1], (bool)));
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+    }
+
+    function testArbitraryBatchSessionExecuteParameterized_ExpiredDeadline_Reverts() public {
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        (, uint128 counter) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp - 1);
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+
+        // Create data manually: [signature(65)][counter(16)][deadline(4)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
+
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+    }
+
+    function testArbitraryBatchSessionExecuteParameterized_InvalidCounter_Reverts() public {
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        (, uint128 counter) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+
+        // Create data manually: [signature(65)][counter(16)][deadline(4)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
+
+        // Burn the counter
+        vm.prank(user, user);
+        MockDelegate(user).burnSessionCounter();
+        vm.stopPrank();
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+    }
+
+    function testArbitraryBatchSessionExecuteParameterized_Replayability_AllowsMultipleExecutions() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 3 ether)
+        });
+
+        (, uint128 counter) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+
+        // Create data manually: [signature(65)][counter(16)][deadline(4)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
+
+        vm.startPrank(paymaster);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data); // Replay
+        vm.stopPrank();
+
+        assertEq(mockToken.balanceOf(receiver), 6 ether);
+    }
+
+    function testArbitraryBatchSessionExecuteParameterized_SignedByOtherUser_RevertsNotSelf() public {
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        (, uint128 counter) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        // Sign with USER_PRIVATE_KEY_2 instead of the user's key
+        bytes memory signature = _signArbitraryWithKey(USER_PRIVATE_KEY_2, counter, deadline, paymaster);
+
+        // Create data manually: [signature(65)][counter(16)][deadline(4)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+    }
+
+    function testArbitraryBatchSessionExecuteParameterized_MaxSizeExceeded_Reverts() public {
+        // MAX_BATCH_SIZE = 20, build 21 calls
+        uint256 maxPlusOne = MockDelegate(user).MAX_BATCH_SIZE() + 1;
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](maxPlusOne);
+        for (uint256 i = 0; i < maxPlusOne; i++) {
+            calls[i] = IBatchExecution.Call({
+                to: address(mockToken),
+                value: 0,
+                data: abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, i)
+            });
+        }
+
+        (, uint128 counter) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+
+        // Create data manually: [signature(65)][counter(16)][deadline(4)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.BatchSizeExceeded.selector);
+        MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+    }
+
+    function testArbitraryBatchSessionExecuteParameterized_MaxSizeSucceeds() public {
+        // MAX_BATCH_SIZE = 20, build exactly 20 calls
+        uint256 maxSize = MockDelegate(user).MAX_BATCH_SIZE();
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](maxSize);
+
+        for (uint256 i = 0; i < maxSize; i++) {
+            calls[i] = IBatchExecution.Call({
+                to: address(mockToken),
+                value: 0,
+                data: abi.encodeWithSelector(mockToken.mint.selector, user, 1 ether)
+            });
+        }
+
+        (, uint128 counter) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+
+        // Create data manually: [signature(65)][counter(16)][deadline(4)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
+
+        vm.prank(paymaster);
+        (bool success, bytes[] memory results) = MockDelegate(user).executeBatchSessionArbitrary(calls, data);
+        vm.stopPrank();
+
+        // Assertions
+        assertTrue(success);
+        assertEq(results.length, maxSize);
+        assertEq(mockToken.balanceOf(user), maxSize * 1 ether);
+    }
+
+    // Helper function for signing with different private key
+    function _signArbitraryWithKey(uint256 _privateKey, uint128 _counter, uint32 _deadline, address _sender) internal returns (bytes memory) {
+        address signerAddr = vm.addr(_privateKey);
+        vm.startPrank(signerAddr);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(_privateKey, MockDelegate(user).hashArbitrarySessionExecution(_counter, _deadline, _sender));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
 }

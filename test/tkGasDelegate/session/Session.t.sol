@@ -199,4 +199,124 @@ contract SessionTest is TKGasDelegateBase {
         assertEq(abi.decode(result, (bool)), true);
         assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
     }
+
+    // ========== PARAMETERIZED VERSIONS ==========
+
+    function testSessionExecuteParameterized_Succeeds() public {
+        mockToken.mint(user, 10 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
+
+        vm.prank(paymaster);
+        (bool success,) = MockDelegate(user).executeSession(address(mockToken), 0, data);
+        vm.stopPrank();
+
+        assertTrue(success);
+        assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
+    }
+
+    function testSessionExecuteParameterized_ExpiredDeadline_Reverts() public {
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp - 1);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+        bytes memory args = bytes("");
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
+
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).executeSession(address(mockToken), 0, data);
+        vm.stopPrank();
+    }
+
+    function testSessionExecuteParameterized_InvalidCounter_Reverts() public {
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+        bytes memory args = bytes("");
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
+
+        // Burn the counter
+        vm.prank(user, user);
+        MockDelegate(user).burnSessionCounter();
+        vm.stopPrank();
+
+        (uint128 newCounter,) = MockDelegate(user).state();
+
+        assertEq(counter + 1, newCounter);
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
+        MockDelegate(user).executeSession(address(mockToken), 0, data);
+        vm.stopPrank();
+    }
+
+    function testSessionExecuteParameterized_Replayability_AllowsMultipleExecutions() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 ether);
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
+
+        vm.startPrank(paymaster);
+        (bool s1,) = MockDelegate(user).executeSession(address(mockToken), 0, data);
+        (bool s2,) = MockDelegate(user).executeSession(address(mockToken), 0, data); // replay with same counter
+        vm.stopPrank();
+
+        assertTrue(s1 && s2);
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+    }
+
+    function testSessionExecuteParameterized_AttemptDifferentContract_Reverts() public {
+        // build a valid signature for mockToken but attempt to call a different contract
+        address other = makeAddr("otherContract");
+        (uint128 counter,) = MockDelegate(user).state();
+        vm.deal(user, 1 ether);
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        // args don't matter, target is wrong
+        bytes memory args = bytes("");
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeSession(other, 0, data);
+        vm.stopPrank();
+    }
+
+    function testSessionExecuteParameterized_SignedByOtherUser_RevertsNotSelf() public {
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        // Sign with USER_PRIVATE_KEY_2 for 'user'
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY_2, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, makeAddr("receiver"), 1 ether);
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeSession(address(mockToken), 0, data);
+        vm.stopPrank();
+    }
 }

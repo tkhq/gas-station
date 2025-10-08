@@ -237,4 +237,113 @@ contract BatchSessionTest is TKGasDelegateBase {
         assertTrue(abi.decode(results[0], (bool)));
         assertTrue(abi.decode(results[1], (bool)));
     }
+
+    // ========== PARAMETERIZED VERSIONS ==========
+
+    function testBatchSessionExecuteParameterized_Succeeds() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][outputContract(20)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
+
+        vm.prank(paymaster);
+        (bool success, bytes[] memory results) = MockDelegate(user).executeBatchSession(calls, data);
+        vm.stopPrank();
+        assertTrue(success);
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+    }
+
+    function testBatchSessionExecuteParameterized_InvalidOutputContract_Reverts() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+        address other = makeAddr("otherContract");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        // Call to a different contract than provided output
+        calls[0] = IBatchExecution.Call({
+            to: other,
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 1 ether)
+        });
+
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][outputContract(20)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
+        MockDelegate(user).executeBatchSession(calls, data);
+        vm.stopPrank();
+    }
+
+    function testBatchSessionExecuteParameterized_ExpiredDeadline_Reverts() public {
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp - 1);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][outputContract(20)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
+
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).executeBatchSession(calls, data);
+        vm.stopPrank();
+    }
+
+    function testBatchSessionExecuteParameterized_InvalidCounter_Reverts() public {
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][outputContract(20)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
+
+        vm.prank(user);
+        MockDelegate(user).spoof_Counter(counter + 1);
+        vm.stopPrank();
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.InvalidCounter.selector);
+        MockDelegate(user).executeBatchSession(calls, data);
+        vm.stopPrank();
+    }
+
+    function testBatchSessionExecuteParameterized_SignedByOtherUser_RevertsNotSelf() public {
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        (uint128 counter,) = MockDelegate(user).state();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        // Sign with USER_PRIVATE_KEY_2 for 'user'
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY_2, user, counter, deadline, paymaster, address(mockToken));
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][outputContract(20)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).executeBatchSession(calls, data);
+        vm.stopPrank();
+    }
 }

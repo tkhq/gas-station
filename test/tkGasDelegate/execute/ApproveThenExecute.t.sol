@@ -430,4 +430,275 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         console.log("=== Approve Then Execute Swap Gas ===");
         console.log("Total Gas Used: %s", gasUsed);
     }
+
+    // ========== PARAMETERIZED VERSIONS ==========
+
+    function testApproveThenExecuteParameterizedSwap() public {
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint256 expectedOutput = 95 * 10 ** 18;
+
+        (, uint128 nonce) = MockDelegate(user).state();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(
+            signature,
+            bytes16(nonce),
+            swapData
+        );
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = MockDelegate(user).approveThenExecute(
+            address(mockSwap),
+            0,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            data
+        );
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Assertions
+        assertTrue(success);
+        assertEq(tokenA.balanceOf(user), 900 * 10 ** 18); // 1000 - 100
+        assertEq(tokenB.balanceOf(user), 1095 * 10 ** 18); // 1000 + 95
+        assertEq(tokenA.balanceOf(address(mockSwap)), 10100 * 10 ** 18); // 10000 + 100
+        assertEq(tokenB.balanceOf(address(mockSwap)), 9905 * 10 ** 18); // 10000 - 95
+        uint256 returnedAmount = abi.decode(result, (uint256));
+        assertEq(returnedAmount, expectedOutput);
+
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
+
+        console.log("=== Approve Then Execute Parameterized Swap Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testApproveThenExecuteParameterizedSwapWithETH() public {
+        uint256 swapAmount = 50 * 10 ** 18;
+        uint256 expectedOutput = 47 * 10 ** 18;
+        uint256 ethAmount = 0.1 ether;
+
+        vm.deal(user, 1 ether);
+        (, uint128 nonce) = MockDelegate(user).state();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            ethAmount,
+            swapData
+        );
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(
+            signature,
+            bytes16(nonce),
+            swapData
+        );
+
+        bool success;
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        (success, result) = MockDelegate(user).approveThenExecute(
+            address(mockSwap),
+            ethAmount,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            data
+        );
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Assertions
+        assertTrue(success);
+        assertEq(tokenA.balanceOf(user), 950 * 10 ** 18); // 1000 - 50
+        assertEq(tokenB.balanceOf(user), 1047 * 10 ** 18); // 1000 + 47
+        assertEq(tokenA.balanceOf(address(mockSwap)), 10050 * 10 ** 18); // 10000 + 50
+        assertEq(tokenB.balanceOf(address(mockSwap)), 9953 * 10 ** 18); // 10000 - 47
+        uint256 returnedAmount = abi.decode(result, (uint256));
+        assertEq(returnedAmount, expectedOutput);
+
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
+
+        console.log("=== Approve Then Execute Parameterized Swap With ETH Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testApproveThenExecuteParameterizedWrongNonceReverts() public {
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint256 expectedOutput = 95 * 10 ** 18;
+
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        uint128 wrongNonce = currentNonce + 1; // Use wrong nonce
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            wrongNonce, // Wrong nonce
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        // Create data manually: [signature(65)][nonce(16)][erc20(20)][spender(20)][approveAmount(32)][outputContract(20)][ethAmount(32)][args]
+        bytes memory data = abi.encodePacked(
+            signature,
+            bytes16(wrongNonce),
+            address(tokenA),
+            address(mockSwap),
+            bytes32(swapAmount),
+            address(mockSwap),
+            bytes32(0),
+            swapData
+        );
+
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).approveThenExecute(
+            address(mockSwap),
+            0,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            data
+        );
+    }
+
+    function testApproveThenExecuteParameterizedSignedByOtherUserRevertsNotSelf() public {
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint256 expectedOutput = 95 * 10 ** 18;
+
+        (, uint128 nonce) = MockDelegate(user).state();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        // Sign with USER_PRIVATE_KEY_2 instead of the user's key
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY_2,
+            user,
+            nonce,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        // Create data manually: [signature(65)][nonce(16)][erc20(20)][spender(20)][approveAmount(32)][outputContract(20)][ethAmount(32)][args]
+        bytes memory data = abi.encodePacked(
+            signature,
+            bytes16(nonce),
+            address(tokenA),
+            address(mockSwap),
+            bytes32(swapAmount),
+            address(mockSwap),
+            bytes32(0),
+            swapData
+        );
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.NotSelf.selector);
+        MockDelegate(user).approveThenExecute(
+            address(mockSwap),
+            0,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            data
+        );
+    }
+
+    function testApproveThenExecuteParameterizedReplayNonceReverts() public {
+        uint256 swapAmount = 10 * 10 ** 18;
+        uint256 expectedOutput = 9 * 10 ** 18;
+        (, uint128 nonce) = MockDelegate(user).state();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(
+            signature,
+            bytes16(nonce),
+            swapData
+        );
+
+        // First execution succeeds
+        vm.prank(paymaster);
+        (bool success,) = MockDelegate(user).approveThenExecute(
+            address(mockSwap),
+            0,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            data
+        );
+        assertTrue(success);
+
+        // Second execution with the same calldata must revert (nonce already consumed)
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).approveThenExecute(
+            address(mockSwap),
+            0,
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            data
+        );
+    }
 }
