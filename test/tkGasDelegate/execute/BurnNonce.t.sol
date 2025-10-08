@@ -115,6 +115,11 @@ contract BurnTest is TKGasDelegateBase {
 
         (, uint128 currentNonce) = MockDelegate(user).state();
         assertEq(currentNonce, nonce + 1);
+
+        vm.startPrank(user);
+        vm.expectRevert();
+        MockDelegate(user).burnNonce();
+        vm.stopPrank();
     }
 
     function testGassyDirectBurnNonceRevertsInvalidNonce() public {
@@ -126,6 +131,11 @@ contract BurnTest is TKGasDelegateBase {
 
         (, uint128 currentNonce) = MockDelegate(user).state();
         assertEq(currentNonce, nonce + 1);
+
+        vm.startPrank(user);
+        vm.expectRevert();
+        MockDelegate(user).burnNonce();
+        vm.stopPrank();
     }
 
     function testGassyDirectBurnNonceThenExecute() public {
@@ -189,4 +199,5 @@ contract BurnTest is TKGasDelegateBase {
 
         assertEq(nonceAfterSignature, nonceAfterDirect + 1);
     }
+
 }
