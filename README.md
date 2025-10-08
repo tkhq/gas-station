@@ -5,10 +5,8 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 ### Deployments
 
 #### Base Mainnet (Latest)
-- **TKGasStation**: [0xa7a8F177aaeDc838669eE4A1eE85f89A153203d3](https://basescan.org/address/0xa7a8f177aaedc838669ee4a1ee85f89a153203d3)
-- **TKGasDelegate**: [0x88Ece3d9A0a3D81c2534422Cd56A726e0f198Dce](https://basescan.org/address/0x88ece3d9a0a3d81c2534422cd56a726e0f198dce)
-
-
+- **TKGasStation**: [0xed641b43dd57CBA9e0c14bD02DD7eF320762a201](https://basescan.org/address/0xed641b43dd57cba9e0c14bd02dd7ef320762a201)
+- **TKGasDelegate**: [0xb68eB4B38Eda7eEa1275c9c781ED257013fa934f](https://basescan.org/address/0xb68eb4b38eda7eea1275c9c781ed257013fa934f)
 
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
