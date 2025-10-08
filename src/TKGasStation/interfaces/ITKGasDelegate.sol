@@ -49,6 +49,8 @@ interface ITKGasDelegate is IBatchExecution {
     // Burn functions
     function burnNonce(bytes calldata _signature, uint128 _nonce) external;
     function burnSessionCounter(bytes calldata _signature, uint128 _counter, address _sender) external;
+    function burnNonce() external;
+    function burnSessionCounter() external;
 
     // State access
     function state() external view returns (uint128 sessionCounter, uint128 nonce);
