@@ -319,7 +319,21 @@ contract TKGasStationTest is Test {
 
         // Create signature for approveThenExecute
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-        bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+        
+        vm.startPrank(user);
+        bytes32 hash = MockDelegate(payable(user)).hashApproveThenExecute(
+            nonce,
+            address(mockToken),  // erc20
+            address(mockToken),  // spender
+            10 * 10 ** 18,  // approveAmount
+            address(mockToken),  // outputContract
+            0,  // ethAmount
+            args
+        );
+        vm.stopPrank();
+        
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, hash);
+        bytes memory signature = abi.encodePacked(r, s, v);
 
         // Build data for approveThenExecuteNoReturn (use simple format like execute)
         bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), args);
@@ -362,7 +376,12 @@ contract TKGasStationTest is Test {
         });
 
         // Create signature
-        bytes memory signature = _sign(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, abi.encode(calls));
+        vm.startPrank(user);
+        bytes32 hash = MockDelegate(payable(user)).hashBatchExecution(nonce, calls);
+        vm.stopPrank();
+        
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, hash);
+        bytes memory signature = abi.encodePacked(r, s, v);
 
         // Build data for executeBatchNoReturn (use simple format like execute)
         bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), abi.encode(calls));
