@@ -19,32 +19,46 @@ interface ITKGasDelegate is IBatchExecution {
 
     function execute(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory);
 
+    function executeNoReturn(address _to, uint256 _ethAmount, bytes calldata _data) external;
+
     function approveThenExecute(bytes calldata data) external returns (bool, bytes memory);
 
     function approveThenExecute(address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external returns (bool, bytes memory);
+
+    function approveThenExecuteNoReturn(address _to, uint256 _ethAmount, address _erc20, address _spender, uint256 _approveAmount, bytes calldata _data) external;
 
     // Session execute functions
     function executeSession(bytes calldata data) external returns (bool, bytes memory);
 
     function executeSession(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory);
 
+    function executeSessionNoReturn(address _to, uint256 _ethAmount, bytes calldata _data) external;
+
     function executeBatch(bytes calldata data) external returns (bool, bytes[] memory);
 
     function executeBatch(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory);
+
+    function executeBatchNoReturn(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external;
 
     // Batch execute functions
     function executeBatchSession(bytes calldata data) external returns (bool, bytes[] memory);
 
     function executeBatchSession(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory);
 
+    function executeBatchSessionNoReturn(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external;
+
     // Arbitrary execute functions
     function executeSessionArbitrary(bytes calldata data) external returns (bool, bytes memory);
 
     function executeSessionArbitrary(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bool, bytes memory);
 
+    function executeSessionArbitraryNoReturn(address _to, uint256 _ethAmount, bytes calldata _data) external;
+
     function executeBatchSessionArbitrary(bytes calldata data) external returns (bool, bytes[] memory);
 
     function executeBatchSessionArbitrary(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external returns (bool, bytes[] memory);
+
+    function executeBatchSessionArbitraryNoReturn(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external;
 
     // Burn functions
     function burnNonce(bytes calldata _signature, uint128 _nonce) external;

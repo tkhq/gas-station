@@ -149,7 +149,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
     function testFallbackExecuteSendERC20WithReturn() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
-
+        MockDelegate(user).spoof_Nonce(1);
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory signature = _signExecute(
             USER_PRIVATE_KEY,
@@ -205,7 +205,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         function testFallbackExecuteSendERC20NoReturn() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
-
+        MockDelegate(user).spoof_Nonce(1);
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory signature = _signExecute(
             USER_PRIVATE_KEY,
@@ -262,6 +262,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver_execute_param");
 
+        MockDelegate(user).spoof_Nonce(1);
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
@@ -291,7 +292,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver_execute_param_value");
         vm.deal(user, 1 ether);
-
+        MockDelegate(user).spoof_Nonce(1);
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
@@ -320,7 +321,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
     function testExecuteParameterizedERC20WrongNonceReverts() public {
         mockToken.mint(user, 20 * 10 ** 18);
         address receiver = makeAddr("receiver");
-
+        
         (, uint128 nonce) = MockDelegate(user).state();
         bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
         bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
@@ -535,5 +536,31 @@ contract ERC20TransfersTest is TKGasDelegateBase {
                    gasUsedNoReturn < 51809 ? "more" : "less");
         console.log("executeNoValueNoReturn vs Fallback (0x00): %s efficient", 
                    gasUsedNoReturn < gasUsedFallback ? "more" : "less");
+    }
+
+    function testExecuteNoReturnGas() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver_execute_no_return");
+
+        MockDelegate(user).spoof_Nonce(1);
+        (, uint128 nonce) = MockDelegate(user).state();
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature = _signExecute(USER_PRIVATE_KEY, user, nonce, address(mockToken), 0, args);
+
+        // Create data manually: [signature(65)][nonce(16)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), args);
+
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        MockDelegate(user).executeNoReturn(address(mockToken), 0, data);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
+        (, uint128 currentNonce) = MockDelegate(user).state();
+        assertEq(currentNonce, nonce + 1);
+
+        console.log("=== executeNoReturn(address, uint256, bytes) ERC20 No Return Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
     }
 }
