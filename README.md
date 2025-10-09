@@ -25,7 +25,7 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 * There are no re-entry protections by design. Re-entrancy should be guarded by the contracts the user is interacting with (as in a normal EoA)
     - The nonce for execute and batch execute will naturally protect against re-entrancy, but this should not be relied upon 
     - There is no built in re-entrancy protection for session based auth since it is meant to be replayed
-* Both the delegate and the gas station are not using DRY to avoid doing internal calls. This is a purpsoseful design choice to save gas during run time
+* Both the delegate and the gas station are not using DRY. This is a purpsoseful design choice to save gas during run time
 * Paymasters (and anyone else) can interact with TKGasDelegate through the TKGasStation or directly through the delegate itself
 * The gas station has helper external functions for hashing for the type hash. This is just to help for external development and testing, and are not used during execution
 * There are session metatransactions that give one particular wallet unlimited execution on behalf of a user
@@ -33,12 +33,12 @@ TK Gas Station lets a user have all their gas paid for by another party using me
     - This limits to only one wallet in the typehash
     - Each one has a counter (starting at 0). Multiple signatures (sessions) can be on a single counter, but the counter is sequential
     - The purpose of the counter is to act as a "log out" functionality to expire the session before the deadline. Burning this will invalidate all signatures with that counter 
-* The standard execution metatransactions should limit by nonce, interacting contract, and arguments
+* The standard execution metatransactions should limit by nonce, deadline, interacting contract, and arguments
 * Batch transactions for standard execution should share one nonce per batch and one signature that includes the whole batch
 * For session batch execution, only the session limitations of sender, counter, and deadline are verified. Not the batch
 * All execute will revert if it gets a failure. Anything interacting with the gas station should be able to handle that
-* Batch transactions are capped at 50 per batch currently
-* Burning a nonce or a counter only burns the current nonce/counter. Ones that are premade will be valid
+* Batch transactions are capped at 20 per batch currently
+* Burning a nonce only burns the current nonce. Ones that are premade will be valid
 * Nonces are sequential and can only be used sequentially
 * A user can burn their own counter or nonce without a 712
 * The gas delegate implements recievers for ERC-721 and ERC-1155
@@ -48,7 +48,8 @@ TK Gas Station lets a user have all their gas paid for by another party using me
     1. A user delegates and uses it as normal. The nonce iterates up
     2. The user then delegates to a contract that changes the nonce or resets it to 0 since that storage slot stays with the user's address, not the delegated contract
     3. The user then delegates back to TKGasDelegate
-    4. Since the nonce is reset, old transactions can be replayed. 
+    4. Since the nonce is reset, old transactions can be replayed.
+    This is accepted because we have a deadline transactions and on step 2, if you delegate to a malicious contract the attacker already has control.  
 
 ## Packing data for calling the fallback function
 
