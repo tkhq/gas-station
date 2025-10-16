@@ -34,6 +34,7 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 3. The paymaster then submits the metatransaction to the TKGasStation
 
 ## Security Design Decisions
+* Contracts are immutable
 * There are no re-entry protections by design. Re-entrancy should be guarded by the contracts the user is interacting with (as in a normal EoA)
     - The nonce for execute and batch execute will naturally protect against re-entrancy, but this should not be relied upon 
     - There is no built in re-entrancy protection for session based auth since it is meant to be replayed
