@@ -2,7 +2,7 @@
 
 TK Gas Station lets a user have all their gas paid for by another party using metatransactions.
 
-### Deployments
+### Beta Deployments For Testing 
 
 #### Ethereum Mainnet
 - **TKGasDelegate**: [0x1B2AfF879Ca5367Ee610C33EE9c8A335495E5688](https://etherscan.io/address/0x1b2aff879ca5367ee610c33ee9c8a335495e5688)
@@ -16,12 +16,25 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 - **TKGasDelegate**: [0x1B2AfF879Ca5367Ee610C33EE9c8A335495E5688](https://polygonscan.com/address/0x1b2aff879ca5367ee610c33ee9c8a335495e5688)
 - **TKGasStation**: [0x9c3f5729BBDfb113c750Cf5e3EDBF56ba315CA57](https://polygonscan.com/address/0x9c3f5729bbdfb113c750cf5e3edbf56ba315ca57)
 
+#### Sepolia Testnet
+- **TKGasDelegate**: [0x1B2AfF879Ca5367Ee610C33EE9c8A335495E5688](https://sepolia.etherscan.io/address/0x1b2aff879ca5367ee610c33ee9c8a335495e5688)
+- **TKGasStation**: [0x9c3f5729BBDfb113c750Cf5e3EDBF56ba315CA57](https://sepolia.etherscan.io/address/0x9c3f5729bbdfb113c750cf5e3edbf56ba315ca57)
+
+#### Base Sepolia Testnet
+- **TKGasDelegate**: [0x1B2AfF879Ca5367Ee610C33EE9c8A335495E5688](https://sepolia.basescan.org/address/0x1b2aff879ca5367ee610c33ee9c8a335495e5688)
+- **TKGasStation**: [0x9c3f5729BBDfb113c750Cf5e3EDBF56ba315CA57](https://sepolia.basescan.org/address/0x9c3f5729bbdfb113c750cf5e3edbf56ba315ca57)
+
+#### Polygon Amoy Testnet
+- **TKGasDelegate**: [0x1B2AfF879Ca5367Ee610C33EE9c8A335495E5688](https://amoy.polygonscan.com/address/0x1b2aff879ca5367ee610c33ee9c8a335495e5688)
+- **TKGasStation**: [0x9c3f5729BBDfb113c750Cf5e3EDBF56ba315CA57](https://amoy.polygonscan.com/address/0x9c3f5729bbdfb113c750cf5e3edbf56ba315ca57)
+
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
 2. The user then signs a metatransaction (EIP-712) to give permissions to the paymaster to initiate a transaction on behalf of the user
 3. The paymaster then submits the metatransaction to the TKGasStation
 
 ## Security Design Decisions
+* Contracts are immutable
 * There are no re-entry protections by design. Re-entrancy should be guarded by the contracts the user is interacting with (as in a normal EoA)
     - The nonce for execute and batch execute will naturally protect against re-entrancy, but this should not be relied upon 
     - There is no built in re-entrancy protection for session based auth since it is meant to be replayed
@@ -31,8 +44,10 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 * There are session metatransactions that give one particular wallet unlimited execution on behalf of a user
     - This is a footgun and should be used carefully
     - This limits to only one wallet in the typehash
-    - Each one has a counter (starting at 0). Multiple signatures (sessions) can be on a single counter, but the counter is sequential
-    - The purpose of the counter is to act as a "log out" functionality to expire the session before the deadline. Burning this will invalidate all signatures with that counter 
+    - Each one has a counter 
+    - Multiple signatures (sessions) can be on a single counter
+    - The counter is non sequential
+    - The purpose of the counter is to act as a "log out" functionality to expire the session before the deadline - Burning this will invalidate all signatures with that counter 
 * The standard execution metatransactions should limit by nonce, deadline, interacting contract, and arguments
 * Batch transactions for standard execution should share one nonce per batch and one signature that includes the whole batch
 * For session batch execution, only the session limitations of sender, counter, and deadline are verified. Not the batch
@@ -44,7 +59,7 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 * The gas delegate implements recievers for ERC-721 and ERC-1155
 * The Gas station cannot use session based auth. This is because authorizing the gas station to send arbitrary messages would enable anyone to send arbitrary messages through the gas station
 * The delegate does not implement EIP-7821[https://eips.ethereum.org/EIPS/eip-7821] as described since the execute function is _payable_. As a security measure to not drain the paymaster, no execute functions by design are allowed to be payable
-* An attack that can be pulled off to reset/modify the nonce is as follows:
+* An attack that can be pulled off to reset/modify the nonce/counters is as follows:
     1. A user delegates and uses it as normal. The nonce iterates up
     2. The user then delegates to a contract that changes the nonce or resets it to 0 since that storage slot stays with the user's address, not the delegated contract
     3. The user then delegates back to TKGasDelegate

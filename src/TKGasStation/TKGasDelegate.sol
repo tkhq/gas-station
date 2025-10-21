@@ -509,8 +509,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
             if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
-                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-                calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
+                //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                //calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
                 mstore(add(ptr, 0x24), 0) // essentially write nothing to the next word in the register so it's 0
                 if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
                     let errorPtr := mload(0x40)
@@ -582,16 +582,16 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x24), _approveAmount)
             if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
-                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-                mstore(add(ptr, 0x04), _spender)
-                mstore(add(ptr, 0x24), 0)
+                //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                //mstore(add(ptr, 0x04), _spender)
+                mstore(add(ptr, 0x24), 0) // zero out the approve amount
                 if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
                     mstore(0x00, APPROVAL_TO_0_FAILED_SELECTOR)
                     revert(0x00, 0x04)
                 }
-                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-                mstore(add(ptr, 0x04), _spender)
-                mstore(add(ptr, 0x24), _approveAmount)
+                //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                //mstore(add(ptr, 0x04), _spender)
+                mstore(add(ptr, 0x24), _approveAmount) // rewrite the approve amount
                 if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
                     mstore(0x00, APPROVAL_FAILED_SELECTOR)
                     revert(0x00, 0x04)
@@ -656,15 +656,15 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x24), _approveAmount)
             if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
-                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-                mstore(add(ptr, 0x04), _spender)
+                //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                //mstore(add(ptr, 0x04), _spender)
                 mstore(add(ptr, 0x24), 0)
                 if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
                     mstore(0x00, APPROVAL_TO_0_FAILED_SELECTOR)
                     revert(0x00, 0x04)
                 }
-                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-                mstore(add(ptr, 0x04), _spender)
+                //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                //mstore(add(ptr, 0x04), _spender)
                 mstore(add(ptr, 0x24), _approveAmount)
                 if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
                     mstore(0x00, APPROVAL_FAILED_SELECTOR)
@@ -744,8 +744,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
             if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
-                mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-                calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
+                //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
+                //calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
                 mstore(add(ptr, 0x24), 0) // essentially write nothing to the next word in the register so it's 0
                 if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
                     let errorPtr := mload(0x40)
