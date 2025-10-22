@@ -8,38 +8,33 @@ import {ITKGasStation} from "../TKGasStation/interfaces/ITKGasStation.sol";
 contract PayWithERC20 {
     using SafeERC20 for IERC20;
 
-    address public immutable paymentReceiver;
+    address public immutable paymentReceiver; // todo make ownable instead
     address public immutable tkGasStation;
+    address public immutable payToken;
 
-    constructor(address _paymentReceiver, address _tkGasStation) {
+    uint256 public constant MAX_GAS = 1000000;
+
+    uint256 public amountToWithdraw;
+
+    mapping(address => uint256) public prePayAmounts;
+
+    constructor(address _paymentReceiver, address _tkGasStation, address _payToken) {
         paymentReceiver = _paymentReceiver;
         tkGasStation = _tkGasStation;
+        payToken = _payToken;
     }
 
-    function executePrepay(
-        address _token,
-        uint256 _amount,
-        address _target,
-        address _to,
-        uint256 _ethAmount,
-        bytes calldata _data
-    ) external {
-        IERC20(_token).safeTransferFrom(_target, paymentReceiver, _amount);
-        ITKGasStation(tkGasStation).execute(_target, _to, _ethAmount, _data);
+    function setPrePayAmount(address _target, uint256 _amount) external {
+        IERC20(payToken).safeTransferFrom(_target, paymentReceiver, _amount);
+        prePayAmounts[_target] = _amount; // bad
     }
 
     // Note: This assumes that you get an exchange rate from some offchain oracle
-    function executePostPay(
-        address _token,
-        uint256 _exchangeRate,
-        address _target,
-        address _to,
-        uint256 _ethAmount,
-        bytes calldata _data
-    ) external {
+    function executePay(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external {
         uint256 gasBefore = gasleft();
         ITKGasStation(tkGasStation).execute(_target, _to, _ethAmount, _data);
-        uint256 gasRemaining = gasleft() - gasBefore;
-        IERC20(_token).safeTransferFrom(paymentReceiver, _target, gasRemaining * _exchangeRate);
+        uint256 gasCost = gasleft() - gasBefore;
+        uint256 chuckECheeseToken = gasCost * MAX_GAS;
+        prePayAmounts[_target] -= chuckECheeseToken; // will error if not enough
     }
 }
