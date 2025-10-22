@@ -105,7 +105,7 @@ The following protections are in place:
 7. ERC-721 and ERC-1155 recievers are implemented. An eth reciever function is implemented.
 
 ## Paymaster protection
-1. The gas station will verify the user is delegated to the right gas delegate. This can also be done off chain. 
+1. The gas station will verify the user is delegated to the right gas delegate. This can also be done off chain. The paymaster can interact with the delegate directly to save gas if if the paymaster trusts the delegate or does off-chain validation. 
 2. The gas station does not allow any eth to be sent to it. If the paymaster has a policy to only interact with it, it will not send any eth
 3. Off chain the paymaster has to parse the transaction and set gas limits. This cannot be purely protected on chain
 4. The gas station and gas delegate are made to be gas efficient. Batch transactions have a hard limit of 20. 

@@ -58,6 +58,7 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 * A user can burn their own counter or nonce without a 712
 * The gas delegate implements recievers for ERC-721 and ERC-1155
 * The Gas station cannot use session based auth. This is because authorizing the gas station to send arbitrary messages would enable anyone to send arbitrary messages through the gas station
+* There is no requirement for the paymaster to interact with the gas station. The paymaster can interact with the delegate directly if they trust that the user is using the right delegate by doing off-chain validation. 
 * The delegate does not implement EIP-7821[https://eips.ethereum.org/EIPS/eip-7821] as described since the execute function is _payable_. As a security measure to not drain the paymaster, no execute functions by design are allowed to be payable
 * An attack that can be pulled off to reset/modify the nonce/counters is as follows:
     1. A user delegates and uses it as normal. The nonce iterates up
