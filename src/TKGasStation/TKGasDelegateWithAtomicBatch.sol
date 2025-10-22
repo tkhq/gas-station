@@ -2,6 +2,8 @@ import {TKGasDelegate} from "./TKGasDelegate.sol";
 
 import {ICallback} from "./interfaces/ICallback.sol";
 
+import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
+
 contract TKGasDelegateWithAtomicBatch is TKGasDelegate {
     error CallbackFailed();
 
@@ -16,17 +18,16 @@ contract TKGasDelegateWithAtomicBatch is TKGasDelegate {
         IBatchExecution.Call[] memory _calls
     ) external {
         // todo validation
+        _executeAtomicBatch(msg.sender, _callback, _calls);
     }
 
     function _executeAtomicBatch(address _sender, address _callback, IBatchExecution.Call[] memory _calls) internal {
         for (uint256 i = 0; i < _calls.length; i++) {
             IBatchExecution.Call memory call = _calls[i];
             (bool success, bytes memory result) = call.to.call{value: call.value}(call.data);
-            if (!success) {
-                revert ExecutionFailed();
-            }
-            (bool callbackSuccess, _calls) =
-                ICallback(_callback).callback(_sender, address(this), success, call, _calls);
+            (bool callbackSuccess, IBatchExecution.Call[] memory updatedCalls) =
+                ICallback(_callback).callback(_sender, address(this), call, success, result, _calls);
+            _calls = updatedCalls;
             if (!callbackSuccess) {
                 revert CallbackFailed();
             }
