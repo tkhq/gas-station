@@ -36,6 +36,7 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
 2. The user then signs a metatransaction (EIP-712) to give permissions to the paymaster to initiate a transaction on behalf of the user
 3. The paymaster then submits the metatransaction to the TKGasStation
+![Transaction Flow Diagram](./flow.png)
 
 ## Security Design Decisions
 * Contracts are immutable
