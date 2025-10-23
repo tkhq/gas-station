@@ -28,6 +28,10 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 - **TKGasDelegate**: [0x1B2AfF879Ca5367Ee610C33EE9c8A335495E5688](https://amoy.polygonscan.com/address/0x1b2aff879ca5367ee610c33ee9c8a335495e5688)
 - **TKGasStation**: [0x9c3f5729BBDfb113c750Cf5e3EDBF56ba315CA57](https://amoy.polygonscan.com/address/0x9c3f5729bbdfb113c750cf5e3edbf56ba315ca57)
 
+#### Monad Testnet
+- **TKGasDelegate**: [0x7721f2d385B47dEA005e6361Cb0f3A6016be5b26](https://testnet.monadexplorer.com/address/0x7721f2d385B47dEA005e6361Cb0f3A6016be5b26)
+- **TKGasStation**: [0x5667A681f25B6B92bc2BBDCBaC4e668E1029a796](https://testnet.monadexplorer.com/address/0x5667A681f25B6B92bc2BBDCBaC4e668E1029a796)
+
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
 2. The user then signs a metatransaction (EIP-712) to give permissions to the paymaster to initiate a transaction on behalf of the user

@@ -17,6 +17,7 @@ ethereum = "https://ethereum.publicnode.com"
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 polygon = "https://polygon-rpc.com"
 polygonAmoy = "https://rpc-amoy.polygon.technology"
+monadTestnet = "https://testnet-rpc.monad.xyz/"
 
 [etherscan]
 baseSepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.basescan.org/api" }
