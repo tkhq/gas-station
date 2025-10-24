@@ -121,4 +121,5 @@ The following protections are in place:
 7. Are there ways to bypass the needed checks? Does each function have all the right needed checks?
 8. Are there missing negative tests I should add? 
 9. Is the fallback functionality something I should remove? 
-10. Any gas optimization suggestions? 
+10. How will this behave with native gas tokens on L2s that are not ethereum? Will it behave the same way? 
+11. Any gas optimization suggestions? 
