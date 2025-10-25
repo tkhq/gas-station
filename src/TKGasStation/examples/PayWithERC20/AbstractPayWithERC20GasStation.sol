@@ -11,10 +11,11 @@ abstract contract AbstractPayWithERC20GasStation is AbstractGasStation, Ownable 
     using SafeERC20 for IERC20;
 
     address public paymentToken;
-    address public storageAddress;
 
-    constructor(address _tkGasDelegate, address _paymentToken, address _storageAddress, address _owner) AbstractGasStation(_tkGasDelegate) Ownable(_owner) {
-        storageAddress = _storageAddress;
+    constructor(address _tkGasDelegate, address _paymentToken, address _owner)
+        AbstractGasStation(_tkGasDelegate)
+        Ownable(_owner)
+    {
         paymentToken = _paymentToken;
     }
 
@@ -24,21 +25,32 @@ abstract contract AbstractPayWithERC20GasStation is AbstractGasStation, Ownable 
         paymentToken = _paymentToken;
     }
 
-    function setStorageAddress(address _storageAddress) external onlyOwner {
-        storageAddress = _storageAddress;
-    }
-
-    function withdraw(address _token, address _destination) external onlyOwner {  // allow any token to be withdrawn in case payment token was changed 
+    function withdraw(address _token, address _destination) external onlyOwner {
+        // allow any token to be withdrawn in case payment token was changed
         IERC20(_token).safeTransfer(_destination, IERC20(_token).balanceOf(address(this)));
     }
 
-    /* Required overrides */
+    /* Required virtual functions */
 
     function _getExchangeRate(address _token, uint256 _amount) internal virtual returns (uint256);
 
-    function _reimburseGasCost(address _token, uint256 _amount, address _from, address _recipient) internal virtual returns (uint256);
+    function _reimburseGasCost(address _token, uint256 _amount, address _from, address _recipient)
+        internal
+        virtual
+        returns (uint256);
 
-    /* Execute functions */ 
+    function _getReimbursementRecipient(address, /* _token */ uint256, /* _amount */ address /* _from */ )
+        internal
+        virtual
+        returns (address)
+    {
+        // in this example, the reimbursement recipient is the contract itself
+        // pratically, this should be overridden to whatever the customer wants
+        // or this could be overridden to tx.origin (the user who initiated the transaction)
+        return address(this);
+    }
+
+    /* Execute functions */
 
     // Override execute functions
     function executeReturns(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
@@ -50,19 +62,15 @@ abstract contract AbstractPayWithERC20GasStation is AbstractGasStation, Ownable 
         uint256 before = gasleft();
         bytes memory result = super.executeReturns(_target, _to, _ethAmount, _data);
         uint256 gasUsed = before - gasleft();
-        _reimburseGasCost(paymentToken, gasUsed, _target, storageAddress);
+        _reimburseGasCost(paymentToken, gasUsed, _target, _getReimbursementRecipient(paymentToken, gasUsed, _target));
         return result;
     }
 
-    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) 
-        public 
-        virtual
-        override
-    {
+    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) public virtual override {
         uint256 before = gasleft();
         super.execute(_target, _to, _ethAmount, _data);
         uint256 gasUsed = before - gasleft();
-        _reimburseGasCost(paymentToken, gasUsed, _target, storageAddress);
+        _reimburseGasCost(paymentToken, gasUsed, _target, _getReimbursementRecipient(paymentToken, gasUsed, _target));
     }
 
     // Override approveThenExecute functions
@@ -76,9 +84,10 @@ abstract contract AbstractPayWithERC20GasStation is AbstractGasStation, Ownable 
         bytes calldata _data
     ) public virtual override returns (bytes memory) {
         uint256 before = gasleft();
-        bytes memory result = super.approveThenExecuteReturns(_target, _to, _ethAmount, _erc20, _spender, _approveAmount, _data);
+        bytes memory result =
+            super.approveThenExecuteReturns(_target, _to, _ethAmount, _erc20, _spender, _approveAmount, _data);
         uint256 gasUsed = before - gasleft();
-        _reimburseGasCost(paymentToken, gasUsed, _target, storageAddress);
+        _reimburseGasCost(paymentToken, gasUsed, _target, _getReimbursementRecipient(paymentToken, gasUsed, _target));
         return result;
     }
 
@@ -94,7 +103,7 @@ abstract contract AbstractPayWithERC20GasStation is AbstractGasStation, Ownable 
         uint256 before = gasleft();
         super.approveThenExecute(_target, _to, _ethAmount, _erc20, _spender, _approveAmount, _data);
         uint256 gasUsed = before - gasleft();
-        _reimburseGasCost(paymentToken, gasUsed, _target, storageAddress);
+        _reimburseGasCost(paymentToken, gasUsed, _target, _getReimbursementRecipient(paymentToken, gasUsed, _target));
     }
 
     // Override batch execute functions
@@ -107,7 +116,7 @@ abstract contract AbstractPayWithERC20GasStation is AbstractGasStation, Ownable 
         uint256 before = gasleft();
         bytes[] memory results = super.executeBatchReturns(_target, _calls, _data);
         uint256 gasUsed = before - gasleft();
-        _reimburseGasCost(paymentToken, gasUsed, _target, storageAddress);
+        _reimburseGasCost(paymentToken, gasUsed, _target, _getReimbursementRecipient(paymentToken, gasUsed, _target));
         return results;
     }
 
@@ -119,17 +128,15 @@ abstract contract AbstractPayWithERC20GasStation is AbstractGasStation, Ownable 
         uint256 before = gasleft();
         super.executeBatch(_target, _calls, _data);
         uint256 gasUsed = before - gasleft();
-        _reimburseGasCost(paymentToken, gasUsed, _target, storageAddress);
+        _reimburseGasCost(paymentToken, gasUsed, _target, _getReimbursementRecipient(paymentToken, gasUsed, _target));
     }
 
-    function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) 
-        public 
-        virtual 
-        override
-    {
+    function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) public virtual override {
         uint256 before = gasleft();
         super.burnNonce(_targetEoA, _signature, _nonce);
         uint256 gasUsed = before - gasleft();
-        _reimburseGasCost(paymentToken, gasUsed, _targetEoA, storageAddress);
+        _reimburseGasCost(
+            paymentToken, gasUsed, _targetEoA, _getReimbursementRecipient(paymentToken, gasUsed, _targetEoA)
+        );
     }
 }
