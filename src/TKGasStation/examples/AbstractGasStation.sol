@@ -26,11 +26,23 @@ abstract contract AbstractGasStation is ITKGasStation {
 
     // Execute functions
     function executeReturns(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
-        external
+        public
         virtual
-        returns (bytes memory);
+        returns (bytes memory)
+    {
+        if (!_isDelegated(_target)) {
+            revert NotDelegated();
+        }
+        bytes memory result = ITKGasDelegate(_target).executeReturns(_to, _ethAmount, _data);
+        return result;
+    }
 
-    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external virtual;
+    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) public virtual {
+        if (!_isDelegated(_target)) {
+            revert NotDelegated();
+        }
+        ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
+    }
 
     // ApproveThenExecute functions
     function approveThenExecuteReturns(
@@ -41,7 +53,7 @@ abstract contract AbstractGasStation is ITKGasStation {
         address _spender,
         uint256 _approveAmount,
         bytes calldata _data
-    ) external virtual returns (bytes memory) {
+    ) public virtual returns (bytes memory) {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
@@ -58,7 +70,7 @@ abstract contract AbstractGasStation is ITKGasStation {
         address _spender,
         uint256 _approveAmount,
         bytes calldata _data
-    ) external virtual {
+    ) public virtual {
         if (!_isDelegated(_target)) {
             revert NotDelegated();
         }
@@ -67,7 +79,7 @@ abstract contract AbstractGasStation is ITKGasStation {
 
     // Batch execute functions
     function executeBatchReturns(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external
+        public
         virtual
         returns (bytes[] memory)
     {
@@ -79,7 +91,7 @@ abstract contract AbstractGasStation is ITKGasStation {
     }
 
     function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external
+        public
         virtual
     {
         if (!_isDelegated(_target)) {
@@ -88,7 +100,7 @@ abstract contract AbstractGasStation is ITKGasStation {
         ITKGasDelegate(_target).executeBatch(_calls, _data);
     }
 
-    function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external virtual {
+    function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) public virtual {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
