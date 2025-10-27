@@ -1,4 +1,6 @@
-## TK Gas Station
+## TK Gas Station - BETA
+
+_THIS PROJECT IS STILL IN BETA AND IS CURRENLTY BEING AUDITED. WE RECOMMEND TO ONLY USE IT FOR TESTING PURPOSES UNTIL THE AUDIT IS COMPLETE_
 
 TK Gas Station lets a user have all their gas paid for by another party using metatransactions.
 
@@ -92,3 +94,6 @@ Function selectors without to return or not:
 
 For example, a normal execute with no return would be 0x00. A normal execute with a return would be 0x01. 
 
+# Reporting A Vulnerability/Bug Bounty
+
+See our documentation[https://docs.turnkey.com/security/reporting-a-vulnerability] about our bug bounty program. _THIS IS STILL IN BETA AND IS NOT OPEN TO BUG BOUNTY_
