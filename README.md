@@ -72,12 +72,12 @@ TK Gas Station lets a user have all their gas paid for by another party using me
     4. Since the nonce is reset, old transactions can be replayed.
     This is accepted because we have a deadline transactions and on step 2, if you delegate to a malicious contract the attacker already has control.  
 
-## Packing data for calling the fallback function
+## Packing data for calling the fallback function in the delegate
 
 The fall back function can call the execute and session execution functions. It does not call the burn functions 
 
 To use it:
-The first byte should be a null byte 0x00
+The first byte should be a null byte 0x00. No function selector in the delegate or the gas station starts with a null byte, so there would be no name collision. The gas station will just parse the target contract and then call the delegate fall back function. 
 The second byte is a combination of the first nibble that acts as the function selector and the second nibble that acts as a boolean that says whether or not to return values or not
 The eth value is 10 bytes, a uint80
 
@@ -91,3 +91,4 @@ Function selectors without to return or not:
 * 60 - ExecuteBatchArbitrarySession
 
 For example, a normal execute with no return would be 0x00. A normal execute with a return would be 0x01. 
+
