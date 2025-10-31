@@ -1728,8 +1728,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     function executeBatchSession(bytes calldata data) external {
         IBatchExecution.Call[] calldata calls;
         assembly {
-            calls.offset := add(105, 0x40)
-            calls.length := calldataload(add(105, 0x20))
+            calls.offset := add(data.offset, add(105, 0x40))
+            calls.length := calldataload(add(data.offset, add(105, 0x20)))
         }
         _executeBatchSessionNoReturn(data[0:65], data[65:81], data[81:85], data[85:105], calls);
     }

@@ -71,7 +71,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         vm.prank(paymaster);
         MockDelegate(user).executeBatchSessionArbitrary(data);
         vm.stopPrank();
-        
+
         // Verify the calls executed successfully
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
