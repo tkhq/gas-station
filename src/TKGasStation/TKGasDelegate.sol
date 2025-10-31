@@ -1311,40 +1311,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
     }
 
-    function _executeSessionArbitraryNoReturn(
-        bytes calldata _signature,
-        bytes calldata _counterBytes,
-        bytes calldata _deadlineBytes,
-        address _outputContract,
-        bytes calldata _arguments
-    ) internal {
-        bytes32 hash;
-        assembly {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // DeadlineExceeded
-            let ptr := mload(0x40)
-            mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
-            let counterValue := shr(128, calldataload(_counterBytes.offset))
-            mstore(add(ptr, 0x20), counterValue)
-            mstore(add(ptr, 0x40), deadline)
-            mstore(add(ptr, 0x60), caller())
-            mstore(add(ptr, 0x80), _outputContract)
-            hash := keccak256(ptr, 0xa0)
-        }
-        hash = _hashTypedData(hash);
-        _validateSession(hash, _signature, _counterBytes);
-        // Execute the session transaction
-        assembly {
-            let ptr := mload(0x40)
-            calldatacopy(ptr, _arguments.offset, _arguments.length)
-            if iszero(call(gas(), _outputContract, 0, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
-        }
-    }
-
     function _executeSessionArbitraryWithValue(
         bytes calldata _signature,
         bytes calldata _counterBytes,
