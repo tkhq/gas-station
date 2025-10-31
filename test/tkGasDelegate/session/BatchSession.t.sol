@@ -322,6 +322,42 @@ contract BatchSessionTest is TKGasDelegateBase {
         vm.stopPrank();
     }
 
+    function testBatchSessionExecuteParameterizedReturns_Succeeds() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        uint128 counter = 1; // Use fixed counter value
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        // Create data manually: [signature(65)][counter(16)][deadline(4)][outputContract(20)]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
+
+        bytes[] memory results;
+        vm.prank(paymaster);
+        results = MockDelegate(user).executeBatchSessionReturns(calls, data);
+        vm.stopPrank();
+
+        // Verify the calls executed successfully and returned expected values
+        assertEq(results.length, 2);
+        assertTrue(abi.decode(results[0], (bool)));
+        assertTrue(abi.decode(results[1], (bool)));
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+    }
+
     function testBatchSessionExecuteParameterized_ExpiredDeadline_Reverts() public {
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
         uint128 counter = 1; // Use fixed counter value

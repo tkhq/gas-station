@@ -84,6 +84,31 @@ contract ETHTransferTest is TKGasDelegateBase {
         console.log("ETH Amount: %s", ethAmount);
     }
 
+    function testExecuteBytesETHNoReturn_Succeeds() public {
+        address receiver = makeAddr("receiver_execute_no_return");
+        uint256 ethAmount = 1 ether;
+
+        vm.deal(user, 2 ether);
+        assertEq(receiver.balance, 0);
+
+        uint128 nonce = MockDelegate(user).nonce();
+        bytes memory args = "";
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), receiver, ethAmount, args);
+
+        bytes memory executeData =
+            _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), receiver, ethAmount, args);
+
+        vm.prank(paymaster);
+        MockDelegate(user).execute(executeData);
+        vm.stopPrank();
+
+        // Verify the call succeeded
+        assertEq(receiver.balance, ethAmount);
+        uint128 currentNonce = MockDelegate(user).nonce();
+        assertEq(currentNonce, nonce + 1);
+    }
+
     function testExecuteBytesETHWrongNonceReverts() public {
         address payable receiver = payable(makeAddr("receiver"));
         uint256 ethAmount = 1 ether;

@@ -34,6 +34,33 @@ contract ArbitrarySessionTest is TKGasDelegateBase {
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 
+    function testArbitrarySessionExecuteReturns_Succeeds() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        uint128 counter = 1; // Use fixed counter value
+        uint32 deadline = uint32(block.timestamp + 1 days);
+
+        // Sign for arbitrary session (sender only, no contract lock)
+        address signerAddr = vm.addr(USER_PRIVATE_KEY);
+        vm.startPrank(signerAddr);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(USER_PRIVATE_KEY, MockDelegate(user).hashArbitrarySessionExecution(counter, deadline, paymaster));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether);
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), uint256(0), args);
+
+        vm.prank(paymaster);
+        bytes memory result = MockDelegate(user).executeSessionArbitraryReturns(data);
+        vm.stopPrank();
+
+        // Verify the call succeeded and returned the expected value
+        assertEq(abi.decode(result, (bool)), true);
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+    }
+
     function testArbitrarySessionExecute_ExpiredDeadline_Reverts() public {
         uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp - 1);

@@ -340,6 +340,49 @@ contract BatchExecutionTest is TKGasDelegateBase {
         console.log("Total Gas Used: %s", gasUsed);
     }
 
+    function testExecuteBatchParameterizedReturns_Succeeds() public {
+        // Prepare calls: 2 ERC20 mints to user and a view call
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](3);
+
+        // Call 1: mockToken.mint(user, 10 ether)
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 10 ether)
+        });
+
+        // Call 2: mockToken.mint(user, 20 ether)
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 20 ether)
+        });
+
+        // Call 3: mockToken.returnPlusHoldings(1)
+        calls[2] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 1)
+        });
+
+        // Build signed batch
+        uint128 nonce = MockDelegate(user).nonce();
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), calls);
+
+        // Execute using parameterized version with Returns - signature and nonce go in _data
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
+        bytes[] memory results;
+        vm.prank(paymaster);
+        results = MockDelegate(user).executeBatchReturns(calls, data);
+        vm.stopPrank();
+
+        // Verify success
+        assertEq(mockToken.balanceOf(user), 30 ether);
+        assertEq(results.length, 3);
+        uint256 ret = abi.decode(results[2], (uint256));
+        assertEq(ret, 1 + 30 ether);
+    }
+
     function testExecuteBatchParameterizedRevertsOnInnerFailure() public {
         // Prepare calls where one will revert: transferFrom without allowance
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);

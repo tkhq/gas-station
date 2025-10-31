@@ -226,6 +226,55 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         console.log("USDT Allowance: %s", usdt.allowance(user, address(mockSwap)));
     }
 
+    function testApproveThenExecuteNoReturn_Succeeds() public {
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint256 expectedOutput = 95 * 10 ** 18;
+
+        uint128 nonce = MockDelegate(user).nonce();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        bytes memory executeData = _constructApproveThenExecuteBytes(
+            signature,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        vm.prank(paymaster);
+        MockDelegate(user).approveThenExecute(executeData);
+        vm.stopPrank();
+
+        // Verify the swap succeeded
+        assertEq(tokenA.balanceOf(user), 900 * 10 ** 18); // 1000 - 100
+        assertEq(tokenB.balanceOf(user), 1095 * 10 ** 18); // 1000 + 95
+        assertEq(tokenA.balanceOf(address(mockSwap)), 10100 * 10 ** 18); // 10000 + 100
+        assertEq(tokenB.balanceOf(address(mockSwap)), 9905 * 10 ** 18); // 10000 - 95
+
+        uint128 currentNonce = MockDelegate(user).nonce();
+        assertEq(currentNonce, nonce + 1);
+    }
+
     function testApproveThenExecuteWrongNonceReverts() public {
         uint256 swapAmount = 100 * 10 ** 18;
         uint256 expectedOutput = 95 * 10 ** 18;
@@ -472,6 +521,49 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
     }
 
     // ========== PARAMETERIZED VERSIONS ==========
+
+    function testApproveThenExecuteParameterizedNoReturn_Succeeds() public {
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint256 expectedOutput = 95 * 10 ** 18;
+
+        uint128 nonce = MockDelegate(user).nonce();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(tokenA), address(tokenB), swapAmount, expectedOutput
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(tokenA),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        // Create data manually: [signature(65)][nonce(16)][deadline(4)][args]
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
+
+        vm.prank(paymaster);
+        MockDelegate(user).approveThenExecute(
+            address(mockSwap), 0, address(tokenA), address(mockSwap), swapAmount, data
+        );
+        vm.stopPrank();
+
+        // Verify the swap succeeded
+        assertEq(tokenA.balanceOf(user), 900 * 10 ** 18); // 1000 - 100
+        assertEq(tokenB.balanceOf(user), 1095 * 10 ** 18); // 1000 + 95
+        assertEq(tokenA.balanceOf(address(mockSwap)), 10100 * 10 ** 18); // 10000 + 100
+        assertEq(tokenB.balanceOf(address(mockSwap)), 9905 * 10 ** 18); // 10000 - 95
+
+        uint128 currentNonce = MockDelegate(user).nonce();
+        assertEq(currentNonce, nonce + 1);
+    }
 
     function testApproveThenExecuteParameterizedSwap() public {
         uint256 swapAmount = 100 * 10 ** 18;
