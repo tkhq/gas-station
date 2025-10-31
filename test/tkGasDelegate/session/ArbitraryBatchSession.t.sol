@@ -47,6 +47,35 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 
+    function testArbitraryBatchSession_NoReturn_Succeeds() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        uint128 counter = 1; // Use fixed counter value
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature = _signArbitrary(counter, deadline, paymaster);
+        bytes memory data = abi.encodePacked(signature, counter, deadline, abi.encode(calls));
+
+        vm.prank(paymaster);
+        MockDelegate(user).executeBatchSessionArbitrary(data);
+        vm.stopPrank();
+        
+        // Verify the calls executed successfully
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+    }
+
     function testArbitraryBatchSession_ExpiredDeadline_Reverts() public {
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
         uint128 counter = 1; // Use fixed counter value
