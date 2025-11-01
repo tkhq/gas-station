@@ -1206,6 +1206,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             IBatchExecution.Call calldata execution = _calls[i];
             uint256 ethAmount = execution.value;
             address outputContract = execution.to;
+            if (bytes20(outputContract) != bytes20(_outputContractBytes)) {
+                revert InvalidOutputContract();
+            }
             bytes calldata _callData = execution.data;
             assembly {
                 let ptr := mload(0x40)

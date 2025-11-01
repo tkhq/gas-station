@@ -18,7 +18,7 @@ contract MockDelegate is TKGasDelegate {
         _consumeNonce(_nonceBytes);
     }
 
-    function external_requireCounter(bytes calldata _counterBytes) external {
+    function external_requireCounter(bytes calldata _counterBytes) external view {
         _requireCounter(_counterBytes);
     }
 }
