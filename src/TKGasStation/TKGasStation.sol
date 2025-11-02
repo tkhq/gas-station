@@ -30,15 +30,18 @@ contract TKGasStation is ITKGasStation {
             revert NotDelegated();
         }
 
-        bytes1 functionSelector = bytes1(data[22] & 0xf0); // mask the last nibble
+        if(bytes1(data[21]) == 0x00) { // check if the first byte is 0x00
 
-        // only allow execute functions, no session functions
-        if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20) {
-            (bool success, bytes memory result) = target.call(data[21:]);
-            if (success) {
-                return result;
+            bytes1 functionSelector = bytes1(data[22] & 0xf0); // mask the last nibble
+
+            // only allow execute functions, no session functions
+            if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20) {
+                (bool success, bytes memory result) = target.call(data[21:]);
+                if (success) {
+                    return result;
+                }
+                revert ExecutionFailed();
             }
-            revert ExecutionFailed();
         }
 
         revert InvalidFunctionSelector();
