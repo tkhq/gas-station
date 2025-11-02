@@ -52,7 +52,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         0xc38de38f81afb4e47772eb84f2d55219fbb4361b588139d3eadcf0cf13dc39cc;
     // Original: keccak256("BurnSessionCounter(uint128 counter)")
 
-    //uint128 public nonce;
 
     struct State {
         uint128 nonce;
@@ -71,10 +70,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _getStateStorage().nonce;
     }
 
-    mapping(uint128 => bool) public expiredSessionCounters;
 
     function checkSessionCounterExpired(uint128 _counter) external view returns (bool) {
-        return expiredSessionCounters[_counter];
+        return _getStateStorage().expiredSessionCounters[_counter];
     }
 
     constructor() EIP712() {}
@@ -349,13 +347,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         assembly {
             counterValue := shr(128, calldataload(_counterBytes.offset))
         }
-        if (expiredSessionCounters[counterValue]) {
+        if (_getStateStorage().expiredSessionCounters[counterValue]) {
             revert InvalidCounter();
         }
     }
 
     function _requireCounter(uint128 _counter) internal view {
-        if (expiredSessionCounters[_counter]) {
+        if (_getStateStorage().expiredSessionCounters[_counter]) {
             revert InvalidCounter();
         }
     }
@@ -1519,14 +1517,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         if (ECDSA.recoverCalldata(hash, _signature) != address(this)) {
             revert NotSelf();
         }
-        expiredSessionCounters[_counter] = true;
+        _getStateStorage().expiredSessionCounters[_counter] = true;
     }
 
     function burnSessionCounter(uint128 _counter) external {
         if (msg.sender != address(this) || msg.sender != tx.origin) {
             revert NotSelf();
         }
-        expiredSessionCounters[_counter] = true;
+        _getStateStorage().expiredSessionCounters[_counter] = true;
     }
 
     function executeSessionReturns(bytes calldata data) external returns (bytes memory) {
