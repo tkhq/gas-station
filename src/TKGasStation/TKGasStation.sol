@@ -263,14 +263,4 @@ contract TKGasStation is ITKGasStation {
         return ITKGasDelegate(_targetEoA).hashBurnSessionCounter(_counter, _sender);
     }
 
-    function hashBatchExecution(address _targetEoA, uint128 _nonce, IBatchExecution.Call[] calldata _calls)
-        external
-        view
-        returns (bytes32)
-    {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).hashBatchExecution(_nonce, _calls);
-    }
 }
