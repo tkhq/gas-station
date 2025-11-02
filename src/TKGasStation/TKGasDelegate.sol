@@ -612,7 +612,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
                 //mstore(add(ptr, 0x04), _spender)
                 mstore(add(ptr, 0x24), 0) // zero out the approve amount
-                if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) { // we don't care about the return value here
+                if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
+                    // we don't care about the return value here
                     mstore(0x00, APPROVAL_TO_0_FAILED_SELECTOR)
                     revert(0x00, 0x04)
                 }

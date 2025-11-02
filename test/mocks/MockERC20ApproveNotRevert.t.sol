@@ -6,7 +6,7 @@ interface IERC20Old {
     function balanceOf(address account) external view returns (uint256);
     function transfer(address to, uint256 value) external returns (bool);
     function allowance(address owner, address spender) external view returns (uint256);
-    function approve(address spender, uint256 value) external returns (bool); // not normal 
+    function approve(address spender, uint256 value) external returns (bool); // not normal
     function transferFrom(address from, address to, uint256 value) external returns (bool);
 }
 
@@ -36,6 +36,7 @@ contract MockERC20ApproveNotRevert is IERC20Old {
         return _symbol;
     }
     // Arbitrary mint function for testing
+
     function mint(address to, uint256 amount) external {
         _balances[to] += amount;
     }
@@ -58,7 +59,7 @@ contract MockERC20ApproveNotRevert is IERC20Old {
     function transferFrom(address from, address to, uint256 amount) public returns (bool) {
         require(_allowances[from][msg.sender] >= amount, "Insufficient allowance");
         require(_balances[from] >= amount, "Insufficient balance");
-        
+
         _allowances[from][msg.sender] -= amount;
         _balances[from] -= amount;
         _balances[to] += amount;
@@ -66,8 +67,8 @@ contract MockERC20ApproveNotRevert is IERC20Old {
     }
 
     function approve(address spender, uint256 amount) public virtual override returns (bool) {
-        // if approve fails for some reason, return false? 
-        if(!approveAllowed) {
+        // if approve fails for some reason, return false?
+        if (!approveAllowed) {
             return false;
         }
         _allowances[msg.sender][spender] = amount;

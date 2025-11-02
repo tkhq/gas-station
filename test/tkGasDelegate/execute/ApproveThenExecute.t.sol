@@ -908,11 +908,14 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             swapData
         );
 
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
 
         vm.prank(paymaster);
         vm.expectRevert(bytes4(keccak256("ApprovalReturnFalse()")));
-        MockDelegate(user).approveThenExecute(address(mockSwap), 0, address(badToken), address(mockSwap), swapAmount, data);
+        MockDelegate(user).approveThenExecute(
+            address(mockSwap), 0, address(badToken), address(mockSwap), swapAmount, data
+        );
         vm.stopPrank();
     }
 
@@ -941,11 +944,14 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             swapData
         );
 
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
 
         vm.prank(paymaster);
         vm.expectRevert(bytes4(keccak256("ApprovalReturnFalse()")));
-        MockDelegate(user).approveThenExecute(address(mockSwap), 0, address(badToken), address(mockSwap), swapAmount, data);
+        MockDelegate(user).approveThenExecute(
+            address(mockSwap), 0, address(badToken), address(mockSwap), swapAmount, data
+        );
         vm.stopPrank();
     }
 
@@ -980,12 +986,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
             nonce,
             uint32(block.timestamp + 86400),
             abi.encodePacked(
-                address(badToken),
-                address(mockSwap),
-                swapAmount,
-                address(mockSwap),
-                _fallbackEncodeEth(0),
-                swapData
+                address(badToken), address(mockSwap), swapAmount, address(mockSwap), _fallbackEncodeEth(0), swapData
             )
         );
 

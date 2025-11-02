@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-// Non standard ERC20 
+// Non standard ERC20
 interface IERC20NotNormal {
     //function totalSupply() external view returns (uint256);
     function balanceOf(address account) external view returns (uint256);
     function transfer(address to, uint256 value) external;
     function allowance(address owner, address spender) external view returns (uint256);
-    function approve(address spender, uint256 value) external; // not normal 
+    function approve(address spender, uint256 value) external; // not normal
     function transferFrom(address from, address to, uint256 value) external;
 }
 
@@ -62,13 +62,13 @@ contract MockUSDT is IERC20NotNormal {
 
         require(!((amount != 0) && (_allowances[msg.sender][spender] != 0)));
 
-        _allowances[msg.sender][spender] = amount; 
+        _allowances[msg.sender][spender] = amount;
     }
 
     function transferFrom(address from, address to, uint256 amount) public {
         require(_allowances[from][msg.sender] >= amount, "Insufficient allowance");
         require(_balances[from] >= amount, "Insufficient balance");
-        
+
         _allowances[from][msg.sender] -= amount;
         _balances[from] -= amount;
         _balances[to] += amount;
