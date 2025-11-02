@@ -145,8 +145,4 @@ interface ITKGasDelegate is IBatchExecution {
 
     function hashBurnSessionCounter(uint128 _counter, address _sender) external view returns (bytes32);
 
-    function hashBatchExecution(uint128 _nonce, IBatchExecution.Call[] calldata _calls)
-        external
-        view
-        returns (bytes32);
 }
