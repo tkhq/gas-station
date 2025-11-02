@@ -2091,22 +2091,4 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _hashTypedData(hash);
     }
 
-    function hashBatchExecution(uint128 _nonce, IBatchExecution.Call[] calldata _calls)
-        external
-        view
-        returns (bytes32)
-    {
-        // Keep abi.encode for complex types (abi.encodePacked doesn't support Call[] arrays)
-        bytes32 executionsHash = keccak256(abi.encode(_calls));
-        bytes32 hash;
-        assembly {
-            let ptr := mload(0x40)
-            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
-            mstore(add(ptr, 0x20), _nonce)
-            mstore(add(ptr, 0x40), executionsHash)
-            hash := keccak256(ptr, 0x60)
-            mstore(0x40, add(ptr, 0x60)) // Update free memory pointer
-        }
-        return _hashTypedData(hash);
-    }
 }
