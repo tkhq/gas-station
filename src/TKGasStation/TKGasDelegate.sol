@@ -55,7 +55,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
     struct State {
         uint128 nonce;
-        mapping(uint128 => bool) expiredSessionCounters;
+        mapping(bytes16 => bool) expiredSessionCounters;
     }
 
     bytes32 internal constant STATE_STORAGE_POSITION = 0x34d5be385818fa5c8c4e7f9d5a028251d28ebab8aaf203a072d1dde2d49a1100;
@@ -72,7 +72,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
 
     function checkSessionCounterExpired(uint128 _counter) external view returns (bool) {
-        return _getStateStorage().expiredSessionCounters[_counter];
+        return _getStateStorage().expiredSessionCounters[bytes16(_counter)];
     }
 
     constructor() EIP712() {}
@@ -343,17 +343,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     }
 
     function _requireCounter(bytes calldata _counterBytes) internal view {
-        uint128 counterValue;
-        assembly {
-            counterValue := shr(128, calldataload(_counterBytes.offset))
-        }
-        if (_getStateStorage().expiredSessionCounters[counterValue]) {
+        // This call should only happen coming from validateSession, so we can assume the counterBytes are the right length
+        if (_getStateStorage().expiredSessionCounters[bytes16(_counterBytes)]) {
             revert InvalidCounter();
         }
     }
 
     function _requireCounter(uint128 _counter) internal view {
-        if (_getStateStorage().expiredSessionCounters[_counter]) {
+        if (_getStateStorage().expiredSessionCounters[bytes16(_counter)]) {
             revert InvalidCounter();
         }
     }
@@ -1517,14 +1514,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         if (ECDSA.recoverCalldata(hash, _signature) != address(this)) {
             revert NotSelf();
         }
-        _getStateStorage().expiredSessionCounters[_counter] = true;
+        _getStateStorage().expiredSessionCounters[bytes16(_counter)] = true; 
     }
 
     function burnSessionCounter(uint128 _counter) external {
         if (msg.sender != address(this) || msg.sender != tx.origin) {
             revert NotSelf();
         }
-        _getStateStorage().expiredSessionCounters[_counter] = true;
+        _getStateStorage().expiredSessionCounters[bytes16(_counter)] = true; // does not need to check if the counter is already expired
     }
 
     function executeSessionReturns(bytes calldata data) external returns (bytes memory) {

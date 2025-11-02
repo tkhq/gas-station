@@ -11,7 +11,7 @@ contract MockDelegate is TKGasDelegate {
     }
 
     function spoof_burnSessionCounter(uint128 _counter) external {
-        _getStateStorage().expiredSessionCounters[_counter] = true;
+        _getStateStorage().expiredSessionCounters[bytes16(_counter)] = true;
     }
 
     function external_consumeNonce(bytes calldata _nonceBytes) external {
