@@ -24,6 +24,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     bytes4 private constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
     bytes4 private constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
     bytes4 private constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
+    bytes4 private constant APPROVAL_RETURN_FALSE_SELECTOR = 0x8164f842;
     uint8 public constant MAX_BATCH_SIZE = 20;
 
     bytes32 private constant EXECUTION_TYPEHASH = 0x57302c9443fd61915dc047bbb218f4d7a49414900b195b59a018caf55444c792;
@@ -594,22 +595,29 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
             mstore(add(ptr, 0x04), _spender)
             mstore(add(ptr, 0x24), _approveAmount)
-            if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
+            let approveReturnPtr := mload(0x40)
+            let success := call(gas(), _erc20, 0, ptr, 0x44, approveReturnPtr, 0x20)
+            switch success
+            case 0 {
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
                 //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
                 //mstore(add(ptr, 0x04), _spender)
                 mstore(add(ptr, 0x24), 0) // zero out the approve amount
-                if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
+                if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) { // we don't care about the return value here
                     mstore(0x00, APPROVAL_TO_0_FAILED_SELECTOR)
                     revert(0x00, 0x04)
                 }
                 //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
                 //mstore(add(ptr, 0x04), _spender)
                 mstore(add(ptr, 0x24), _approveAmount) // rewrite the approve amount
-                if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
+                if iszero(call(gas(), _erc20, 0, ptr, 0x44, approveReturnPtr, 0x20)) {
                     mstore(0x00, APPROVAL_FAILED_SELECTOR)
                     revert(0x00, 0x04)
                 }
+            }
+            if iszero(or(iszero(returndatasize()), mload(approveReturnPtr))) {
+                mstore(0x00, APPROVAL_RETURN_FALSE_SELECTOR)
+                revert(0x00, 0x04)
             }
         }
 
