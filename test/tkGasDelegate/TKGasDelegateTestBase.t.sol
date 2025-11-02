@@ -75,14 +75,14 @@ contract TKGasDelegateTestBase is Test {
         return signature;
     }
 
-    function _signBurnSessionCounter(uint256 _privateKey, address payable _publicKey, uint128 _counter, address _sender)
+    function _signBurnSessionCounter(uint256 _privateKey, address payable _publicKey, uint128 _counter)
         internal
         returns (bytes memory)
     {
         address signer = vm.addr(_privateKey);
         vm.startPrank(signer);
         (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(_privateKey, MockDelegate(_publicKey).hashBurnSessionCounter(_counter, _sender));
+            vm.sign(_privateKey, MockDelegate(_publicKey).hashBurnSessionCounter(_counter));
         bytes memory signature = abi.encodePacked(r, s, v);
         vm.stopPrank();
         return signature;

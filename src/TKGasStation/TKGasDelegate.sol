@@ -49,8 +49,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     // Original: keccak256("ArbitrarySessionExecution(uint128 counter,uint32 deadline,address sender)")
 
     bytes32 private constant BURN_SESSION_COUNTER_TYPEHASH =
-        0x9e83fc2d99981f8f5e9cca6e9253e48163b75f85c9f1e80235a9380203430d4f;
-    // Original: keccak256("BurnSessionCounter(uint128 counter,address sender)")
+        0xc38de38f81afb4e47772eb84f2d55219fbb4361b588139d3eadcf0cf13dc39cc;
+    // Original: keccak256("BurnSessionCounter(uint128 counter)")
 
     uint128 public nonce;
 
@@ -1485,15 +1485,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
     }
 
-    function burnSessionCounter(bytes calldata _signature, uint128 _counter, address _sender) external {
+    function burnSessionCounter(bytes calldata _signature, uint128 _counter) external {
         bytes32 hash;
         assembly {
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, BURN_SESSION_COUNTER_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
-            mstore(add(ptr, 0x40), _sender)
-            hash := keccak256(ptr, 0x60)
-            mstore(0x40, add(ptr, 0x60)) // Update free memory pointer
+            hash := keccak256(ptr, 0x40)
+            mstore(0x40, add(ptr, 0x40)) // Update free memory pointer
         }
         hash = _hashTypedData(hash);
 
@@ -2078,15 +2077,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _hashTypedData(hash);
     }
 
-    function hashBurnSessionCounter(uint128 _counter, address _sender) external view returns (bytes32) {
+    function hashBurnSessionCounter(uint128 _counter) external view returns (bytes32) {
         bytes32 hash;
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, BURN_SESSION_COUNTER_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
-            mstore(add(ptr, 0x40), _sender)
-            hash := keccak256(ptr, 0x60)
-            mstore(0x40, add(ptr, 0x60)) // Update free memory pointer
+            hash := keccak256(ptr, 0x40)
+            mstore(0x40, add(ptr, 0x40)) // Update free memory pointer
         }
         return _hashTypedData(hash);
     }

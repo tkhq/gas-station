@@ -252,7 +252,7 @@ contract TKGasStation is ITKGasStation {
         return ITKGasDelegate(_targetEoA).hashBatchExecution(_nonce, _deadline, _calls);
     }
 
-    function hashBurnSessionCounter(address _targetEoA, uint128 _counter, address _sender)
+    function hashBurnSessionCounter(address _targetEoA, uint128 _counter)
         external
         view
         returns (bytes32)
@@ -260,7 +260,7 @@ contract TKGasStation is ITKGasStation {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(_targetEoA).hashBurnSessionCounter(_counter, _sender);
+        return ITKGasDelegate(_targetEoA).hashBurnSessionCounter(_counter);
     }
 
 }

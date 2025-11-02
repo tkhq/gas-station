@@ -157,14 +157,13 @@ contract TypeHashValidationTest is Test {
      */
     function testBurnSessionCounterTypeHash() public view {
         uint128 counter = 1;
-        address sender = address(0x1234);
 
-        bytes32 hash = delegate.hashBurnSessionCounter(counter, sender);
+        bytes32 hash = delegate.hashBurnSessionCounter(counter);
 
         // Verify the hash is non-zero and deterministic
         assertTrue(hash != bytes32(0), "BurnSessionCounter hash should not be zero");
         assertEq(
-            hash, delegate.hashBurnSessionCounter(counter, sender), "BurnSessionCounter hash should be deterministic"
+            hash, delegate.hashBurnSessionCounter(counter), "BurnSessionCounter hash should be deterministic"
         );
     }
 

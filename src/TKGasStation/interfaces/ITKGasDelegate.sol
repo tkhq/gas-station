@@ -102,7 +102,7 @@ interface ITKGasDelegate is IBatchExecution {
 
     // Burn functions
     function burnNonce(bytes calldata _signature, uint128 _nonce) external;
-    function burnSessionCounter(bytes calldata _signature, uint128 _counter, address _sender) external;
+    function burnSessionCounter(bytes calldata _signature, uint128 _counter) external;
     function burnNonce() external;
     function burnSessionCounter(uint128 _counter) external;
 
@@ -143,6 +143,6 @@ interface ITKGasDelegate is IBatchExecution {
         view
         returns (bytes32);
 
-    function hashBurnSessionCounter(uint128 _counter, address _sender) external view returns (bytes32);
+    function hashBurnSessionCounter(uint128 _counter) external view returns (bytes32);
 
 }
