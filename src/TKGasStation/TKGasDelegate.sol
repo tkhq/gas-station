@@ -19,12 +19,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     error UnsupportedExecutionMode();
     error ApprovalFailed();
     error ApprovalTo0Failed();
+    error ApprovalReturnFalse();
 
     // Precomputed selector for DeadlineExceeded(): 0x559895a3
     bytes4 private constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
     bytes4 private constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
     bytes4 private constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
-    bytes4 private constant APPROVAL_RETURN_FALSE_SELECTOR = 0x8164f842;
+    bytes4 private constant APPROVAL_RETURN_FALSE_SELECTOR = 0xf572481d;
     uint8 public constant MAX_BATCH_SIZE = 20;
 
     bytes32 private constant EXECUTION_TYPEHASH = 0x57302c9443fd61915dc047bbb218f4d7a49414900b195b59a018caf55444c792;
@@ -522,7 +523,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
             // Write amount (32 bytes) starting at offset 4 + 32 = 0x24
             calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
-            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
+            let approveReturnPtr := mload(0x40)
+            let success := call(gas(), token, 0, ptr, 0x44, approveReturnPtr, 0x20)
+            switch success
+            case 0 {
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
                 //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
                 //calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
@@ -533,12 +537,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                     revert(errorPtr, 0x04)
                 }
                 calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32) // then write something
-                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
+                if iszero(call(gas(), token, 0, ptr, 0x44, approveReturnPtr, 0x20)) {
                     let errorPtr := mload(0x40)
                     mstore(errorPtr, APPROVAL_FAILED_SELECTOR)
                     revert(errorPtr, 0x04)
                 }
-            } // set the approval
+            }
+            if iszero(or(iszero(returndatasize()), mload(approveReturnPtr))) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, APPROVAL_RETURN_FALSE_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
         }
         (bool success, bytes memory result) =
             _ethAmount == 0 ? _outputContract.call(_arguments) : _outputContract.call{value: _ethAmount}(_arguments);
@@ -676,7 +685,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
             mstore(add(ptr, 0x04), _spender)
             mstore(add(ptr, 0x24), _approveAmount)
-            if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
+            let approveReturnPtr := mload(0x40)
+            let success := call(gas(), _erc20, 0, ptr, 0x44, approveReturnPtr, 0x20)
+            switch success
+            case 0 {
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
                 //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
                 //mstore(add(ptr, 0x04), _spender)
@@ -688,10 +700,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                 //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
                 //mstore(add(ptr, 0x04), _spender)
                 mstore(add(ptr, 0x24), _approveAmount)
-                if iszero(call(gas(), _erc20, 0, ptr, 0x44, 0, 0)) {
+                if iszero(call(gas(), _erc20, 0, ptr, 0x44, approveReturnPtr, 0x20)) {
                     mstore(0x00, APPROVAL_FAILED_SELECTOR)
                     revert(0x00, 0x04)
                 }
+            }
+            if iszero(or(iszero(returndatasize()), mload(approveReturnPtr))) {
+                mstore(0x00, APPROVAL_RETURN_FALSE_SELECTOR)
+                revert(0x00, 0x04)
             }
         }
 
@@ -764,7 +780,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
             calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
             calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
-            if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
+            let approveReturnPtr := mload(0x40)
+            let success := call(gas(), token, 0, ptr, 0x44, approveReturnPtr, 0x20)
+            switch success
+            case 0 {
                 // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
                 //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
                 //calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
@@ -775,12 +794,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
                     revert(errorPtr, 0x04)
                 }
                 calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32) // then write something
-                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
+                if iszero(call(gas(), token, 0, ptr, 0x44, approveReturnPtr, 0x20)) {
                     let errorPtr := mload(0x40)
                     mstore(errorPtr, APPROVAL_FAILED_SELECTOR)
                     revert(errorPtr, 0x04)
                 }
-            } // set the approval
+            }
+            if iszero(or(iszero(returndatasize()), mload(approveReturnPtr))) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, APPROVAL_RETURN_FALSE_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
             // Execute
             let outputAddr := shr(96, calldataload(_outputContractBytes.offset))
             calldatacopy(ptr, _arguments.offset, _arguments.length)

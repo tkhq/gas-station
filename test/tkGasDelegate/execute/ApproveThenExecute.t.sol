@@ -7,6 +7,7 @@ import {ECDSA} from "solady/utils/ECDSA.sol";
 import {MockDelegate} from "../../mocks/MockDelegate.t.sol";
 import {MockERC20} from "../../mocks/MockERC20.t.sol";
 import {MockUSDT} from "../../mocks/MockUSDT.t.sol";
+import {MockERC20ApproveNotRevert} from "../../mocks/MockERC20ApproveNotRevert.t.sol";
 import {MockContractInteractions} from "../../mocks/MockContractInteractions.t.sol";
 import {TKGasDelegateTestBase} from "../TKGasDelegateTestBase.t.sol";
 import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
@@ -836,6 +837,161 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.DeadlineExceeded.selector);
         MockDelegate(user).approveThenExecute(data);
+        vm.stopPrank();
+    }
+
+    function testApproveThenExecute_ApproveFalse_Reverts() public {
+        MockERC20ApproveNotRevert badToken = new MockERC20ApproveNotRevert("Bad Token", "BAD");
+        badToken.mint(user, 1000 * 10 ** 18);
+        badToken.setApproveAllowed(false); // Make approve return false
+
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint128 nonce = MockDelegate(user).nonce();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(badToken), address(tokenB), swapAmount, 95 * 10 ** 18
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(badToken),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        bytes memory data = _constructApproveThenExecuteBytes(
+            signature,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(badToken),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        vm.prank(paymaster);
+        vm.expectRevert(bytes4(keccak256("ApprovalReturnFalse()")));
+        MockDelegate(user).approveThenExecute(data);
+        vm.stopPrank();
+    }
+
+    function testApproveThenExecuteParameterized_ApproveFalse_Reverts() public {
+        MockERC20ApproveNotRevert badToken = new MockERC20ApproveNotRevert("Bad Token", "BAD");
+        badToken.mint(user, 1000 * 10 ** 18);
+        badToken.setApproveAllowed(false); // Make approve return false
+
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint128 nonce = MockDelegate(user).nonce();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(badToken), address(tokenB), swapAmount, 95 * 10 ** 18
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(badToken),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
+
+        vm.prank(paymaster);
+        vm.expectRevert(bytes4(keccak256("ApprovalReturnFalse()")));
+        MockDelegate(user).approveThenExecute(address(mockSwap), 0, address(badToken), address(mockSwap), swapAmount, data);
+        vm.stopPrank();
+    }
+
+    function testApproveThenExecuteNoReturn_ApproveFalse_Reverts() public {
+        MockERC20ApproveNotRevert badToken = new MockERC20ApproveNotRevert("Bad Token", "BAD");
+        badToken.mint(user, 1000 * 10 ** 18);
+        badToken.setApproveAllowed(false); // Make approve return false
+
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint128 nonce = MockDelegate(user).nonce();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(badToken), address(tokenB), swapAmount, 95 * 10 ** 18
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(badToken),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), swapData);
+
+        vm.prank(paymaster);
+        vm.expectRevert(bytes4(keccak256("ApprovalReturnFalse()")));
+        MockDelegate(user).approveThenExecute(address(mockSwap), 0, address(badToken), address(mockSwap), swapAmount, data);
+        vm.stopPrank();
+    }
+
+    function testFallbackApproveThenExecute_ApproveFalse_Reverts() public {
+        MockERC20ApproveNotRevert badToken = new MockERC20ApproveNotRevert("Bad Token", "BAD");
+        badToken.mint(user, 1000 * 10 ** 18);
+        badToken.setApproveAllowed(false); // Make approve return false
+
+        uint256 swapAmount = 100 * 10 ** 18;
+        uint128 nonce = MockDelegate(user).nonce();
+
+        bytes memory swapData = abi.encodeWithSelector(
+            mockSwap.mockSwap.selector, address(badToken), address(tokenB), swapAmount, 95 * 10 ** 18
+        );
+
+        bytes memory signature = _signApproveThenExecute(
+            USER_PRIVATE_KEY,
+            user,
+            nonce,
+            uint32(block.timestamp + 86400),
+            address(badToken),
+            address(mockSwap),
+            swapAmount,
+            address(mockSwap),
+            0,
+            swapData
+        );
+
+        bytes memory fallbackData = _constructFallbackCalldata(
+            bytes1(0x10), // approveThenExecute no return
+            signature,
+            nonce,
+            uint32(block.timestamp + 86400),
+            abi.encodePacked(
+                address(badToken),
+                address(mockSwap),
+                swapAmount,
+                address(mockSwap),
+                _fallbackEncodeEth(0),
+                swapData
+            )
+        );
+
+        vm.prank(paymaster);
+        vm.expectRevert(bytes4(keccak256("ApprovalReturnFalse()")));
+        (bool success,) = address(MockDelegate(user)).call(fallbackData);
         vm.stopPrank();
     }
 }
