@@ -52,7 +52,24 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         0xc38de38f81afb4e47772eb84f2d55219fbb4361b588139d3eadcf0cf13dc39cc;
     // Original: keccak256("BurnSessionCounter(uint128 counter)")
 
-    uint128 public nonce;
+    //uint128 public nonce;
+
+    struct State {
+        uint128 nonce;
+        mapping(uint128 => bool) expiredSessionCounters;
+    }
+
+    bytes32 internal constant STATE_STORAGE_POSITION = 0x34d5be385818fa5c8c4e7f9d5a028251d28ebab8aaf203a072d1dde2d49a1100;
+    // Original: abi.encode(uint256(keccak256("TKGasDelegate.state")) - 1) & ~bytes32(uint256(0xff))
+    function _getStateStorage() internal pure returns (State storage $) {
+        assembly {
+            $.slot := STATE_STORAGE_POSITION
+        }
+    }
+
+    function nonce() external view returns (uint128) {
+        return _getStateStorage().nonce;
+    }
 
     mapping(uint128 => bool) public expiredSessionCounters;
 
@@ -305,23 +322,25 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
     function _consumeNonce(bytes calldata _nonceBytes) internal {
         uint128 nonceValue;
+        State storage state = _getStateStorage();
         assembly {
             nonceValue := shr(128, calldataload(_nonceBytes.offset))
         }
-        if (nonceValue != nonce) {
+        if (nonceValue != state.nonce) {
             revert InvalidNonce();
         }
         unchecked {
-            ++nonce;
+            ++state.nonce;
         }
     }
 
     function _consumeNonce(uint128 _nonce) internal {
-        if (_nonce != nonce) {
+        State storage state = _getStateStorage();
+        if (_nonce != state.nonce) {    
             revert InvalidNonce();
         }
         unchecked {
-            ++nonce;
+            ++state.nonce;
         }
     }
 
@@ -984,7 +1003,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             revert NotSelf();
         }
         unchecked {
-            ++nonce;
+            ++_getStateStorage().nonce;
         }
     }
 
