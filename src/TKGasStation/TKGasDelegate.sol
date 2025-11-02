@@ -1945,6 +1945,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return 0xbc197c81;
     }
 
+    function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
+        return _interfaceId == 0x01ffc9a7 // ERC165 Interface ID
+            || _interfaceId == 0x150b7a02 // ERC721Receiver Interface ID
+            || _interfaceId == 0x4e2312e0 // ERC1155Receiver Interface ID (onERC1155Received)
+            || _interfaceId == 0xbc197c81; // ERC1155Receiver Interface ID (onERC1155BatchReceived)
+    }
+
     // View functions
     function hashExecution(
         uint128 _nonce,
