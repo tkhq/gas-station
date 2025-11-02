@@ -144,5 +144,4 @@ interface ITKGasDelegate is IBatchExecution {
         returns (bytes32);
 
     function hashBurnSessionCounter(uint128 _counter) external view returns (bytes32);
-
 }

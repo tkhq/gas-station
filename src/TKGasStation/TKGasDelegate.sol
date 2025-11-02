@@ -52,14 +52,15 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         0xc38de38f81afb4e47772eb84f2d55219fbb4361b588139d3eadcf0cf13dc39cc;
     // Original: keccak256("BurnSessionCounter(uint128 counter)")
 
-
     struct State {
         uint128 nonce;
         mapping(bytes16 => bool) expiredSessionCounters;
     }
 
-    bytes32 internal constant STATE_STORAGE_POSITION = 0x34d5be385818fa5c8c4e7f9d5a028251d28ebab8aaf203a072d1dde2d49a1100;
+    bytes32 internal constant STATE_STORAGE_POSITION =
+        0x34d5be385818fa5c8c4e7f9d5a028251d28ebab8aaf203a072d1dde2d49a1100;
     // Original: abi.encode(uint256(keccak256("TKGasDelegate.state")) - 1) & ~bytes32(uint256(0xff))
+
     function _getStateStorage() internal pure returns (State storage $) {
         assembly {
             $.slot := STATE_STORAGE_POSITION
@@ -69,7 +70,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     function nonce() external view returns (uint128) {
         return _getStateStorage().nonce;
     }
-
 
     function checkSessionCounterExpired(uint128 _counter) external view returns (bool) {
         return _getStateStorage().expiredSessionCounters[bytes16(_counter)];
@@ -334,7 +334,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
     function _consumeNonce(uint128 _nonce) internal {
         State storage state = _getStateStorage();
-        if (_nonce != state.nonce) {    
+        if (_nonce != state.nonce) {
             revert InvalidNonce();
         }
         unchecked {
@@ -1514,7 +1514,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         if (ECDSA.recoverCalldata(hash, _signature) != address(this)) {
             revert NotSelf();
         }
-        _getStateStorage().expiredSessionCounters[bytes16(_counter)] = true; 
+        _getStateStorage().expiredSessionCounters[bytes16(_counter)] = true;
     }
 
     function burnSessionCounter(uint128 _counter) external {
@@ -2102,5 +2102,4 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         }
         return _hashTypedData(hash);
     }
-
 }

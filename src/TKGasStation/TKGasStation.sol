@@ -30,8 +30,8 @@ contract TKGasStation is ITKGasStation {
             revert NotDelegated();
         }
 
-        if(bytes1(data[21]) == 0x00) { // check if the first byte is 0x00
-
+        if (bytes1(data[21]) == 0x00) {
+            // check if the first byte is 0x00
             bytes1 functionSelector = bytes1(data[22] & 0xf0); // mask the last nibble
 
             // only allow execute functions, no session functions
@@ -255,15 +255,10 @@ contract TKGasStation is ITKGasStation {
         return ITKGasDelegate(_targetEoA).hashBatchExecution(_nonce, _deadline, _calls);
     }
 
-    function hashBurnSessionCounter(address _targetEoA, uint128 _counter)
-        external
-        view
-        returns (bytes32)
-    {
+    function hashBurnSessionCounter(address _targetEoA, uint128 _counter) external view returns (bytes32) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
         return ITKGasDelegate(_targetEoA).hashBurnSessionCounter(_counter);
     }
-
 }

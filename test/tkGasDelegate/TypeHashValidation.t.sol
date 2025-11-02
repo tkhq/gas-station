@@ -162,9 +162,7 @@ contract TypeHashValidationTest is Test {
 
         // Verify the hash is non-zero and deterministic
         assertTrue(hash != bytes32(0), "BurnSessionCounter hash should not be zero");
-        assertEq(
-            hash, delegate.hashBurnSessionCounter(counter), "BurnSessionCounter hash should be deterministic"
-        );
+        assertEq(hash, delegate.hashBurnSessionCounter(counter), "BurnSessionCounter hash should be deterministic");
     }
 
     /**
