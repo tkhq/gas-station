@@ -10,10 +10,14 @@ interface ITKGasDelegate is IBatchExecution {
 
     function checkSessionCounterExpired(uint128 _counter) external view returns (bool);
 
+    function supportsInterface(bytes4 _interfaceId) external pure returns (bool);
+
     // Execute functions
     function executeReturns(bytes calldata data) external returns (bytes memory);
 
     function execute(bytes calldata data) external;
+
+    function executeNoValueNoReturn(bytes calldata data) external;
 
     function executeReturns(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bytes memory);
 
