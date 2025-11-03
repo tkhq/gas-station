@@ -61,7 +61,7 @@ contract BatchSessionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
 
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
+        vm.expectRevert(TKGasDelegate.InvalidToContract.selector);
         MockDelegate(user).executeBatchSession(calls, data);
         vm.stopPrank();
     }
@@ -188,7 +188,7 @@ contract BatchSessionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
 
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
+        vm.expectRevert(TKGasDelegate.InvalidToContract.selector);
         MockDelegate(user).executeBatchSession(calls, data);
         vm.stopPrank();
     }
@@ -318,7 +318,7 @@ contract BatchSessionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), address(mockToken));
 
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
+        vm.expectRevert(TKGasDelegate.InvalidToContract.selector);
         MockDelegate(user).executeBatchSession(calls, data);
         vm.stopPrank();
     }
@@ -501,7 +501,7 @@ contract BatchSessionTest is TKGasDelegateBase {
         });
 
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
+        vm.expectRevert(TKGasDelegate.InvalidToContract.selector);
         MockDelegate(user).executeBatchSession(abi.encodePacked(data, abi.encode(attackCalls)));
         vm.stopPrank();
     }
@@ -531,7 +531,7 @@ contract BatchSessionTest is TKGasDelegateBase {
         });
 
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.InvalidOutputContract.selector);
+        vm.expectRevert(TKGasDelegate.InvalidToContract.selector);
         MockDelegate(user).executeBatchSession(attackCalls, data);
         vm.stopPrank();
     }

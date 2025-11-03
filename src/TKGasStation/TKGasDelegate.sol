@@ -11,7 +11,7 @@ import {IERC1155Receiver} from "./interfaces/IERC1155Receiver.sol";
 contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDelegate {
     error BatchSizeExceeded();
     error DeadlineExceeded();
-    error InvalidOutputContract();
+    error InvalidToContract();
     error InvalidNonce();
     error InvalidCounter();
     error NotSelf();
@@ -1198,7 +1198,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             address outputContract = execution.to;
             // do not cache execution.data - leave it as calldata
             if (outputContract != _outputContract) {
-                revert InvalidOutputContract();
+                revert InvalidToContract();
             }
             (bool success, bytes memory result) = ethAmount == 0
                 ? outputContract.call(execution.data)
@@ -1255,7 +1255,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             uint256 ethAmount = execution.value;
             address outputContract = execution.to;
             if (bytes20(outputContract) != bytes20(_outputContractBytes)) {
-                revert InvalidOutputContract();
+                revert InvalidToContract();
             }
             bytes calldata _callData = execution.data;
             assembly {
@@ -1315,7 +1315,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
             // Validate that all calls are to the same output contract
             if (outputContract != _outputContract) {
-                revert InvalidOutputContract();
+                revert InvalidToContract();
             }
 
             assembly {
