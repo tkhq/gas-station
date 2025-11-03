@@ -21,4 +21,32 @@ contract MockDelegate is TKGasDelegate {
     function external_requireCounter(bytes calldata _counterBytes) external view {
         _requireCounter(_counterBytes);
     }
+
+    function external_EXECUTION_TYPEHASH() external pure returns (bytes32) {
+        return EXECUTION_TYPEHASH;
+    }
+
+    function external_APPROVE_THEN_EXECUTE_TYPEHASH() external pure returns (bytes32) {
+        return APPROVE_THEN_EXECUTE_TYPEHASH;
+    }
+
+    function external_BATCH_EXECUTION_TYPEHASH() external pure returns (bytes32) {
+        return BATCH_EXECUTION_TYPEHASH;
+    }
+
+    function external_BURN_NONCE_TYPEHASH() external pure returns (bytes32) {
+        return BURN_NONCE_TYPEHASH;
+    }
+
+    function external_SESSION_EXECUTION_TYPEHASH() external pure returns (bytes32) {
+        return SESSION_EXECUTION_TYPEHASH;
+    }
+
+    function external_ARBITRARY_SESSION_EXECUTION_TYPEHASH() external pure returns (bytes32) {
+        return ARBITRARY_SESSION_EXECUTION_TYPEHASH;
+    }
+
+    function external_BURN_SESSION_COUNTER_TYPEHASH() external pure returns (bytes32) {
+        return BURN_SESSION_COUNTER_TYPEHASH;
+    }
 }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 import "forge-std/Test.sol";
-import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
+import {MockDelegate} from "../mocks/MockDelegate.t.sol";
 
 /**
  * @title TypeHashValidationTest
@@ -13,10 +13,10 @@ import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
  *      do not match their type string definitions, which would break signature validation.
  */
 contract TypeHashValidationTest is Test {
-    TKGasDelegate delegate;
+    MockDelegate delegate;
 
     function setUp() public {
-        delegate = new TKGasDelegate();
+        delegate = new MockDelegate();
     }
 
     /**
@@ -24,33 +24,32 @@ contract TypeHashValidationTest is Test {
      * @dev This test ensures that the hardcoded typehash values in the contract are correct.
      *      If any of these assertions fail, the contract's typehash constants need to be updated.
      */
-    function testValidateAllTypeHashConstants() public pure {
+    function testValidateAllTypeHashConstants() public view {
         // Expected typehash values calculated from type strings
         bytes32 expectedExecutionTypehash = keccak256(
-            "Execution(uint128 nonce,uint32 deadline,address outputContract,uint256 ethAmount,bytes arguments)"
+            "Execution(uint128 nonce,uint32 deadline,address to,uint256 value,bytes data)"
         );
         bytes32 expectedApproveThenExecuteTypehash = keccak256(
-            "ApproveThenExecute(uint128 nonce,uint32 deadline,address erc20Contract,address spender,uint256 approveAmount,address outputContract,uint256 ethAmount,bytes arguments)"
+            "ApproveThenExecute(uint128 nonce,uint32 deadline,address erc20Contract,address spender,uint256 approveAmount,address to,uint256 value,bytes data)"
         );
         bytes32 expectedBatchExecutionTypehash = keccak256(
             "BatchExecution(uint128 nonce,uint32 deadline,Call[] calls)Call(address to,uint256 value,bytes data)"
         );
         bytes32 expectedBurnNonceTypehash = keccak256("BurnNonce(uint128 nonce)");
         bytes32 expectedSessionExecutionTypehash =
-            keccak256("SessionExecution(uint128 counter,uint32 deadline,address sender,address outputContract)");
+            keccak256("SessionExecution(uint128 counter,uint32 deadline,address sender,address to)");
         bytes32 expectedArbitrarySessionExecutionTypehash =
             keccak256("ArbitrarySessionExecution(uint128 counter,uint32 deadline,address sender)");
-        bytes32 expectedBurnSessionCounterTypehash = keccak256("BurnSessionCounter(uint128 counter,address sender)");
+        bytes32 expectedBurnSessionCounterTypehash = keccak256("BurnSessionCounter(uint128 counter)");
 
         // Actual typehash values from the contract
-        bytes32 actualExecutionTypehash = 0x57302c9443fd61915dc047bbb218f4d7a49414900b195b59a018caf55444c792;
-        bytes32 actualApproveThenExecuteTypehash = 0x5307a057487d127f168eaec165127bc70635758316af883df210876a14cac22a;
-        bytes32 actualBatchExecutionTypehash = 0x14007e8c5dd696e52899952d0c28098ab95c056d082adc0d757f91c1306c7f55;
-        bytes32 actualBurnNonceTypehash = 0x1abb8920e48045adda3ed0ce4be4357be95d4aa21af287280f532fc031584bda;
-        bytes32 actualSessionExecutionTypehash = 0x0e5dde950fa96b3a45206cd316b87614dbb6a0c5533671a098088b0b3bb72aff;
-        bytes32 actualArbitrarySessionExecutionTypehash =
-            0x37c1343675452b4c8f9477fbedff7bcc1e7fa8b3bc97a1e58d4e371c86bd64bb;
-        bytes32 actualBurnSessionCounterTypehash = 0x9e83fc2d99981f8f5e9cca6e9253e48163b75f85c9f1e80235a9380203430d4f;
+        bytes32 actualExecutionTypehash = delegate.external_EXECUTION_TYPEHASH();
+        bytes32 actualApproveThenExecuteTypehash = delegate.external_APPROVE_THEN_EXECUTE_TYPEHASH();
+        bytes32 actualBatchExecutionTypehash = delegate.external_BATCH_EXECUTION_TYPEHASH();
+        bytes32 actualBurnNonceTypehash = delegate.external_BURN_NONCE_TYPEHASH();
+        bytes32 actualSessionExecutionTypehash = delegate.external_SESSION_EXECUTION_TYPEHASH();
+        bytes32 actualArbitrarySessionExecutionTypehash = delegate.external_ARBITRARY_SESSION_EXECUTION_TYPEHASH();
+        bytes32 actualBurnSessionCounterTypehash = delegate.external_BURN_SESSION_COUNTER_TYPEHASH();
 
         // Validate each typehash
         assertEq(actualExecutionTypehash, expectedExecutionTypehash, "EXECUTION_TYPEHASH mismatch");

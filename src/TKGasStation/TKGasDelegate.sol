@@ -22,37 +22,38 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     error ApprovalReturnFalse();
 
     // Precomputed selector for DeadlineExceeded(): 0x559895a3
-    bytes4 private constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
-    bytes4 private constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
-    bytes4 private constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
-    bytes4 private constant APPROVAL_RETURN_FALSE_SELECTOR = 0xf572481d;
+    bytes4 internal constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
+    bytes4 internal constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
+    bytes4 internal constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
+    bytes4 internal constant APPROVAL_RETURN_FALSE_SELECTOR = 0xf572481d;
     uint8 public constant MAX_BATCH_SIZE = 20;
 
-    bytes32 private constant EXECUTION_TYPEHASH = 0x57302c9443fd61915dc047bbb218f4d7a49414900b195b59a018caf55444c792;
-    // Original: keccak256("Execution(uint128 nonce,uint32 deadline,address outputContract,uint256 ethAmount,bytes arguments)")
+    bytes32 internal constant EXECUTION_TYPEHASH = 0x06bb52ccb5d61c4f9c5baafc0affaba32c4d02864c91221ad411291324aeea2e;
+    // keccak256("Execution(uint128 nonce,uint32 deadline,address to,uint256 value,bytes data)")
 
-    bytes32 private constant APPROVE_THEN_EXECUTE_TYPEHASH =
-        0x5307a057487d127f168eaec165127bc70635758316af883df210876a14cac22a;
-    // Original: keccak256("ApproveThenExecute(uint128 nonce,uint32 deadline,address erc20Contract,address spender,uint256 approveAmount,address outputContract,uint256 ethAmount,bytes arguments)")
+    bytes32 internal constant APPROVE_THEN_EXECUTE_TYPEHASH =
+        0x321d2e8c030c2c64001a1895d0f865dd0dc361666bd775ccb835b1a8bc2d41e3;
+    // keccak256("ApproveThenExecute(uint128 nonce,uint32 deadline,address erc20Contract,address spender,uint256 approveAmount,address to,uint256 value,bytes data)")
 
-    bytes32 private constant BATCH_EXECUTION_TYPEHASH =
+    bytes32 internal constant BATCH_EXECUTION_TYPEHASH =
         0x14007e8c5dd696e52899952d0c28098ab95c056d082adc0d757f91c1306c7f55;
-    // Original: keccak256("BatchExecution(uint128 nonce,uint32 deadline,Call[] calls)Call(address to,uint256 value,bytes data)")
+    // keccak256("BatchExecution(uint128 nonce,uint32 deadline,Call[] calls)Call(address to,uint256 value,bytes data)")
 
-    bytes32 private constant BURN_NONCE_TYPEHASH = 0x1abb8920e48045adda3ed0ce4be4357be95d4aa21af287280f532fc031584bda;
-    // Original: keccak256("BurnNonce(uint128 nonce)")
+    bytes32 internal constant BURN_NONCE_TYPEHASH = 0x1abb8920e48045adda3ed0ce4be4357be95d4aa21af287280f532fc031584bda;
+    // keccak256("BurnNonce(uint128 nonce)")
 
-    bytes32 private constant SESSION_EXECUTION_TYPEHASH =
-        0x0e5dde950fa96b3a45206cd316b87614dbb6a0c5533671a098088b0b3bb72aff;
-    // Original: keccak256("SessionExecution(uint128 counter,uint32 deadline,address sender,address outputContract)")
+    bytes32 internal constant SESSION_EXECUTION_TYPEHASH =
+        0xfe77dfae033808a0d3fd8ba43e104e84622b2d23bd43e92d96df863e280843e6;
+    // keccak256("SessionExecution(uint128 counter,uint32 deadline,address sender,address to)")
 
-    bytes32 private constant ARBITRARY_SESSION_EXECUTION_TYPEHASH =
+    bytes32 internal constant ARBITRARY_SESSION_EXECUTION_TYPEHASH =
         0x37c1343675452b4c8f9477fbedff7bcc1e7fa8b3bc97a1e58d4e371c86bd64bb;
-    // Original: keccak256("ArbitrarySessionExecution(uint128 counter,uint32 deadline,address sender)")
+    // keccak256("ArbitrarySessionExecution(uint128 counter,uint32 deadline,address sender)")
 
-    bytes32 private constant BURN_SESSION_COUNTER_TYPEHASH =
-        0xc38de38f81afb4e47772eb84f2d55219fbb4361b588139d3eadcf0cf13dc39cc;
-    // Original: keccak256("BurnSessionCounter(uint128 counter)")
+    bytes32 internal constant BURN_SESSION_COUNTER_TYPEHASH =
+        0x601e2106a9a69d50c3489343bfc805c6ad1b051e27f87c20ed3735e4fdbb0826;
+    // keccak256("BurnSessionCounter(uint128 counter)")
+
 
     struct State {
         uint128 nonce;
@@ -366,17 +367,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         version = "1";
     }
 
-    function executeReturns(address _to, uint256 _ethAmount, bytes calldata _data) external returns (bytes memory) {
-        bytes memory result = _ethAmount == 0
+    function executeReturns(address _to, uint256 _value, bytes calldata _data) external returns (bytes memory) {
+        bytes memory result = _value == 0
             ? _executeNoValue(_data[0:65], _data[65:81], _data[81:85], _to, _data[85:])
-            : _executeWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
+            : _executeWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
         return result;
     }
 
-    function execute(address _to, uint256 _ethAmount, bytes calldata _data) external {
-        _ethAmount == 0
+    function execute(address _to, uint256 _value, bytes calldata _data) external {
+        _value == 0
             ? _executeNoValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _data[85:])
-            : _executeWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
+            : _executeWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
     }
 
     function executeReturns(bytes calldata data) external returns (bytes memory) {
@@ -443,28 +444,28 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
 
     function approveThenExecuteReturns(
         address _to,
-        uint256 _ethAmount,
+        uint256 _value,
         address _erc20,
         address _spender,
         uint256 _approveAmount,
         bytes calldata _data
     ) external returns (bytes memory) {
         bytes memory result = _approveThenExecuteWithParams(
-            _data[0:65], _data[65:81], _data[81:85], _erc20, _spender, _approveAmount, _to, _ethAmount, _data[85:]
+            _data[0:65], _data[65:81], _data[81:85], _erc20, _spender, _approveAmount, _to, _value, _data[85:]
         );
         return result;
     }
 
     function approveThenExecute(
         address _to,
-        uint256 _ethAmount,
+        uint256 _value,
         address _erc20,
         address _spender,
         uint256 _approveAmount,
         bytes calldata _data
     ) external {
         _approveThenExecuteNoReturnWithParams(
-            _data[0:65], _data[65:81], _data[81:85], _erc20, _spender, _approveAmount, _to, _ethAmount, _data[85:]
+            _data[0:65], _data[65:81], _data[81:85], _erc20, _spender, _approveAmount, _to, _value, _data[85:]
         );
     }
 
@@ -1570,17 +1571,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return result;
     }
 
-    function executeSessionReturns(address _to, uint256 _ethAmount, bytes calldata _data)
+    function executeSessionReturns(address _to, uint256 _value, bytes calldata _data)
         external
         returns (bytes memory)
     {
         bytes memory result =
-            _executeSessionWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
+            _executeSessionWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
         return result;
     }
 
-    function executeSession(address _to, uint256 _ethAmount, bytes calldata _data) external {
-        _executeSessionWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
+    function executeSession(address _to, uint256 _value, bytes calldata _data) external {
+        _executeSessionWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
     }
 
     function executeBatchSessionReturns(bytes calldata data) external returns (bytes[] memory) {
@@ -1632,17 +1633,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return result;
     }
 
-    function executeSessionArbitraryReturns(address _to, uint256 _ethAmount, bytes calldata _data)
+    function executeSessionArbitraryReturns(address _to, uint256 _value, bytes calldata _data)
         external
         returns (bytes memory)
     {
         bytes memory result =
-            _executeSessionArbitraryWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
+            _executeSessionArbitraryWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
         return result;
     }
 
-    function executeSessionArbitrary(address _to, uint256 _ethAmount, bytes calldata _data) external {
-        _executeSessionArbitraryWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _ethAmount, _data[85:]);
+    function executeSessionArbitrary(address _to, uint256 _value, bytes calldata _data) external {
+        _executeSessionArbitraryWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
     }
 
     function executeBatchSessionArbitraryReturns(bytes calldata data) external returns (bytes[] memory) {
@@ -2002,19 +2003,19 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     function hashExecution(
         uint128 _nonce,
         uint32 _deadline,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
+        address _to,
+        uint256 _value,
+        bytes calldata _data
     ) external view returns (bytes32) {
-        bytes32 argsHash = keccak256(_arguments);
+        bytes32 argsHash = keccak256(_data);
         bytes32 hash;
         assembly {
             let ptr := mload(0x40)
             mstore(ptr, EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _nonce)
             mstore(add(ptr, 0x40), _deadline)
-            mstore(add(ptr, 0x60), _outputContract)
-            mstore(add(ptr, 0x80), _ethAmount)
+            mstore(add(ptr, 0x60), _to)
+            mstore(add(ptr, 0x80), _value)
             mstore(add(ptr, 0xa0), argsHash)
             hash := keccak256(ptr, 0xc0)
             mstore(0x40, add(ptr, 0xc0)) // Update free memory pointer
@@ -2040,9 +2041,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         address _erc20Contract,
         address _spender,
         uint256 _approveAmount,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
+        address _to,
+        uint256 _value,
+        bytes calldata _data
     ) external view returns (bytes32) {
         bytes32 hash;
         assembly {
@@ -2054,12 +2055,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x60), _erc20Contract)
             mstore(add(ptr, 0x80), _spender)
             mstore(add(ptr, 0xa0), _approveAmount)
-            mstore(add(ptr, 0xc0), _outputContract)
-            mstore(add(ptr, 0xe0), _ethAmount)
+            mstore(add(ptr, 0xc0), _to)
+            mstore(add(ptr, 0xe0), _value)
             // Compute argsHash in assembly
             let argsPtr := add(ptr, 0x100)
-            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
-            let argsHash := keccak256(argsPtr, _arguments.length)
+            calldatacopy(argsPtr, _data.offset, _data.length)
+            let argsHash := keccak256(argsPtr, _data.length)
             mstore(add(ptr, 0x100), argsHash)
             // total = 0x120 (288) bytes
             hash := keccak256(ptr, 0x120)
@@ -2068,7 +2069,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return _hashTypedData(hash);
     }
 
-    function hashSessionExecution(uint128 _counter, uint32 _deadline, address _sender, address _outputContract)
+    function hashSessionExecution(uint128 _counter, uint32 _deadline, address _sender, address _to)
         external
         view
         returns (bytes32)
@@ -2080,7 +2081,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), _sender)
-            mstore(add(ptr, 0x80), _outputContract)
+            mstore(add(ptr, 0x80), _to)
             hash := keccak256(ptr, 0xa0)
             mstore(0x40, add(ptr, 0xa0)) // Update free memory pointer
         }

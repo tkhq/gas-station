@@ -41,7 +41,7 @@ contract BatchSessionTest is TKGasDelegateBase {
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 
-    function testBatchSessionExecute_InvalidOutputContract_Reverts() public {
+    function testBatchSessionExecute_InvalidToContract_Reverts() public {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
         address other = makeAddr("otherContract");
@@ -297,7 +297,7 @@ contract BatchSessionTest is TKGasDelegateBase {
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 
-    function testBatchSessionExecuteParameterized_InvalidOutputContract_Reverts() public {
+    function testBatchSessionExecuteParameterized_InvalidToContract_Reverts() public {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
         address other = makeAddr("otherContract");
