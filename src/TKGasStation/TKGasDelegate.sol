@@ -7,8 +7,9 @@ import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
 import {ITKGasDelegate} from "./interfaces/ITKGasDelegate.sol";
 import {IERC721Receiver} from "./interfaces/IERC721Receiver.sol";
 import {IERC1155Receiver} from "./interfaces/IERC1155Receiver.sol";
+import {IERC1721} from "./interfaces/IERC1721.sol";
 
-contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDelegate {
+contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, ITKGasDelegate {
     error BatchSizeExceeded();
     error DeadlineExceeded();
     error InvalidToContract();
@@ -26,6 +27,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     bytes4 internal constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
     bytes4 internal constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
     bytes4 internal constant APPROVAL_RETURN_FALSE_SELECTOR = 0xf572481d;
+    bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
     uint8 public constant MAX_BATCH_SIZE = 20;
 
     bytes32 internal constant EXECUTION_TYPEHASH = 0x06bb52ccb5d61c4f9c5baafc0affaba32c4d02864c91221ad411291324aeea2e;
@@ -310,14 +312,24 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     }
 
     function _requireSelf(bytes32 _hash, bytes calldata _signature) internal view {
-        if (ECDSA.recoverCalldata(_hash, _signature) != address(this)) {
+        if (!_validateSignature(_hash, _signature)) {
             revert NotSelf();
         }
     }
 
+    function _validateSignature(bytes32 _hash, bytes calldata _signature) internal view returns (bool) {
+        return ECDSA.recoverCalldata(_hash, _signature) == address(this);
+    }
+
     function validateSignature(bytes32 _hash, bytes calldata _signature) external view returns (bool) {
-        _requireSelf(_hash, _signature);
-        return true;
+        return _validateSignature(_hash, _signature);
+    }
+
+    function isValidSignature(bytes32 _hash, bytes calldata _signature) external view returns (bytes4) {
+        if (_validateSignature(_hash, _signature)) {
+            return ERC1271_MAGIC_VALUE;
+        }
+        return 0xffffffff;
     }
 
     function _consumeNonce(bytes calldata _nonceBytes) internal {
