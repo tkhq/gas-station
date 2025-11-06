@@ -26,9 +26,8 @@ contract TypeHashValidationTest is Test {
      */
     function testValidateAllTypeHashConstants() public view {
         // Expected typehash values calculated from type strings
-        bytes32 expectedExecutionTypehash = keccak256(
-            "Execution(uint128 nonce,uint32 deadline,address to,uint256 value,bytes data)"
-        );
+        bytes32 expectedExecutionTypehash =
+            keccak256("Execution(uint128 nonce,uint32 deadline,address to,uint256 value,bytes data)");
         bytes32 expectedApproveThenExecuteTypehash = keccak256(
             "ApproveThenExecute(uint128 nonce,uint32 deadline,address erc20Contract,address spender,uint256 approveAmount,address to,uint256 value,bytes data)"
         );
