@@ -66,7 +66,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     // Original: abi.encode(uint256(keccak256("TKGasDelegate.state")) - 1) & ~bytes32(uint256(0xff))
 
     function _getStateStorage() internal pure returns (State storage $) {
-        assembly {
+        assembly ("memory-safe") {
             $.slot := STATE_STORAGE_POSITION
         }
     }
@@ -95,7 +95,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             bytes calldata outputContractBytes;
             uint256 ethAmount;
             bytes calldata arguments;
-            assembly {
+            assembly ("memory-safe") {
                 outputContractBytes.offset := nonceEnd
                 outputContractBytes.length := 20
                 let loaded := calldataload(add(nonceEnd, 20))
@@ -105,18 +105,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             }
             if (ethAmount == 0) {
                 address outputContract;
-                assembly {
+                assembly ("memory-safe") {
                     outputContract := shr(96, calldataload(nonceEnd))
                 }
                 _executeNoValueNoReturn(signature, nonceBytes, deadlineBytes, outputContract, arguments);
             } else {
                 address outputContract;
-                assembly {
+                assembly ("memory-safe") {
                     outputContract := shr(96, calldataload(nonceEnd))
                 }
                 _executeWithValueNoReturn(signature, nonceBytes, deadlineBytes, outputContract, ethAmount, arguments);
             }
-            assembly {
+            assembly ("memory-safe") {
                 return(0x00, 0x00)
             }
         } else if (functionSelector == bytes1(0x10)) {
@@ -132,19 +132,19 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 msg.data[nonceEnd + 92:nonceEnd + 102], //ethAmountBytes (10 bytes)
                 msg.data[nonceEnd + 102:] //arguments
             );
-            assembly {
+            assembly ("memory-safe") {
                 return(0x00, 0x00)
             }
         } else if (functionSelector == bytes1(0x20)) {
             // executeBatch no return
             _executeBatchNoReturn(signature, nonceBytes, deadlineBytes, msg.data[nonceEnd:]);
-            assembly {
+            assembly ("memory-safe") {
                 return(0x00, 0x00)
             }
         } else if (functionSelector == bytes1(0x30)) {
             uint256 ethAmount;
             bytes calldata arguments;
-            assembly {
+            assembly ("memory-safe") {
                 let w := calldataload(107) // Updated offset for deadline
                 ethAmount := shr(176, w) // (32-10)*8
                 arguments.offset := add(107, 10) // Skip the 10-byte ethAmount
@@ -153,25 +153,25 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             _executeSessionWithValueNoReturn(
                 signature, nonceBytes, deadlineBytes, msg.data[nonceEnd:nonceEnd + 20], ethAmount, arguments
             );
-            assembly {
+            assembly ("memory-safe") {
                 return(0x00, 0x00)
             }
         } else if (functionSelector == bytes1(0x40)) {
             // executeBatchSession no return
             IBatchExecution.Call[] calldata calls;
-            assembly {
+            assembly ("memory-safe") {
                 calls.offset := add(107, 0x40) // Updated offset for deadline
                 calls.length := calldataload(add(107, 0x20))
             }
             _executeBatchSessionNoReturn(signature, nonceBytes, deadlineBytes, msg.data[nonceEnd:nonceEnd + 20], calls);
-            assembly {
+            assembly ("memory-safe") {
                 return(0x00, 0x00)
             }
         } else if (functionSelector == bytes1(0x50)) {
             // executeSessionArbitraryWithValue no return
             uint256 ethAmount;
             bytes calldata arguments;
-            assembly {
+            assembly ("memory-safe") {
                 let loaded := calldataload(107) // Updated offset for deadline
                 ethAmount := shr(176, loaded)
                 arguments.offset := add(107, 10) // Skip the 10-byte ethAmount
@@ -180,18 +180,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             _executeSessionArbitraryWithValueNoReturn(
                 signature, nonceBytes, deadlineBytes, msg.data[nonceEnd:nonceEnd + 20], ethAmount, arguments
             );
-            assembly {
+            assembly ("memory-safe") {
                 return(0x00, 0x00)
             }
         } else if (functionSelector == bytes1(0x60)) {
             // executeBatchSessionArbitrary
             IBatchExecution.Call[] calldata calls;
-            assembly {
+            assembly ("memory-safe") {
                 calls.offset := add(87, 0x40) // Updated offset for deadline (no outputContract)
                 calls.length := calldataload(add(87, 0x20))
             }
             _executeBatchSessionArbitraryNoReturn(signature, nonceBytes, deadlineBytes, calls);
-            assembly {
+            assembly ("memory-safe") {
                 return(0x00, 0x00)
             }
         }
@@ -201,7 +201,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             address outputContract;
             uint256 ethAmount;
             bytes calldata arguments;
-            assembly {
+            assembly ("memory-safe") {
                 let data := calldataload(nonceEnd)
                 outputContract := shr(96, data)
                 let loaded := calldataload(add(nonceEnd, 20))
@@ -221,7 +221,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
             address outputContract;
             uint256 ethAmount;
-            assembly {
+            assembly ("memory-safe") {
                 outputContract := shr(96, calldataload(159)) // Updated offset for deadline
                 let loaded := calldataload(179) // Updated offset for deadline
                 ethAmount := shr(176, loaded)
@@ -246,7 +246,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             address outputContract;
             uint256 ethAmount;
             bytes calldata arguments;
-            assembly {
+            assembly ("memory-safe") {
                 outputContract := shr(96, calldataload(87)) // Updated offset for deadline
                 let w := calldataload(107) // Updated offset for deadline
                 ethAmount := shr(176, w) // (32-10)*8
@@ -261,7 +261,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             // executeBatchSession with return
             address outputContract;
             IBatchExecution.Call[] calldata calls;
-            assembly {
+            assembly ("memory-safe") {
                 outputContract := shr(96, calldataload(87)) // Updated offset for deadline
                 calls.offset := add(107, 0x40) // Updated offset for deadline
                 calls.length := calldataload(add(107, 0x20))
@@ -274,7 +274,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             address outputContract;
             uint256 ethAmount;
             bytes calldata arguments;
-            assembly {
+            assembly ("memory-safe") {
                 outputContract := shr(96, calldataload(87)) // Updated offset for deadline
                 let loaded := calldataload(107) // Updated offset for deadline
                 ethAmount := shr(176, loaded)
@@ -288,7 +288,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         } else if (functionSelector == bytes1(0x61)) {
             // executeBatchSessionArbitrary with return
             IBatchExecution.Call[] calldata calls;
-            assembly {
+            assembly ("memory-safe") {
                 calls.offset := add(87, 0x40) // Updated offset for deadline (no outputContract)
                 calls.length := calldataload(add(87, 0x20))
             }
@@ -335,7 +335,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     function _consumeNonce(bytes calldata _nonceBytes) internal {
         uint128 nonceValue;
         State storage state = _getStateStorage();
-        assembly {
+        assembly ("memory-safe") {
             nonceValue := shr(128, calldataload(_nonceBytes.offset))
         }
         if (nonceValue != state.nonce) {
@@ -394,7 +394,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     function executeReturns(bytes calldata data) external returns (bytes memory) {
         address to;
         uint256 value;
-        assembly {
+        assembly ("memory-safe") {
             // address is 20 bytes immediately after deadline
             to := shr(96, calldataload(add(data.offset, 85)))
             // value is 32 bytes immediately after address
@@ -409,7 +409,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     function execute(bytes calldata data) external {
         address to;
         uint256 value;
-        assembly {
+        assembly ("memory-safe") {
             // address is 20 bytes immediately after deadline
             to := shr(96, calldataload(add(data.offset, 85)))
             // value is 32 bytes immediately after address
@@ -424,7 +424,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     function executeNoValueNoReturn(bytes calldata data) external {
         address to;
-        assembly {
+        assembly ("memory-safe") {
             // address is 20 bytes immediately after deadline
             to := shr(96, calldataload(add(data.offset, 85)))
         }
@@ -435,7 +435,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Layout: [signature(65)][nonce(16)][deadline(4)][erc20(20)][spender(20)][approveAmount(32)][output(20)][eth(32)][args]
         address to;
         uint256 value;
-        assembly {
+        assembly ("memory-safe") {
             to := shr(96, calldataload(add(_data.offset, 157)))
             value := calldataload(add(_data.offset, 177))
         }
@@ -492,7 +492,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _arguments
     ) internal returns (bytes memory) {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -521,12 +521,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x100), argsHash)
             // total = 0x120 (288) bytes
             hash := keccak256(ptr, 0x120)
+            mstore(0x40, add(ptr, 0x120))
         }
         hash = _hashTypedData(hash);
 
         _validateExecute(hash, _signature, _nonceBytes);
         // Build calldata for approve(spender, amount) cheaply in assembly and call token
-        assembly {
+        assembly ("memory-safe") {
             let token := shr(96, calldataload(_erc20Bytes.offset))
             let ptr := mload(0x40)
             mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
@@ -560,6 +561,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 mstore(errorPtr, APPROVAL_RETURN_FALSE_SELECTOR)
                 revert(errorPtr, 0x04)
             }
+            mstore(0x40, add(ptr, 0x64))
         }
         (bool success, bytes memory result) =
             _ethAmount == 0 ? _outputContract.call(_arguments) : _outputContract.call{value: _ethAmount}(_arguments);
@@ -581,7 +583,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _arguments
     ) internal returns (bytes memory) {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -605,13 +607,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x100), argsHash)
             // total = 0x120 (288) bytes
             hash := keccak256(ptr, 0x120)
+            mstore(0x40, add(ptr, 0x120))
         }
         hash = _hashTypedData(hash);
 
         _validateExecute(hash, _signature, _nonceBytes);
 
         // Build calldata for approve(spender, amount) and call token
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
             mstore(add(ptr, 0x04), _spender)
@@ -641,6 +644,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 mstore(0x00, APPROVAL_RETURN_FALSE_SELECTOR)
                 revert(0x00, 0x04)
             }
+            mstore(0x40, add(ptr, 0x64))
         }
 
         (bool success, bytes memory result) =
@@ -663,7 +667,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _arguments
     ) internal {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -687,13 +691,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x100), argsHash)
             // total = 0x120 (288) bytes
             hash := keccak256(ptr, 0x120)
+            mstore(0x40, add(ptr, 0x120))
         }
         hash = _hashTypedData(hash);
 
         _validateExecute(hash, _signature, _nonceBytes);
 
         // Build calldata for approve(spender, amount) and call token
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
             mstore(add(ptr, 0x04), _spender)
@@ -722,13 +727,15 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 mstore(0x00, APPROVAL_RETURN_FALSE_SELECTOR)
                 revert(0x00, 0x04)
             }
+            mstore(0x40, add(ptr, 0x64))
         }
 
         // Execute the call without returning the result
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), _outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            // No need to restore free memory pointer - execution ends immediately
         }
     }
 
@@ -744,7 +751,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _arguments
     ) internal {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -780,6 +787,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let argsHash := keccak256(argsPtr, _arguments.length)
             mstore(add(ptr, 0x100), argsHash)
             hash := keccak256(ptr, 0x120)
+            mstore(0x40, add(ptr, 0x120))
         }
         hash = _hashTypedData(hash);
 
@@ -825,6 +833,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let shiftBits := mul(sub(32, _ethAmountBytes.length), 8)
             let ethVal := shr(shiftBits, rawEth)
             if iszero(call(gas(), outputAddr, ethVal, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            // No need to restore free memory pointer - execution ends immediately
         }
     }
 
@@ -836,7 +845,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _arguments
     ) internal {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -856,6 +865,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let argsHash := keccak256(argsPtr, _arguments.length)
             mstore(add(ptr, 0xa0), argsHash)
             hash := keccak256(ptr, 0xc0)
+            mstore(0x40, add(ptr, 0xc0))
         }
         hash = _hashTypedData(hash);
 
@@ -865,6 +875,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), _outputContract, 0, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            // No need to restore free memory pointer - execution ends immediately
         }
     }
 
@@ -876,7 +887,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _arguments
     ) internal returns (bytes memory) {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -896,6 +907,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let argsHash := keccak256(argsPtr, _arguments.length)
             mstore(add(ptr, 0xa0), argsHash)
             hash := keccak256(ptr, 0xc0)
+            mstore(0x40, add(ptr, 0xc0))
         }
         hash = _hashTypedData(hash);
 
@@ -916,7 +928,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _arguments
     ) internal returns (bytes memory) {
         bytes32 hash; // all this assembly to avoid using abi.encode
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -936,6 +948,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let argsHash := keccak256(argsPtr, _arguments.length)
             mstore(add(ptr, 0xa0), argsHash)
             hash := keccak256(ptr, 0xc0)
+            mstore(0x40, add(ptr, 0xc0))
         }
         hash = _hashTypedData(hash);
 
@@ -957,7 +970,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     ) internal {
         bytes32 argsHash = keccak256(_arguments);
         bytes32 hash; // all this assembly to avoid using abi.encode
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -974,6 +987,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x80), _ethAmount)
             mstore(add(ptr, 0xa0), argsHash)
             hash := keccak256(ptr, 0xc0)
+            mstore(0x40, add(ptr, 0xc0))
         }
         hash = _hashTypedData(hash);
 
@@ -983,6 +997,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            // No need to restore free memory pointer - execution ends immediately
         }
     }
 
@@ -996,7 +1011,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     ) internal {
         bytes32 argsHash = keccak256(_arguments);
         bytes32 hash; // all this assembly to avoid using abi.encode
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1012,6 +1027,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x80), _ethAmount)
             mstore(add(ptr, 0xa0), argsHash)
             hash := keccak256(ptr, 0xc0)
+            mstore(0x40, add(ptr, 0xc0))
         }
         hash = _hashTypedData(hash);
 
@@ -1020,12 +1036,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), _outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            // finish exection, no need to restore free memory pointer // mstore(0x40, add(ptr, _arguments.length))
         }
     }
 
     function burnNonce(bytes calldata _signature, uint128 _nonce) external {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, BURN_NONCE_TYPEHASH)
             mstore(add(ptr, 0x20), _nonce)
@@ -1060,7 +1077,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Check if deadline has passed using calldata
         address sender = msg.sender;
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1075,7 +1092,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x60), sender)
             mstore(add(ptr, 0x80), _outputContract)
             hash := keccak256(ptr, 0xa0)
-            mstore(0x40, add(ptr, 0xa0)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0xa0))
         }
         hash = _hashTypedData(hash);
 
@@ -1099,7 +1116,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     ) internal {
         address sender = msg.sender;
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 // Use precomputed selector and revert with 4-byte custom error
@@ -1115,15 +1132,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let raw := calldataload(_outputContractBytes.offset)
             mstore(add(ptr, 0x80), shr(96, raw))
             hash := keccak256(ptr, 0xa0)
+            mstore(0x40, add(ptr, 0xa0))
         }
         hash = _hashTypedData(hash);
 
         _validateSession(hash, _signature, _counterBytes);
-        assembly {
+        assembly ("memory-safe") {
             let outputContract := shr(96, calldataload(_outputContractBytes.offset))
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            mstore(0x40, add(ptr, _arguments.length))
         }
     }
 
@@ -1137,7 +1156,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     ) internal {
         address sender = msg.sender;
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 // Use precomputed selector and revert with 4-byte custom error
@@ -1152,6 +1171,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x60), sender)
             mstore(add(ptr, 0x80), _outputContract)
             hash := keccak256(ptr, 0xa0)
+            mstore(0x40, add(ptr, 0xa0))
         }
         hash = _hashTypedData(hash);
 
@@ -1160,6 +1180,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), _outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            // No need to restore free memory pointer - execution ends immediately
         }
     }
 
@@ -1177,7 +1198,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
 
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1193,7 +1214,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x60), caller())
             mstore(add(ptr, 0x80), _outputContract)
             hash := keccak256(ptr, 0xa0)
-            mstore(0x40, add(ptr, 0xa0)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0xa0))
         }
         hash = _hashTypedData(hash);
         _validateSession(hash, _signature, _counterBytes);
@@ -1238,7 +1259,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             revert BatchSizeExceeded();
         }
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1254,6 +1275,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let raw := calldataload(_outputContractBytes.offset)
             mstore(add(ptr, 0x80), shr(96, raw))
             hash := keccak256(ptr, 0xa0)
+            mstore(0x40, add(ptr, 0xa0))
         }
         hash = _hashTypedData(hash);
         _validateSession(hash, _signature, _counterBytes);
@@ -1269,10 +1291,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 revert InvalidToContract();
             }
             bytes calldata _callData = execution.data;
-            assembly {
+            assembly ("memory-safe") {
                 let ptr := mload(0x40)
                 calldatacopy(ptr, _callData.offset, _callData.length)
                 if iszero(call(gas(), outputContract, ethAmount, ptr, _callData.length, 0, 0)) { revert(0, 0) }
+                mstore(0x40, add(ptr, _callData.length))
             }
             unchecked {
                 ++i;
@@ -1293,7 +1316,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
         address sender = msg.sender;
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1309,7 +1332,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x60), sender)
             mstore(add(ptr, 0x80), _outputContract)
             hash := keccak256(ptr, 0xa0)
-            mstore(0x40, add(ptr, 0xa0)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0xa0))
         }
         hash = _hashTypedData(hash);
         _validateSession(hash, _signature, _counterBytes);
@@ -1329,10 +1352,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 revert InvalidToContract();
             }
 
-            assembly {
+            assembly ("memory-safe") {
                 let ptr := mload(0x40)
                 calldatacopy(ptr, _callData.offset, _callData.length)
                 if iszero(call(gas(), outputContract, ethAmount, ptr, _callData.length, 0, 0)) { revert(0, 0) }
+                mstore(0x40, add(ptr, _callData.length))
             }
             unchecked {
                 ++i;
@@ -1350,7 +1374,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     ) internal returns (bytes memory) {
         // Check if deadline has passed using calldata
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1366,6 +1390,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), caller())
             hash := keccak256(ptr, 0x80)
+            mstore(0x40, add(ptr, 0x80))
         }
         hash = _hashTypedData(hash);
         _validateSession(hash, _signature, _counterBytes);
@@ -1386,7 +1411,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _arguments
     ) internal {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1400,6 +1425,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), caller())
             hash := keccak256(ptr, 0x80)
+            mstore(0x40, add(ptr, 0x80))
         }
         hash = _hashTypedData(hash);
         _validateSession(hash, _signature, _counterBytes);
@@ -1408,6 +1434,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            //no need to restore free memory pointer - execution ends immediately
         }
     }
 
@@ -1420,7 +1447,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _arguments
     ) internal {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1434,6 +1461,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), caller())
             hash := keccak256(ptr, 0x80)
+            mstore(0x40, add(ptr, 0x80))
         }
         hash = _hashTypedData(hash);
         _validateSession(hash, _signature, _counterBytes);
@@ -1441,6 +1469,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), _outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            // No need to restore free memory pointer - execution ends immediately
         }
     }
 
@@ -1454,7 +1483,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             revert BatchSizeExceeded();
         }
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1471,6 +1500,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), caller())
             hash := keccak256(ptr, 0x80)
+            mstore(0x40, add(ptr, 0x80))
         }
         hash = _hashTypedData(hash);
         _validateSession(hash, _signature, _counterBytes);
@@ -1508,7 +1538,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     ) internal {
         if (_calls.length > MAX_BATCH_SIZE) revert BatchSizeExceeded();
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 // Use precomputed selector and revert with 4-byte custom error
@@ -1523,6 +1553,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), caller())
             hash := keccak256(ptr, 0x80)
+            mstore(0x40, add(ptr, 0x80))
         }
         hash = _hashTypedData(hash);
         _validateSession(hash, _signature, _counterBytes);
@@ -1533,10 +1564,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             uint256 ethAmount = execution.value;
             address outputContract = execution.to;
             bytes calldata _callData = execution.data;
-            assembly {
+            assembly ("memory-safe") {
                 let ptr := mload(0x40)
                 calldatacopy(ptr, _callData.offset, _callData.length)
                 if iszero(call(gas(), outputContract, ethAmount, ptr, _callData.length, 0, 0)) { revert(0, 0) }
+                mstore(0x40, add(ptr, _callData.length))
             }
             unchecked {
                 ++i;
@@ -1546,7 +1578,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     function burnSessionCounter(bytes calldata _signature, uint128 _counter) external {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, BURN_SESSION_COUNTER_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
@@ -1573,7 +1605,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Layout: [signature(65)][counter(16)][deadline(4)][output(20)][ethAmount(32)][args]
         address output;
         uint256 ethAmount;
-        assembly {
+        assembly ("memory-safe") {
             output := shr(96, calldataload(add(data.offset, 85)))
             ethAmount := calldataload(add(data.offset, 105))
         }
@@ -1595,7 +1627,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Layout: [signature(65)][counter(16)][deadline(4)][output(20)][abi.encode(IBatchExecution.Call[])]
         IBatchExecution.Call[] calldata calls;
         address output;
-        assembly {
+        assembly ("memory-safe") {
             output := shr(96, calldataload(add(data.offset, 85)))
 
             // ABI: at offset 105, we have the head for the dynamic array: [offset=0x20][length][elements]
@@ -1611,7 +1643,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         returns (bytes[] memory)
     {
         address output;
-        assembly {
+        assembly ("memory-safe") {
             output := shr(96, calldataload(add(_data.offset, 85)))
         }
         bytes[] memory results = _executeBatchSession(_data[0:65], _data[65:81], _data[81:85], output, _calls);
@@ -1620,7 +1652,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     function executeBatchSession(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {
         address output;
-        assembly {
+        assembly ("memory-safe") {
             output := shr(96, calldataload(add(_data.offset, 85)))
         }
         _executeBatchSessionNoReturn(_data[0:65], _data[65:81], _data[81:85], output, _calls);
@@ -1631,7 +1663,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Layout: [signature(65)][counter(16)][deadline(4)][output(20)][ethAmount(32)][args]
         address output;
         uint256 ethAmount;
-        assembly {
+        assembly ("memory-safe") {
             output := shr(96, calldataload(add(data.offset, 85)))
             ethAmount := calldataload(add(data.offset, 105))
         }
@@ -1656,7 +1688,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     function executeBatchSessionArbitraryReturns(bytes calldata data) external returns (bytes[] memory) {
         // Layout: [signature(65)][counter(16)][deadline(4)][abi.encode(IBatchExecution.Call[])]
         IBatchExecution.Call[] calldata calls;
-        assembly {
+        assembly ("memory-safe") {
             // ABI: at offset 85, we have the head for the dynamic array: [offset=0x20][length][elements]
             calls.offset := add(data.offset, add(85, 0x40))
             calls.length := calldataload(add(data.offset, add(85, 0x20)))
@@ -1717,7 +1749,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     function executeBatchSession(bytes calldata data) external {
         IBatchExecution.Call[] calldata calls;
-        assembly {
+        assembly ("memory-safe") {
             calls.offset := add(data.offset, add(105, 0x40))
             calls.length := calldataload(add(data.offset, add(105, 0x20)))
         }
@@ -1726,7 +1758,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     function executeBatchSessionArbitrary(bytes calldata data) external {
         IBatchExecution.Call[] calldata calls;
-        assembly {
+        assembly ("memory-safe") {
             calls.offset := add(data.offset, add(85, 0x40))
             calls.length := calldataload(add(data.offset, add(85, 0x20)))
         }
@@ -1737,7 +1769,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Parse data to extract parameters and call appropriate internal function
         address to;
         uint256 value;
-        assembly {
+        assembly ("memory-safe") {
             to := shr(96, calldataload(add(data.offset, 85)))
             value := calldataload(add(data.offset, 105))
         }
@@ -1748,7 +1780,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Parse data to extract parameters and call appropriate internal function
         address to;
         uint256 value;
-        assembly {
+        assembly ("memory-safe") {
             to := shr(96, calldataload(add(data.offset, 85)))
             value := calldataload(add(data.offset, 105))
         }
@@ -1766,7 +1798,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // So we need to hash the encoded calls array
         bytes32 executionsHash = keccak256(abi.encode(_calls));
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1780,7 +1812,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), executionsHash)
             hash := keccak256(ptr, 0x80)
-            mstore(0x40, add(ptr, 0x80)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0x80))
         }
         hash = _hashTypedData(hash);
         _validateExecute(hash, _signature, _nonceBytes);
@@ -1816,7 +1848,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // So we need to hash the encoded calls array
         bytes32 executionsHash = keccak256(abi.encode(_calls));
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1830,7 +1862,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), executionsHash)
             hash := keccak256(ptr, 0x80)
-            mstore(0x40, add(ptr, 0x80)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0x80))
         }
         hash = _hashTypedData(hash);
         _validateExecute(hash, _signature, _nonceBytes);
@@ -1861,7 +1893,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Hash the raw encoded calls slice to match the off-chain preimage exactly
         bytes32 executionsHash = keccak256(_calls);
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1875,14 +1907,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), executionsHash)
             hash := keccak256(ptr, 0x80)
-            mstore(0x40, add(ptr, 0x80)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0x80))
         }
         hash = _hashTypedData(hash);
         _validateExecute(hash, _signature, _nonceBytes);
 
         IBatchExecution.Call[] calldata calls;
         uint256 length;
-        assembly {
+        assembly ("memory-safe") {
             calls.offset := add(_calls.offset, 0x40)
             calls.length := calldataload(add(_calls.offset, 0x20))
             length := calls.length
@@ -1917,7 +1949,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     ) internal {
         bytes32 executionsHash = keccak256(_calls);
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
@@ -1938,7 +1970,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
         IBatchExecution.Call[] calldata calls;
         uint256 length;
-        assembly {
+        assembly ("memory-safe") {
             calls.offset := add(_calls.offset, 0x40)
             calls.length := calldataload(add(_calls.offset, 0x20))
             length := calls.length
@@ -1949,10 +1981,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             uint256 ethAmount = execution.value;
             address outputContract = execution.to;
             bytes calldata _callData2 = execution.data;
-            assembly {
+            assembly ("memory-safe") {
                 let ptr := mload(0x40)
                 calldatacopy(ptr, _callData2.offset, _callData2.length)
                 if iszero(call(gas(), outputContract, ethAmount, ptr, _callData2.length, 0, 0)) { revert(0, 0) }
+                mstore(0x40, add(ptr, _callData2.length))
             }
             unchecked {
                 ++i;
@@ -2014,7 +2047,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     {
         bytes32 argsHash = keccak256(_data);
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _nonce)
@@ -2023,14 +2056,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x80), _value)
             mstore(add(ptr, 0xa0), argsHash)
             hash := keccak256(ptr, 0xc0)
-            mstore(0x40, add(ptr, 0xc0)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0xc0))
         }
         return _hashTypedData(hash);
     }
 
     function hashBurnNonce(uint128 _nonce) external view returns (bytes32) {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, BURN_NONCE_TYPEHASH)
             mstore(add(ptr, 0x20), _nonce)
@@ -2051,7 +2084,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _data
     ) external view returns (bytes32) {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
             // Store nonce as 32-byte value (same as internal function)
@@ -2069,7 +2102,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x100), argsHash)
             // total = 0x120 (288) bytes
             hash := keccak256(ptr, 0x120)
-            mstore(0x40, add(ptr, 0x120)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0x120))
         }
         return _hashTypedData(hash);
     }
@@ -2080,7 +2113,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         returns (bytes32)
     {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
@@ -2088,7 +2121,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             mstore(add(ptr, 0x60), _sender)
             mstore(add(ptr, 0x80), _to)
             hash := keccak256(ptr, 0xa0)
-            mstore(0x40, add(ptr, 0xa0)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0xa0))
         }
         return _hashTypedData(hash);
     }
@@ -2099,14 +2132,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         returns (bytes32)
     {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, ARBITRARY_SESSION_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), _sender)
             hash := keccak256(ptr, 0x80)
-            mstore(0x40, add(ptr, 0x80)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0x80))
         }
         return _hashTypedData(hash);
     }
@@ -2118,21 +2151,21 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     {
         bytes32 executionsHash = keccak256(abi.encode(_calls));
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, BATCH_EXECUTION_TYPEHASH)
             mstore(add(ptr, 0x20), _nonce)
             mstore(add(ptr, 0x40), _deadline)
             mstore(add(ptr, 0x60), executionsHash)
             hash := keccak256(ptr, 0x80)
-            mstore(0x40, add(ptr, 0x80)) // Update free memory pointer
+            mstore(0x40, add(ptr, 0x80))
         }
         return _hashTypedData(hash);
     }
 
     function hashBurnSessionCounter(uint128 _counter) external view returns (bytes32) {
         bytes32 hash;
-        assembly {
+        assembly ("memory-safe") {
             let ptr := mload(0x40)
             mstore(ptr, BURN_SESSION_COUNTER_TYPEHASH)
             mstore(add(ptr, 0x20), _counter)
