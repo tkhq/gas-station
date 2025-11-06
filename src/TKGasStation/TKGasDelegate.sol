@@ -54,7 +54,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         0x601e2106a9a69d50c3489343bfc805c6ad1b051e27f87c20ed3735e4fdbb0826;
     // keccak256("BurnSessionCounter(uint128 counter)")
 
-
     struct State {
         uint128 nonce;
         mapping(bytes16 => bool) expiredSessionCounters;
@@ -1571,12 +1570,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
         return result;
     }
 
-    function executeSessionReturns(address _to, uint256 _value, bytes calldata _data)
-        external
-        returns (bytes memory)
-    {
-        bytes memory result =
-            _executeSessionWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
+    function executeSessionReturns(address _to, uint256 _value, bytes calldata _data) external returns (bytes memory) {
+        bytes memory result = _executeSessionWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
         return result;
     }
 
@@ -2000,13 +1995,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, ITKGasDeleg
     }
 
     // View functions
-    function hashExecution(
-        uint128 _nonce,
-        uint32 _deadline,
-        address _to,
-        uint256 _value,
-        bytes calldata _data
-    ) external view returns (bytes32) {
+    function hashExecution(uint128 _nonce, uint32 _deadline, address _to, uint256 _value, bytes calldata _data)
+        external
+        view
+        returns (bytes32)
+    {
         bytes32 argsHash = keccak256(_data);
         bytes32 hash;
         assembly {
