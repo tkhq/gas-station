@@ -7,7 +7,6 @@ import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
 
 contract TKGasStation is ITKGasStation {
     error NotDelegated();
-    error NoEthAllowed();
     error InvalidFunctionSelector();
     error ExecutionFailed();
 
@@ -15,10 +14,6 @@ contract TKGasStation is ITKGasStation {
 
     constructor(address _tkGasDelegate) {
         tkGasDelegate = _tkGasDelegate;
-    }
-
-    receive() external payable {
-        revert NoEthAllowed();
     }
 
     fallback(bytes calldata data) external returns (bytes memory) {
