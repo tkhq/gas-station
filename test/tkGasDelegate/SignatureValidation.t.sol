@@ -10,7 +10,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
     bytes4 constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
     bytes4 constant ERC1271_INVALID_SIGNATURE = 0xffffffff;
 
-    function testValidateSignature_ValidSignature_ReturnsTrue() public {
+    function testValidateSignature_ValidSignature_ReturnsTrue() public view {
         bytes32 messageHash = keccak256("test message");
 
         // Sign with the contract's private key (user's key)
@@ -21,7 +21,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         assertTrue(isValid);
     }
 
-    function testValidateSignature_InvalidSignature_ReturnsFalse() public {
+    function testValidateSignature_InvalidSignature_ReturnsFalse() public view {
         bytes32 messageHash = keccak256("test message");
 
         // Sign with a different private key
@@ -32,7 +32,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         assertFalse(isValid);
     }
 
-    function testValidateSignature_WrongHash_ReturnsFalse() public {
+    function testValidateSignature_WrongHash_ReturnsFalse() public view {
         bytes32 messageHash = keccak256("test message");
         bytes32 wrongHash = keccak256("wrong message");
 
@@ -45,7 +45,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         assertFalse(isValid);
     }
 
-    function testIsValidSignature_ValidSignature_ReturnsMagicValue() public {
+    function testIsValidSignature_ValidSignature_ReturnsMagicValue() public view {
         bytes32 messageHash = keccak256("test message");
 
         // Sign with the contract's private key
@@ -56,7 +56,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         assertEq(result, ERC1271_MAGIC_VALUE);
     }
 
-    function testIsValidSignature_InvalidSignature_ReturnsInvalidValue() public {
+    function testIsValidSignature_InvalidSignature_ReturnsInvalidValue() public view {
         bytes32 messageHash = keccak256("test message");
 
         // Sign with a different private key
@@ -67,7 +67,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         assertEq(result, ERC1271_INVALID_SIGNATURE);
     }
 
-    function testIsValidSignature_WrongHash_ReturnsInvalidValue() public {
+    function testIsValidSignature_WrongHash_ReturnsInvalidValue() public view {
         bytes32 messageHash = keccak256("test message");
         bytes32 wrongHash = keccak256("wrong message");
 
@@ -96,7 +96,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         MockDelegate(user).isValidSignature(messageHash, malformedSignature);
     }
 
-    function testValidateSignature_WithEIP712Hash_ReturnsTrue() public {
+    function testValidateSignature_WithEIP712Hash_ReturnsTrue() public view {
         // Test with a hash that would be generated from EIP-712
         bytes32 typeHash = keccak256("Execution(uint128 nonce,uint32 deadline,address to,uint256 value,bytes data)");
         bytes32 structHash = keccak256(
@@ -122,7 +122,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         assertTrue(isValid);
     }
 
-    function testIsValidSignature_WithEIP712Hash_ReturnsMagicValue() public {
+    function testIsValidSignature_WithEIP712Hash_ReturnsMagicValue() public view {
         // Test with a hash that would be generated from EIP-712
         bytes32 typeHash = keccak256("Execution(uint128 nonce,uint32 deadline,address to,uint256 value,bytes data)");
         bytes32 structHash = keccak256(
@@ -148,7 +148,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         assertEq(result, ERC1271_MAGIC_VALUE);
     }
 
-    function testValidateSignature_DifferentContracts_DifferentResults() public {
+    function testValidateSignature_DifferentContracts_DifferentResults() public view {
         bytes32 messageHash = keccak256("test message");
 
         // Sign with user's key
@@ -164,7 +164,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         assertFalse(isValidUser2);
     }
 
-    function testIsValidSignature_DifferentContracts_DifferentResults() public {
+    function testIsValidSignature_DifferentContracts_DifferentResults() public view {
         bytes32 messageHash = keccak256("test message");
 
         // Sign with user's key
@@ -196,7 +196,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         MockDelegate(user).isValidSignature(zeroHash, signature);
     }
 
-    function testValidateSignature_ConsistencyWithIsValidSignature() public {
+    function testValidateSignature_ConsistencyWithIsValidSignature() public view {
         bytes32 messageHash = keccak256("test message");
 
         // Sign with the contract's private key
@@ -214,7 +214,7 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         }
     }
 
-    function testValidateSignature_InvalidSignature_ConsistencyWithIsValidSignature() public {
+    function testValidateSignature_InvalidSignature_ConsistencyWithIsValidSignature() public view {
         bytes32 messageHash = keccak256("test message");
 
         // Sign with wrong key
