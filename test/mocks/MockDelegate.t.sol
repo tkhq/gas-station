@@ -34,6 +34,10 @@ contract MockDelegate is TKGasDelegate {
         return BATCH_EXECUTION_TYPEHASH;
     }
 
+    function external_CALL_TYPEHASH() external pure returns (bytes32) {
+        return CALL_TYPEHASH;
+    }
+
     function external_BURN_NONCE_TYPEHASH() external pure returns (bytes32) {
         return BURN_NONCE_TYPEHASH;
     }

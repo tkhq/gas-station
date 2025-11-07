@@ -113,7 +113,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
             abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
 
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.BatchSizeExceeded.selector);
+        vm.expectRevert(TKGasDelegate.BatchSizeInvalid.selector);
         MockDelegate(user).executeBatch(data);
     }
 
@@ -426,10 +426,9 @@ contract BatchExecutionTest is TKGasDelegateBase {
         }
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), calls);
-
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.BatchSizeExceeded.selector);
+        vm.expectRevert(TKGasDelegate.BatchSizeInvalid.selector);
         MockDelegate(user).executeBatch(calls, data);
     }
 
@@ -542,5 +541,57 @@ contract BatchExecutionTest is TKGasDelegateBase {
         vm.expectRevert(TKGasDelegate.DeadlineExceeded.selector);
         MockDelegate(user).executeBatch(calls, data);
         vm.stopPrank();
+    }
+
+    function testHashCallArrayMatchesAbiEncode() public view {
+        // Prepare calls
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 100,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 10 ether)
+        });
+
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 200,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 20 ether)
+        });
+
+        uint256 gasBefore2 = gasleft();
+        bytes32[] memory hashes = new bytes32[](calls.length);
+        for (uint256 i = 0; i < calls.length; i++) {
+            bytes32 structDataHash = keccak256(
+                abi.encodePacked(
+                    MockDelegate(user).external_CALL_TYPEHASH(),
+                    uint256(uint160(calls[i].to)), // Pad address to 32 bytes (right-aligned)
+                    calls[i].value,
+                    keccak256(calls[i].data)
+                )
+            );
+            /*
+            console.log("Item %s", i);
+            console.logBytes32(structDataHash);
+            console.log("to: %s", calls[i].to);
+            console.log("value: %s", calls[i].value);
+            console.logBytes32(keccak256(calls[i].data));
+            */
+            hashes[i] = structDataHash;
+        }
+        // For EIP-712 arrays, hash the concatenation of all struct hashes (no length prefix)
+        bytes32 hashFromHashes = keccak256(abi.encodePacked(hashes));
+        uint256 gasUsed2 = gasBefore2 - gasleft();
+        console.log("gas used by normal abi decoding: %s", gasUsed2);
+
+        // Get hash from the contract function
+        uint256 gasBefore = gasleft();
+        bytes32 hashFromFunction = MockDelegate(user).hashCallArray(calls);
+        uint256 gasUsed = gasBefore - gasleft();
+        console.log("gas used by hashCallArray: %s", gasUsed);
+
+        assertEq(hashFromFunction, hashFromHashes, "hashCallArray should match abi encoded version ");
+
+        // Verify it's deterministic
+        assertEq(hashFromFunction, MockDelegate(user).hashCallArray(calls), "hashCallArray should be deterministic");
     }
 }

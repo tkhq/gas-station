@@ -10,7 +10,7 @@ import {IERC1155Receiver} from "./interfaces/IERC1155Receiver.sol";
 import {IERC1721} from "./interfaces/IERC1721.sol";
 
 contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, ITKGasDelegate {
-    error BatchSizeExceeded();
+    error BatchSizeInvalid();
     error DeadlineExceeded();
     error InvalidToContract();
     error InvalidNonce();
@@ -40,6 +40,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     bytes32 internal constant BATCH_EXECUTION_TYPEHASH =
         0x14007e8c5dd696e52899952d0c28098ab95c056d082adc0d757f91c1306c7f55;
     // keccak256("BatchExecution(uint128 nonce,uint32 deadline,Call[] calls)Call(address to,uint256 value,bytes data)")
+
+    bytes32 internal constant CALL_TYPEHASH = 0x9085b19ea56248c94d86174b3784cfaaa8673d1041d6441f61ff52752dac8483;
+    // keccak256("Call(address to,uint256 value,bytes data)")
 
     bytes32 internal constant BURN_NONCE_TYPEHASH = 0x1abb8920e48045adda3ed0ce4be4357be95d4aa21af287280f532fc031584bda;
     // keccak256("BurnNonce(uint128 nonce)")
@@ -1194,7 +1197,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Check if deadline has passed using calldata
 
         if (_calls.length > MAX_BATCH_SIZE) {
-            revert BatchSizeExceeded();
+            revert BatchSizeInvalid();
         }
 
         bytes32 hash;
@@ -1256,7 +1259,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         IBatchExecution.Call[] calldata _calls
     ) internal {
         if (_calls.length > MAX_BATCH_SIZE) {
-            revert BatchSizeExceeded();
+            revert BatchSizeInvalid();
         }
         bytes32 hash;
         assembly ("memory-safe") {
@@ -1311,10 +1314,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         IBatchExecution.Call[] calldata _calls
     ) internal {
         if (_calls.length > MAX_BATCH_SIZE) {
-            revert BatchSizeExceeded();
+            revert BatchSizeInvalid();
         }
 
-        address sender = msg.sender;
         bytes32 hash;
         assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
@@ -1329,7 +1331,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let counterValue := shr(128, calldataload(_counterBytes.offset))
             mstore(add(ptr, 0x20), counterValue)
             mstore(add(ptr, 0x40), deadline)
-            mstore(add(ptr, 0x60), sender)
+            mstore(add(ptr, 0x60), caller())
             mstore(add(ptr, 0x80), _outputContract)
             hash := keccak256(ptr, 0xa0)
             mstore(0x40, add(ptr, 0xa0))
@@ -1480,7 +1482,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         IBatchExecution.Call[] calldata _calls
     ) internal returns (bytes[] memory) {
         if (_calls.length > MAX_BATCH_SIZE) {
-            revert BatchSizeExceeded();
+            revert BatchSizeInvalid();
         }
         bytes32 hash;
         assembly ("memory-safe") {
@@ -1536,7 +1538,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _deadlineBytes,
         IBatchExecution.Call[] calldata _calls
     ) internal {
-        if (_calls.length > MAX_BATCH_SIZE) revert BatchSizeExceeded();
+        if (_calls.length > MAX_BATCH_SIZE) revert BatchSizeInvalid();
         bytes32 hash;
         assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
@@ -1796,7 +1798,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Hash the calls array to match the calldata version exactly
         // The calldata version uses keccak256(_calls) where _calls is abi.encode(IBatchExecution.Call[])
         // So we need to hash the encoded calls array
-        bytes32 executionsHash = keccak256(abi.encode(_calls));
+        bytes32 executionsHash = _hashCallArray(_calls);
         bytes32 hash;
         assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
@@ -1819,7 +1821,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
         uint256 length = _calls.length;
         if (length > MAX_BATCH_SIZE) {
-            revert BatchSizeExceeded();
+            revert BatchSizeInvalid();
         }
 
         bytes[] memory results = new bytes[](length);
@@ -1846,7 +1848,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         // Hash the calls array to match the calldata version exactly
         // The calldata version uses keccak256(_calls) where _calls is abi.encode(IBatchExecution.Call[])
         // So we need to hash the encoded calls array
-        bytes32 executionsHash = keccak256(abi.encode(_calls));
+        bytes32 executionsHash = _hashCallArray(_calls);
         bytes32 hash;
         assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
@@ -1856,6 +1858,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 revert(errorPtr, 0x04)
             } // DeadlineExceeded
             let ptr := mload(0x40)
+
             mstore(ptr, BATCH_EXECUTION_TYPEHASH)
             let nonceValue := shr(128, calldataload(_nonceBytes.offset))
             mstore(add(ptr, 0x20), nonceValue)
@@ -1869,7 +1872,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
         uint256 length = _calls.length;
         if (length > MAX_BATCH_SIZE) {
-            revert BatchSizeExceeded();
+            revert BatchSizeInvalid();
         }
 
         for (uint256 i; i < length;) {
@@ -1890,9 +1893,21 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _deadlineBytes,
         bytes calldata _calls
     ) internal returns (bytes[] memory) {
-        // Hash the raw encoded calls slice to match the off-chain preimage exactly
-        bytes32 executionsHash = keccak256(_calls);
+        IBatchExecution.Call[] calldata calls;
+        uint256 length;
+        assembly ("memory-safe") {
+            calls.offset := add(_calls.offset, 0x40)
+            calls.length := calldataload(add(_calls.offset, 0x20))
+            length := calls.length
+        }
+
+        if (length > MAX_BATCH_SIZE || length == 0) {
+            revert BatchSizeInvalid();
+        }
+
+        bytes32 executionsHash = _hashCallArray(calls);
         bytes32 hash;
+
         assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
@@ -1911,18 +1926,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
         hash = _hashTypedData(hash);
         _validateExecute(hash, _signature, _nonceBytes);
-
-        IBatchExecution.Call[] calldata calls;
-        uint256 length;
-        assembly ("memory-safe") {
-            calls.offset := add(_calls.offset, 0x40)
-            calls.length := calldataload(add(_calls.offset, 0x20))
-            length := calls.length
-        }
-
-        if (length > MAX_BATCH_SIZE) {
-            revert BatchSizeExceeded();
-        }
 
         bytes[] memory results = new bytes[](length);
         for (uint256 i = 0; i < length;) {
@@ -1947,7 +1950,19 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _deadlineBytes,
         bytes calldata _calls
     ) internal {
-        bytes32 executionsHash = keccak256(_calls);
+        IBatchExecution.Call[] calldata calls;
+        uint256 length;
+        assembly ("memory-safe") {
+            calls.offset := add(_calls.offset, 0x40)
+            calls.length := calldataload(add(_calls.offset, 0x20))
+            length := calls.length
+        }
+
+        if (length > MAX_BATCH_SIZE || length == 0) {
+            revert BatchSizeInvalid();
+        }
+
+        bytes32 executionsHash = _hashCallArray(calls);
         bytes32 hash;
         assembly ("memory-safe") {
             let deadline := shr(224, calldataload(_deadlineBytes.offset))
@@ -1967,15 +1982,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
         hash = _hashTypedData(hash);
         _validateExecute(hash, _signature, _nonceBytes);
-
-        IBatchExecution.Call[] calldata calls;
-        uint256 length;
-        assembly ("memory-safe") {
-            calls.offset := add(_calls.offset, 0x40)
-            calls.length := calldataload(add(_calls.offset, 0x20))
-            length := calls.length
-        }
-        if (length > MAX_BATCH_SIZE) revert BatchSizeExceeded();
         for (uint256 i = 0; i < length;) {
             IBatchExecution.Call calldata execution = calls[i];
             uint256 ethAmount = execution.value;
@@ -1991,6 +1997,37 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 ++i;
             }
         }
+    }
+
+    function _hashCallArray(IBatchExecution.Call[] calldata _calls) internal pure returns (bytes32) {
+        bytes32[] memory hashes = new bytes32[](_calls.length);
+        for (uint256 i = 0; i < _calls.length; i++) {
+            bytes32 structHash;
+            assembly {
+                // Read the offset value for call[i]
+                let offsetValue := calldataload(add(_calls.offset, mul(i, 0x20)))
+                let startN := add(_calls.offset, offsetValue)
+
+                let to := calldataload(startN)
+                let value := calldataload(add(startN, 0x20))
+
+                let dataRelOffset := calldataload(add(startN, 0x40))
+                let dataLength := calldataload(add(startN, 0x60))
+                let dataStart := add(startN, add(dataRelOffset, 0x20))
+
+                let ptr := mload(0x40) // workspace
+                calldatacopy(ptr, dataStart, dataLength)
+                let dataHash := keccak256(ptr, dataLength)
+                
+                mstore(ptr, CALL_TYPEHASH)
+                mstore(add(ptr, 0x20), to)
+                mstore(add(ptr, 0x40), value)
+                mstore(add(ptr, 0x60), dataHash)
+                structHash := keccak256(ptr, 0x80)
+            }
+            hashes[i] = structHash;
+        }
+        return keccak256(abi.encodePacked(hashes));
     }
 
     /**
@@ -2040,6 +2077,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     }
 
     // View functions
+
+    function hashCallArray(IBatchExecution.Call[] calldata _calls) external view returns (bytes32) {
+        return _hashCallArray(_calls);
+    }
+
     function hashExecution(uint128 _nonce, uint32 _deadline, address _to, uint256 _value, bytes calldata _data)
         external
         view
@@ -2149,7 +2191,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         view
         returns (bytes32)
     {
-        bytes32 executionsHash = keccak256(abi.encode(_calls));
+        bytes32 executionsHash = _hashCallArray(_calls);
         bytes32 hash;
         assembly ("memory-safe") {
             let ptr := mload(0x40)

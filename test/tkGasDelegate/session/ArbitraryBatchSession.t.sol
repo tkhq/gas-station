@@ -333,7 +333,7 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
         bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline));
 
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.BatchSizeExceeded.selector);
+        vm.expectRevert(TKGasDelegate.BatchSizeInvalid.selector);
         MockDelegate(user).executeBatchSessionArbitrary(calls, data);
     }
 

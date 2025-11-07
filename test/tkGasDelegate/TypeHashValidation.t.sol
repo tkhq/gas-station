@@ -34,6 +34,7 @@ contract TypeHashValidationTest is Test {
         bytes32 expectedBatchExecutionTypehash = keccak256(
             "BatchExecution(uint128 nonce,uint32 deadline,Call[] calls)Call(address to,uint256 value,bytes data)"
         );
+        bytes32 expectedCallTypehash = keccak256("Call(address to,uint256 value,bytes data)");
         bytes32 expectedBurnNonceTypehash = keccak256("BurnNonce(uint128 nonce)");
         bytes32 expectedSessionExecutionTypehash =
             keccak256("SessionExecution(uint128 counter,uint32 deadline,address sender,address to)");
@@ -45,6 +46,7 @@ contract TypeHashValidationTest is Test {
         bytes32 actualExecutionTypehash = delegate.external_EXECUTION_TYPEHASH();
         bytes32 actualApproveThenExecuteTypehash = delegate.external_APPROVE_THEN_EXECUTE_TYPEHASH();
         bytes32 actualBatchExecutionTypehash = delegate.external_BATCH_EXECUTION_TYPEHASH();
+        bytes32 actualCallTypehash = delegate.external_CALL_TYPEHASH();
         bytes32 actualBurnNonceTypehash = delegate.external_BURN_NONCE_TYPEHASH();
         bytes32 actualSessionExecutionTypehash = delegate.external_SESSION_EXECUTION_TYPEHASH();
         bytes32 actualArbitrarySessionExecutionTypehash = delegate.external_ARBITRARY_SESSION_EXECUTION_TYPEHASH();
@@ -58,6 +60,7 @@ contract TypeHashValidationTest is Test {
             "APPROVE_THEN_EXECUTE_TYPEHASH mismatch"
         );
         assertEq(actualBatchExecutionTypehash, expectedBatchExecutionTypehash, "BATCH_EXECUTION_TYPEHASH mismatch");
+        assertEq(actualCallTypehash, expectedCallTypehash, "CALL_TYPEHASH mismatch");
         assertEq(actualBurnNonceTypehash, expectedBurnNonceTypehash, "BURN_NONCE_TYPEHASH mismatch");
         assertEq(
             actualSessionExecutionTypehash, expectedSessionExecutionTypehash, "SESSION_EXECUTION_TYPEHASH mismatch"
@@ -161,6 +164,20 @@ contract TypeHashValidationTest is Test {
         // Verify the hash is non-zero and deterministic
         assertTrue(hash != bytes32(0), "BurnSessionCounter hash should not be zero");
         assertEq(hash, delegate.hashBurnSessionCounter(counter), "BurnSessionCounter hash should be deterministic");
+    }
+
+    /**
+     * @notice Validates CALL_TYPEHASH
+     */
+    function testCallTypeHash() public view {
+        bytes32 expectedCallTypehash = keccak256("Call(address to,uint256 value,bytes data)");
+        bytes32 actualCallTypehash = delegate.external_CALL_TYPEHASH();
+
+        // Verify the typehash matches the expected value
+        assertEq(actualCallTypehash, expectedCallTypehash, "CALL_TYPEHASH mismatch");
+
+        // Verify the typehash is non-zero
+        assertTrue(actualCallTypehash != bytes32(0), "CALL_TYPEHASH should not be zero");
     }
 
     /**
