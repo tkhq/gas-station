@@ -569,13 +569,6 @@ contract BatchExecutionTest is TKGasDelegateBase {
                     keccak256(calls[i].data)
                 )
             );
-            /*
-            console.log("Item %s", i);
-            console.logBytes32(structDataHash);
-            console.log("to: %s", calls[i].to);
-            console.log("value: %s", calls[i].value);
-            console.logBytes32(keccak256(calls[i].data));
-            */
             hashes[i] = structDataHash;
         }
         // For EIP-712 arrays, hash the concatenation of all struct hashes (no length prefix)

@@ -239,7 +239,12 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
     }
 
     function testArbitraryBatchSessionExecuteParameterized_ExpiredDeadline_Reverts() public {
-        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, makeAddr("receiver"), 1 ether)
+        });
         uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp - 1);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
@@ -253,7 +258,12 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
     }
 
     function testArbitraryBatchSessionExecuteParameterized_InvalidCounter_Reverts() public {
-        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, makeAddr("receiver"), 1 ether)
+        });
         uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature = _signArbitrary(counter, deadline, paymaster);
@@ -299,7 +309,12 @@ contract ArbitraryBatchSessionTest is TKGasDelegateBase {
     }
 
     function testArbitraryBatchSessionExecuteParameterized_SignedByOtherUser_RevertsNotSelf() public {
-        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](0);
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, makeAddr("receiver"), 1 ether)
+        });
         uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp + 1 days);
         // Sign with USER_PRIVATE_KEY_2 instead of the user's key
