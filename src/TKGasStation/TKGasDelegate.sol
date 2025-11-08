@@ -1286,8 +1286,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         hash = _hashTypedData(hash);
         _validateSession(hash, _signature, _counterBytes);
 
-        address _out = address(uint160(uint256(bytes32(msg.data)))); // placeholder to avoid warnings
-        _out; // silence
         for (uint256 i = 0; i < length;) {
             IBatchExecution.Call calldata execution = _calls[i];
             uint256 ethAmount = execution.value;
