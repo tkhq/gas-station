@@ -18,7 +18,7 @@ contract BatchSessionTest is TKGasDelegateBase {
         calls[0] = IBatchExecution.Call({
             to: address(mockToken),
             value: 0,
-            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 20 ether)
         });
         calls[1] = IBatchExecution.Call({
             to: address(mockToken),
@@ -38,8 +38,91 @@ contract BatchSessionTest is TKGasDelegateBase {
         results = MockDelegate(user).executeBatchSessionReturns(data);
         vm.stopPrank();
         // Success is implicit - if we get here without reverting, the call succeeded
+        assertEq(results.length, 2);
+        assertEq(mockToken.allowance(user, receiver), 20 ether);
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
+
+    function testBatchSessionExecute_Length_One_But_Actually_Two_Elements() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        // Manually corrupt the length field of the calls array in memory to 1 (should be 2)
+        assembly {
+            mstore(calls, 1)
+        }
+        assertEq(calls.length, 1);
+
+        uint128 counter = 1; // Use fixed counter value
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), abi.encode(calls));
+
+        bytes[] memory results;
+        vm.prank(paymaster);
+        results = MockDelegate(user).executeBatchSessionReturns(data);
+        vm.stopPrank();
+
+        // result is that it should only execute the first call, so the balance of the receiver should be 0
+        assertEq(results.length, 1);
+        assertEq(mockToken.allowance(user, receiver), 10 ether);
+        assertEq(mockToken.balanceOf(receiver), 0 ether);
+    }
+
+    /*
+        Leaving this test commented out to show a scenario where the length field is corrupted. 
+        It reverts with InvalidOperandOOG, and you can uncomment and run it, but foundry vm.revert does not support this error code.
+    */
+    /*
+    function testBatchSessionExecute_Length_Two_But_Actually_One_Element_Reverts() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+
+        // Manually corrupt the length field of the calls array in memory to 2
+        assembly {
+            mstore(calls, 2)
+        }
+        assertEq(calls.length, 2);
+
+        uint128 counter = 1; // Use fixed counter value
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), abi.encode(calls));
+
+        bool reverted = false;
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).executeBatchSessionReturns(data);
+        vm.stopPrank();
+        
+        // result is that it should only execute the first call, so the balance of the receiver should be 0
+        assertEq(mockToken.allowance(user, receiver), 0 ether);
+        assertEq(mockToken.balanceOf(receiver), 0 ether);
+    }
+    */
 
     function testBatchSessionExecute_InvalidToContract_Reverts() public {
         mockToken.mint(user, 100 ether);
