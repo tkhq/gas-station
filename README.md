@@ -15,8 +15,8 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 - **TKGasStation**: [0x231B4712F367D775ccB483de28eD28E7276746d6](https://basescan.org/address/0x231b4712f367d775ccb483de28ed28e7276746d6)
 
 #### Sepolia Testnet
-- **TKGasDelegate**: [0x1B2AfF879Ca5367Ee610C33EE9c8A335495E5688](https://sepolia.etherscan.io/address/0x1b2aff879ca5367ee610c33ee9c8a335495e5688)
-- **TKGasStation**: [0x9c3f5729BBDfb113c750Cf5e3EDBF56ba315CA57](https://sepolia.etherscan.io/address/0x9c3f5729bbdfb113c750cf5e3edbf56ba315ca57)
+- **TKGasDelegate**: [0x4069D5192Ab235B6d4e92453A68197Be217f3A35](https://sepolia.etherscan.io/address/0x4069d5192ab235b6d4e92453a68197be217f3a35)
+- **TKGasStation**: [0x231B4712F367D775ccB483de28eD28E7276746d6](https://sepolia.etherscan.io/address/0x231b4712f367d775ccb483de28ed28e7276746d6)
 
 #### Base Sepolia Testnet
 - **TKGasDelegate**: [0x4069D5192Ab235B6d4e92453A68197Be217f3A35](https://sepolia.basescan.org/address/0x4069d5192ab235b6d4e92453a68197be217f3a35)
