@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
+import {IBatchExecution} from "../../src/TKGasStation/interfaces/IBatchExecution.sol";
 
 contract MockDelegate is TKGasDelegate {
     constructor() TKGasDelegate() {}
@@ -52,5 +53,13 @@ contract MockDelegate is TKGasDelegate {
 
     function external_BURN_SESSION_COUNTER_TYPEHASH() external pure returns (bytes32) {
         return BURN_SESSION_COUNTER_TYPEHASH;
+    }
+
+    function external_DOMAIN_SEPARATOR() external view returns (bytes32) {
+        return _domainSeparator();
+    }
+
+    function external_hashCallArrayUnchecked(IBatchExecution.Call[] calldata _calls) external pure returns (bytes32) {
+        return _hashCallArrayUnchecked(_calls);
     }
 }
