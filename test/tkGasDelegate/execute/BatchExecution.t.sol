@@ -66,6 +66,49 @@ contract BatchExecutionTest is TKGasDelegateBase {
         console.log("Total Gas Used: %s", gasUsed);
     }
 
+    function testExecuteBatchBytesGas_SingleTransfer() public {
+        // Mint tokens to user first so they have balance to transfer
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        // Prepare single call: transfer mockToken
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+
+        // Call 1: mockToken.transfer(receiver, 10 ether)
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        // Build signed batch
+        uint128 nonce = MockDelegate(user).nonce();
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), calls);
+
+        // Encode as abi.encode(IBatchExecution.Call[])
+        bytes memory callsEncoded = abi.encode(calls);
+
+        // Construct calldata: [sig(65)][nonce(16)][abi.encode(calls)]
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), callsEncoded);
+
+        // Execute
+        bytes[] memory results;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        results = MockDelegate(user).executeBatchReturns(data);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Success is implicit - if we get here without reverting, the call succeeded
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+        assertEq(results.length, 1);
+
+        // Log gas
+        console.log("=== executeBatch(bytes) Single Transfer Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
     function testExecuteBatchRevertsOnInnerFailure() public {
         // Prepare calls where one will revert: transferFrom without allowance
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
