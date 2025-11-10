@@ -13,7 +13,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         vm.prank(user);
         uint256 gasBefore = gasleft();
-        bool success = mockToken.transfer(receiver, 10 * 10 ** 18);
+        mockToken.transfer(receiver, 10 * 10 ** 18);
         uint256 gasUsed = gasBefore - gasleft();
 
         // First execution succeeds - if we get here without reverting, it succeeded
@@ -204,7 +204,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         // Success is implicit - if we get here without reverting, the call succeeded
         uint128 currentNonce = MockDelegate(user).nonce();
         assertEq(currentNonce, nonce + 1);
-        bool ret = abi.decode(result, (bool));
+        abi.decode(result, (bool));
 
         console.log("=== Fallback Function ERC20 Transfer Analysis ===");
         console.log("Total Gas Used: %s", gasUsed);
@@ -516,7 +516,7 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         vm.prank(paymaster);
         gasBefore = gasleft();
-        (bool success,) = address(MockDelegate(user)).call(fallbackData);
+        (,) = address(MockDelegate(user)).call(fallbackData);
         uint256 gasUsedFallback = gasBefore - gasleft();
 
         // Assertions

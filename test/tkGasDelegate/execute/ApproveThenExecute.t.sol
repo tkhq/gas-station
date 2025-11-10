@@ -76,7 +76,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
         // Execute approve then execute
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        bytes memory result = MockDelegate(user).approveThenExecuteReturns(executeData);
+        MockDelegate(user).approveThenExecuteReturns(executeData);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
@@ -992,7 +992,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         vm.prank(paymaster);
         vm.expectRevert(bytes4(keccak256("ApprovalReturnFalse()")));
-        (bool success,) = address(MockDelegate(user)).call(fallbackData);
+        (,) = address(MockDelegate(user)).call(fallbackData);
         vm.stopPrank();
     }
 }

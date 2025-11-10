@@ -90,7 +90,6 @@ contract BurnTest is TKGasDelegateBase {
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         vm.expectRevert();
@@ -163,7 +162,6 @@ contract BurnTest is TKGasDelegateBase {
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
 
-        bool success;
         bytes memory result;
         vm.prank(paymaster);
         vm.expectRevert();
