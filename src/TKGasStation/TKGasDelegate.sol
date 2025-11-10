@@ -21,6 +21,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     error ApprovalFailed();
     error ApprovalTo0Failed();
     error ApprovalReturnFalse();
+    error InvalidOffset();
 
     error Debug(bytes32 a, bytes32 b);
 
@@ -29,6 +30,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     bytes4 internal constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
     bytes4 internal constant APPROVAL_RETURN_FALSE_SELECTOR = 0xf572481d;
     bytes4 internal constant BATCH_SIZE_INVALID_SELECTOR = 0xde21ae18;
+    bytes4 internal constant INVALID_OFFSET_SELECTOR = 0x01da1572;
     bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
     uint8 public constant MAX_BATCH_SIZE = 20;
 
@@ -1584,18 +1586,28 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _executeSessionWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
     }
 
-    function executeBatchSessionReturns(bytes calldata data) external returns (bytes[] memory) {
+    function executeBatchSessionReturns(bytes calldata _data) external returns (bytes[] memory) {
         // Layout: [signature(65)][counter(16)][deadline(4)][output(20)][abi.encode(IBatchExecution.Call[])]
         IBatchExecution.Call[] calldata calls;
         address output;
         assembly ("memory-safe") {
-            output := shr(96, calldataload(add(data.offset, 85)))
+            output := shr(96, calldataload(add(_data.offset, 85)))
 
             // ABI: at offset 105, we have the head for the dynamic array: [offset=0x20][length][elements]
-            calls.offset := add(data.offset, add(105, 0x40))
-            calls.length := calldataload(add(data.offset, add(105, 0x20)))
+            let arrayStart := add(_data.offset, 105)
+            let offsetPointer := calldataload(arrayStart)
+            // If offset pointer is not 0x20, the length is not at the expected position
+            if iszero(eq(offsetPointer, 0x20)) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, INVALID_OFFSET_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
+            // With offset pointer = 0x20, length is at arrayStart + 0x20, data starts at arrayStart + 0x40
+            let lengthPos := add(arrayStart, 0x20)
+            calls.offset := add(arrayStart, 0x40)
+            calls.length := calldataload(lengthPos)
         }
-        bytes[] memory results = _executeBatchSession(data[0:65], data[65:81], data[81:85], output, calls);
+        bytes[] memory results = _executeBatchSession(_data[0:65], _data[65:81], _data[81:85], output, calls);
         return results;
     }
 
@@ -1646,16 +1658,26 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _executeSessionArbitraryWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
     }
 
-    function executeBatchSessionArbitraryReturns(bytes calldata data) external returns (bytes[] memory) {
+    function executeBatchSessionArbitraryReturns(bytes calldata _data) external returns (bytes[] memory) {
         // Layout: [signature(65)][counter(16)][deadline(4)][abi.encode(IBatchExecution.Call[])]
         IBatchExecution.Call[] calldata calls;
         assembly ("memory-safe") {
             // ABI: at offset 85, we have the head for the dynamic array: [offset=0x20][length][elements]
-            calls.offset := add(data.offset, add(85, 0x40))
-            calls.length := calldataload(add(data.offset, add(85, 0x20)))
+            let arrayStart := add(_data.offset, 85)
+            let offsetPointer := calldataload(arrayStart)
+            // If offset pointer is not 0x20, the length is not at the expected position
+            if iszero(eq(offsetPointer, 0x20)) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, INVALID_OFFSET_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
+            // With offset pointer = 0x20, length is at arrayStart + 0x20, data starts at arrayStart + 0x40
+            let lengthPos := add(arrayStart, 0x20)
+            calls.offset := add(arrayStart, 0x40)
+            calls.length := calldataload(lengthPos)
         }
         // For arbitrary batch, sender is implicitly msg.sender in typehash, keep as paymaster (msg.sender)
-        bytes[] memory results = _executeBatchSessionArbitrary(data[0:65], data[65:81], data[81:85], calls);
+        bytes[] memory results = _executeBatchSessionArbitrary(_data[0:65], _data[65:81], _data[81:85], calls);
         return results;
     }
 
@@ -1708,22 +1730,44 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _executeBatchNoReturn(data[0:65], data[65:81], data[81:85], data[85:]);
     }
 
-    function executeBatchSession(bytes calldata data) external {
+    function executeBatchSession(bytes calldata _data) external {
         IBatchExecution.Call[] calldata calls;
         assembly ("memory-safe") {
-            calls.offset := add(data.offset, add(105, 0x40))
-            calls.length := calldataload(add(data.offset, add(105, 0x20)))
+            // ABI: at offset 105, we have the head for the dynamic array: [offset=0x20][length][elements]
+            let arrayStart := add(_data.offset, 105)
+            let offsetPointer := calldataload(arrayStart)
+            // If offset pointer is not 0x20, the length is not at the expected position
+            if iszero(eq(offsetPointer, 0x20)) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, INVALID_OFFSET_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
+            // With offset pointer = 0x20, length is at arrayStart + 0x20, data starts at arrayStart + 0x40
+            let lengthPos := add(arrayStart, 0x20)
+            calls.offset := add(arrayStart, 0x40)
+            calls.length := calldataload(lengthPos)
         }
-        _executeBatchSessionNoReturn(data[0:65], data[65:81], data[81:85], data[85:105], calls);
+        _executeBatchSessionNoReturn(_data[0:65], _data[65:81], _data[81:85], _data[85:105], calls);
     }
 
-    function executeBatchSessionArbitrary(bytes calldata data) external {
+    function executeBatchSessionArbitrary(bytes calldata _data) external {
         IBatchExecution.Call[] calldata calls;
         assembly ("memory-safe") {
-            calls.offset := add(data.offset, add(85, 0x40))
-            calls.length := calldataload(add(data.offset, add(85, 0x20)))
+            // ABI: at offset 85, we have the head for the dynamic array: [offset=0x20][length][elements]
+            let arrayStart := add(_data.offset, 85)
+            let offsetPointer := calldataload(arrayStart)
+            // If offset pointer is not 0x20, the length is not at the expected position
+            if iszero(eq(offsetPointer, 0x20)) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, INVALID_OFFSET_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
+            // With offset pointer = 0x20, length is at arrayStart + 0x20, data starts at arrayStart + 0x40
+            let lengthPos := add(arrayStart, 0x20)
+            calls.offset := add(arrayStart, 0x40)
+            calls.length := calldataload(lengthPos)
         }
-        _executeBatchSessionArbitraryNoReturn(data[0:65], data[65:81], data[81:85], calls);
+        _executeBatchSessionArbitraryNoReturn(_data[0:65], _data[65:81], _data[81:85], calls);
     }
 
     function executeSession(bytes calldata data) external {
@@ -1849,8 +1893,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         IBatchExecution.Call[] calldata calls;
         uint256 length;
         assembly ("memory-safe") {
+            // Read the offset pointer to determine where array data starts
+            let offsetPointer := calldataload(_calls.offset)
+            // If offset pointer is not 0x20, the length is not at the expected position
+            if iszero(eq(offsetPointer, 0x20)) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, INVALID_OFFSET_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
+            // With offset pointer = 0x20, length is at _calls.offset + 0x20, data starts at _calls.offset + 0x40
+            let lengthPos := add(_calls.offset, 0x20)
             calls.offset := add(_calls.offset, 0x40)
-            calls.length := calldataload(add(_calls.offset, 0x20))
+            calls.length := calldataload(lengthPos)
             length := calls.length
         }
 
@@ -1902,8 +1956,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         IBatchExecution.Call[] calldata calls;
         uint256 length;
         assembly ("memory-safe") {
+            // Read the offset pointer to determine where array data starts
+            let offsetPointer := calldataload(_calls.offset)
+            // If offset pointer is not 0x20, the length is not at the expected position
+            if iszero(eq(offsetPointer, 0x20)) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, INVALID_OFFSET_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
+            // With offset pointer = 0x20, length is at _calls.offset + 0x20, data starts at _calls.offset + 0x40
+            let lengthPos := add(_calls.offset, 0x20)
             calls.offset := add(_calls.offset, 0x40)
-            calls.length := calldataload(add(_calls.offset, 0x20))
+            calls.length := calldataload(lengthPos)
             length := calls.length
         }
 

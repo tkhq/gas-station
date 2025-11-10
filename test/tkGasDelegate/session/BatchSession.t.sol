@@ -43,7 +43,7 @@ contract BatchSessionTest is TKGasDelegateBase {
         assertEq(mockToken.balanceOf(receiver), 10 ether);
     }
 
-    function testBatchSessionExecute_Corrupted_Offset() public {
+    function testBatchSessionExecute_Corrupted_Offset_Returns() public {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
 
@@ -59,40 +59,70 @@ contract BatchSessionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
         });
 
-        // Manually corrupt the length field of the calls array in memory to 1 (should be 2)
-        assembly {
-            mstore(calls, 1)
-            mstore(add(calls, 0x20), 0) // set offset of calls[0] to 0x00
-        }
-        assertEq(calls.length, 1);
-
-        uint128 counter = 1; // Use fixed counter value
+        uint128 counter = 1;
         uint32 deadline = uint32(block.timestamp + 1 days);
         bytes memory signature =
             _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
 
-        bytes memory callBytes;
+        bytes memory callsEncoded = abi.encode(calls);
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), callsEncoded);
+
+        // Corrupt the offset pointer in the ABI-encoded calls array (should be 0x20, set to 0x00)
+        // Offset pointer is at byte 105 from start of data content (after 32-byte length prefix)
         assembly {
-            // Take length and data directly from `calls` memory
-            let callsLen := mul(mload(calls), 0x20)
-            let callsDataPtr := add(calls, 0x20)
-            let totalLen := add(0x20, callsLen)
-            callBytes := mload(0x40)
-            mstore(callBytes, mload(calls)) // store the "length" (even if corrupted)
-            // store the offsets/data after the first 0x20 bytes
-            let dst := add(callBytes, 0x20)
-            let src := callsDataPtr
-            for { let i := 0 } lt(i, callsLen) { i := add(i, 0x20) } { mstore(add(dst, i), mload(add(src, i))) }
-            mstore(0x40, add(callBytes, totalLen))
+            let offsetPtrStart := add(add(data, 0x20), 105)
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
+                mstore8(add(offsetPtrStart, i), 0)
+            }
         }
-        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), callBytes);
 
         vm.prank(paymaster);
-        vm.expectRevert();
+        vm.expectRevert(TKGasDelegate.InvalidOffset.selector);
         MockDelegate(user).executeBatchSessionReturns(data);
         vm.stopPrank();
 
-        // result is that it should only execute the first call, so the balance of the receiver should be 0
+        assertEq(mockToken.allowance(user, receiver), 0 ether);
+        assertEq(mockToken.balanceOf(receiver), 0 ether);
+    }
+
+    function testBatchSessionExecute_Corrupted_Offset_NoReturn() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        uint128 counter = 1;
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory callsEncoded = abi.encode(calls);
+        bytes memory data = abi.encodePacked(signature, counter, deadline, address(mockToken), callsEncoded);
+
+        // Corrupt the offset pointer in the ABI-encoded calls array (should be 0x20, set to 0x00)
+        // Offset pointer is at byte 105 from start of data content (after 32-byte length prefix)
+        assembly {
+            let offsetPtrStart := add(add(data, 0x20), 105)
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
+                mstore8(add(offsetPtrStart, i), 0)
+            }
+        }
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.InvalidOffset.selector);
+        MockDelegate(user).executeBatchSession(data);
+        vm.stopPrank();
+
         assertEq(mockToken.allowance(user, receiver), 0 ether);
         assertEq(mockToken.balanceOf(receiver), 0 ether);
     }

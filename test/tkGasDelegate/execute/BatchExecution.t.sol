@@ -589,7 +589,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
         assertEq(hashFromFunction, MockDelegate(user).hashCallArray(calls), "hashCallArray should be deterministic");
     }
 
-    function testExecuteBatch_Corrupted_Offset() public {
+    function testExecuteBatch_Corrupted_Offset_Returns() public {
         mockToken.mint(user, 100 ether);
         address receiver = makeAddr("receiver");
 
@@ -600,18 +600,11 @@ contract BatchExecutionTest is TKGasDelegateBase {
             data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
         });
 
-        // Read the call data BEFORE corrupting the array
+        // Read the call data BEFORE encoding
         IBatchExecution.Call memory call0 = calls[0];
         bytes32 callTypeHash = MockDelegate(user).external_CALL_TYPEHASH();
         bytes32 callStructHash =
             keccak256(abi.encode(callTypeHash, uint256(uint160(call0.to)), call0.value, keccak256(call0.data)));
-
-        // Manually corrupt the length field of the calls array in memory to 1 (should be 2)
-        assembly {
-            mstore(calls, 1)
-            mstore(add(calls, 0x20), 0) // set offset of calls[0] to 0x00
-        }
-        assertEq(calls.length, 1);
 
         uint128 nonce = MockDelegate(user).nonce();
         uint32 deadline = uint32(block.timestamp + 86400);
@@ -633,14 +626,81 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes32 typedDataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, typedDataHash);
         bytes memory signature = abi.encodePacked(r, s, v);
-        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), abi.encode(calls));
+        bytes memory callsEncoded = abi.encode(calls);
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), callsEncoded);
+
+        // Corrupt the offset pointer in the ABI-encoded calls array (should be 0x20, set to 0x00)
+        // Offset pointer is at byte 85 from start of data content (after 32-byte length prefix)
+        assembly {
+            let offsetPtrStart := add(add(data, 0x20), 85)
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
+                mstore8(add(offsetPtrStart, i), 0)
+            }
+        }
 
         vm.prank(paymaster);
-        vm.expectRevert();
+        vm.expectRevert(TKGasDelegate.InvalidOffset.selector);
         MockDelegate(user).executeBatchReturns(data);
         vm.stopPrank();
 
-        // result is that it should only execute the first call, so the balance of the receiver should be 0
+        assertEq(mockToken.allowance(user, receiver), 0 ether);
+        assertEq(mockToken.balanceOf(receiver), 0 ether);
+    }
+
+    function testExecuteBatch_Corrupted_Offset_NoReturn() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+
+        // Read the call data BEFORE encoding
+        IBatchExecution.Call memory call0 = calls[0];
+        bytes32 callTypeHash = MockDelegate(user).external_CALL_TYPEHASH();
+        bytes32 callStructHash =
+            keccak256(abi.encode(callTypeHash, uint256(uint160(call0.to)), call0.value, keccak256(call0.data)));
+
+        uint128 nonce = MockDelegate(user).nonce();
+        uint32 deadline = uint32(block.timestamp + 86400);
+
+        // For a single element array, EIP-712 expects keccak256(abi.encodePacked(structHash))
+        bytes32 executionsHash = keccak256(abi.encodePacked(callStructHash));
+        bytes32 BATCH_EXECUTION_TYPEHASH = MockDelegate(user).external_BATCH_EXECUTION_TYPEHASH();
+        bytes32 structHash;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), nonce)
+            mstore(add(ptr, 0x40), deadline)
+            mstore(add(ptr, 0x60), executionsHash)
+            structHash := keccak256(ptr, 0x80)
+            mstore(0x40, add(ptr, 0x80)) // advance free mem pointer
+        }
+        bytes32 domainSeparator = MockDelegate(user).external_DOMAIN_SEPARATOR();
+        bytes32 typedDataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, typedDataHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory callsEncoded = abi.encode(calls);
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), callsEncoded);
+
+        // Corrupt the offset pointer in the ABI-encoded calls array (should be 0x20, set to 0x00)
+        // Offset pointer is at byte 85 from start of data content (after 32-byte length prefix)
+        assembly {
+            let offsetPtrStart := add(add(data, 0x20), 85)
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
+                mstore8(add(offsetPtrStart, i), 0)
+            }
+        }
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.InvalidOffset.selector);
+        MockDelegate(user).executeBatch(data);
+        vm.stopPrank();
+
         assertEq(mockToken.allowance(user, receiver), 0 ether);
         assertEq(mockToken.balanceOf(receiver), 0 ether);
     }

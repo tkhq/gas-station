@@ -992,7 +992,7 @@ contract ApproveThenExecuteTest is TKGasDelegateTestBase {
 
         vm.prank(paymaster);
         vm.expectRevert(bytes4(keccak256("ApprovalReturnFalse()")));
-        // solhint-disable-next-line
+        /* solc-disable-next-line */
         address(MockDelegate(user)).call(fallbackData);
         vm.stopPrank();
     }
