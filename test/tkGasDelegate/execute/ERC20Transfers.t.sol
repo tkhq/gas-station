@@ -516,7 +516,8 @@ contract ERC20TransfersTest is TKGasDelegateBase {
 
         vm.prank(paymaster);
         gasBefore = gasleft();
-        (,) = address(MockDelegate(user)).call(fallbackData);
+        // solhint-disable-next-line
+        address(MockDelegate(user)).call(fallbackData);
         uint256 gasUsedFallback = gasBefore - gasleft();
 
         // Assertions
