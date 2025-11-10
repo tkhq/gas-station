@@ -29,6 +29,27 @@ contract SessionTest is TKGasDelegateBase {
         assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
     }
 
+    function testSessionExecuteReturns_Succeeds() public {
+        mockToken.mint(user, 10 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        uint128 counter = 1; // Use fixed counter value
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
+        bytes memory data = _constructSessionExecuteBytes(signature, counter, deadline, address(mockToken), 0, args);
+
+        vm.prank(paymaster);
+        bytes memory result = MockDelegate(user).executeSessionReturns(data);
+        vm.stopPrank();
+
+        // Verify the call succeeded and returned the expected value
+        assertEq(abi.decode(result, (bool)), true);
+        assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
+    }
+
     function testSessionExecute_ExpiredDeadline_Reverts() public {
         uint128 counter = 1; // Use fixed counter value
         uint32 deadline = uint32(block.timestamp - 1);
@@ -189,6 +210,28 @@ contract SessionTest is TKGasDelegateBase {
     }
 
     // ========== PARAMETERIZED VERSIONS ==========
+
+    function testSessionExecuteParameterizedReturns_Succeeds() public {
+        mockToken.mint(user, 10 * 10 ** 18);
+        address receiver = makeAddr("receiver");
+
+        uint128 counter = 1; // Use fixed counter value
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature =
+            _signSessionExecuteWithSender(USER_PRIVATE_KEY, user, counter, deadline, paymaster, address(mockToken));
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 5 * 10 ** 18);
+        // Create data manually: [signature(65)][counter(16)][deadline(4)][args]
+        bytes memory data = abi.encodePacked(signature, bytes16(counter), bytes4(deadline), args);
+
+        vm.prank(paymaster);
+        bytes memory result = MockDelegate(user).executeSessionReturns(address(mockToken), 0, data);
+        vm.stopPrank();
+
+        // Verify the call succeeded and returned the expected value
+        assertEq(abi.decode(result, (bool)), true);
+        assertEq(mockToken.balanceOf(receiver), 5 * 10 ** 18);
+    }
 
     function testSessionExecuteParameterized_Succeeds() public {
         mockToken.mint(user, 10 * 10 ** 18);

@@ -70,7 +70,7 @@ contract TKGasStationTest is Test {
     }
 
     function testInit() public view {
-        assertTrue(tkGasStation.tkGasDelegate() == address(tkGasDelegate));
+        assertTrue(tkGasStation.TK_GAS_DELEGATE() == address(tkGasDelegate));
     }
 
     function testERC20Transfer() public {
@@ -215,7 +215,7 @@ contract TKGasStationTest is Test {
         assertFalse(tkGasStation.isDelegated(newUser));
     }
 
-    function testGetNonce() public {
+    function testGetNonce() public view {
         uint128 nonce = tkGasStation.getNonce(user);
         assertEq(nonce, 0); // Should start at 0
     }
@@ -242,13 +242,15 @@ contract TKGasStationTest is Test {
 
     function testReceiveReverts() public {
         vm.expectRevert();
-        address(tkGasStation).call{value: 1 ether}("");
+        (bool success,) = address(tkGasStation).call{value: 1 ether}("");
+        success; // Silence unused variable warning
     }
 
     function testFallbackInvalidFunctionSelectorRevert() public {
         // Test fallback with invalid function selector
         vm.expectRevert();
-        address(tkGasStation).call(abi.encodePacked(bytes1(0x00), user, bytes1(0x80))); // Invalid selector
+        (bool success,) = address(tkGasStation).call(abi.encodePacked(bytes1(0x00), user, bytes1(0x80))); // Invalid selector
+        success; // Silence unused variable warning
     }
 
     // Tests for newly implemented no-return functions

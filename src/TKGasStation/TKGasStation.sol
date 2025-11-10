@@ -7,18 +7,13 @@ import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
 
 contract TKGasStation is ITKGasStation {
     error NotDelegated();
-    error NoEthAllowed();
     error InvalidFunctionSelector();
     error ExecutionFailed();
 
-    address public immutable tkGasDelegate;
+    address public immutable TK_GAS_DELEGATE;
 
     constructor(address _tkGasDelegate) {
-        tkGasDelegate = _tkGasDelegate;
-    }
-
-    receive() external payable {
-        revert NoEthAllowed();
+        TK_GAS_DELEGATE = _tkGasDelegate;
     }
 
     fallback(bytes calldata data) external returns (bytes memory) {
@@ -30,15 +25,18 @@ contract TKGasStation is ITKGasStation {
             revert NotDelegated();
         }
 
-        bytes1 functionSelector = bytes1(data[22] & 0xf0); // mask the last nibble
+        if (bytes1(data[21]) == 0x00) {
+            // check if the first byte is 0x00
+            bytes1 functionSelector = bytes1(data[22] & 0xf0); // mask the last nibble
 
-        // only allow execute functions, no session functions
-        if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20) {
-            (bool success, bytes memory result) = target.call(data[21:]);
-            if (success) {
-                return result;
+            // only allow execute functions, no session functions
+            if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20) {
+                (bool success, bytes memory result) = target.call(data[21:]);
+                if (success) {
+                    return result;
+                }
+                revert ExecutionFailed();
             }
-            revert ExecutionFailed();
         }
 
         revert InvalidFunctionSelector();
@@ -69,7 +67,7 @@ contract TKGasStation is ITKGasStation {
             delegatedTo := shr(96, mload(add(code, 0x23)))
         }
 
-        return delegatedTo == tkGasDelegate;
+        return delegatedTo == TK_GAS_DELEGATE;
     }
 
     // Execute functions
@@ -252,25 +250,10 @@ contract TKGasStation is ITKGasStation {
         return ITKGasDelegate(_targetEoA).hashBatchExecution(_nonce, _deadline, _calls);
     }
 
-    function hashBurnSessionCounter(address _targetEoA, uint128 _counter, address _sender)
-        external
-        view
-        returns (bytes32)
-    {
+    function hashBurnSessionCounter(address _targetEoA, uint128 _counter) external view returns (bytes32) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        return ITKGasDelegate(_targetEoA).hashBurnSessionCounter(_counter, _sender);
-    }
-
-    function hashBatchExecution(address _targetEoA, uint128 _nonce, IBatchExecution.Call[] calldata _calls)
-        external
-        view
-        returns (bytes32)
-    {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).hashBatchExecution(_nonce, _calls);
+        return ITKGasDelegate(_targetEoA).hashBurnSessionCounter(_counter);
     }
 }

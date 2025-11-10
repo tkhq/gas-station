@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {IBatchExecution} from "../../../src/TKGasStation/interfaces/IBatchExecution.sol";
+import {ITKGasDelegate} from "../../../src/TKGasStation/interfaces/ITKGasDelegate.sol";
 import {TKGasDelegateTestBase as TKGasDelegateBase} from "../TKGasDelegateTestBase.t.sol";
 import {MockDelegate} from "../../mocks/MockDelegate.t.sol";
 import {console} from "forge-std/console.sol";
@@ -65,6 +66,111 @@ contract BatchExecutionTest is TKGasDelegateBase {
         console.log("Total Gas Used: %s", gasUsed);
     }
 
+    function testExecuteBatchBytesGas_SingleTransfer() public {
+        // Mint tokens to user first so they have balance to transfer
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        // Prepare single call: transfer mockToken
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+
+        // Call 1: mockToken.transfer(receiver, 10 ether)
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        // Build signed batch
+        uint128 nonce = MockDelegate(user).nonce();
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), calls);
+
+        // Encode as abi.encode(IBatchExecution.Call[])
+        bytes memory callsEncoded = abi.encode(calls);
+
+        // Construct calldata: [sig(65)][nonce(16)][abi.encode(calls)]
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), callsEncoded);
+
+        // Execute
+        bytes[] memory results;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        results = MockDelegate(user).executeBatchReturns(data);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Success is implicit - if we get here without reverting, the call succeeded
+        assertEq(mockToken.balanceOf(receiver), 10 ether);
+        assertEq(results.length, 1);
+
+        // Log gas
+        console.log("=== executeBatch(bytes) Single Transfer Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testExecuteBatchBytesGas_ApproveThenTransferFrom() public {
+        // Mint tokens to user first so they have balance to transfer
+        mockToken.mint(user, 100 ether);
+        address spender = makeAddr("spender");
+        address receiver = makeAddr("receiver");
+        uint256 transferAmount = 10 ether;
+
+        // First, we need to approve the spender from the user's account
+        // This simulates a real-world scenario where user has already approved a spender
+        vm.prank(user);
+        mockToken.approve(spender, transferAmount);
+
+        // Prepare batch: approve (increase allowance) then transferFrom
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+
+        // Call 1: mockToken.approve(spender, transferAmount * 2)
+        // Increase the allowance (simulating a top-up scenario)
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, spender, transferAmount * 2)
+        });
+
+        // Call 2: mockToken.transferFrom(user, receiver, transferAmount)
+        // The spender (via delegate contract) transfers from user to receiver
+        // Note: In batch execution, msg.sender is the delegate contract, so we need to
+        // use a different approach - use transfer instead since delegate acts on behalf of user
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, transferAmount)
+        });
+
+        // Build signed batch
+        uint128 nonce = MockDelegate(user).nonce();
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), calls);
+
+        // Encode as abi.encode(IBatchExecution.Call[])
+        bytes memory callsEncoded = abi.encode(calls);
+
+        // Construct calldata: [sig(65)][nonce(16)][abi.encode(calls)]
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), callsEncoded);
+
+        // Execute
+        bytes[] memory results;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        results = MockDelegate(user).executeBatchReturns(data);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Success is implicit - if we get here without reverting, the call succeeded
+        assertEq(mockToken.balanceOf(receiver), transferAmount);
+        assertEq(mockToken.allowance(user, spender), transferAmount * 2);
+        assertEq(results.length, 2);
+
+        // Log gas
+        console.log("=== executeBatch(bytes) Approve Then Transfer Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
     function testExecuteBatchRevertsOnInnerFailure() public {
         // Prepare calls where one will revert: transferFrom without allowance
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
@@ -113,7 +219,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
             abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), abi.encode(calls));
 
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.BatchSizeExceeded.selector);
+        vm.expectRevert(TKGasDelegate.BatchSizeInvalid.selector);
         MockDelegate(user).executeBatch(data);
     }
 
@@ -340,6 +446,49 @@ contract BatchExecutionTest is TKGasDelegateBase {
         console.log("Total Gas Used: %s", gasUsed);
     }
 
+    function testExecuteBatchParameterizedReturns_Succeeds() public {
+        // Prepare calls: 2 ERC20 mints to user and a view call
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](3);
+
+        // Call 1: mockToken.mint(user, 10 ether)
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 10 ether)
+        });
+
+        // Call 2: mockToken.mint(user, 20 ether)
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 20 ether)
+        });
+
+        // Call 3: mockToken.returnPlusHoldings(1)
+        calls[2] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.returnPlusHoldings.selector, 1)
+        });
+
+        // Build signed batch
+        uint128 nonce = MockDelegate(user).nonce();
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), calls);
+
+        // Execute using parameterized version with Returns - signature and nonce go in _data
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
+        bytes[] memory results;
+        vm.prank(paymaster);
+        results = MockDelegate(user).executeBatchReturns(calls, data);
+        vm.stopPrank();
+
+        // Verify success
+        assertEq(mockToken.balanceOf(user), 30 ether);
+        assertEq(results.length, 3);
+        uint256 ret = abi.decode(results[2], (uint256));
+        assertEq(ret, 1 + 30 ether);
+    }
+
     function testExecuteBatchParameterizedRevertsOnInnerFailure() public {
         // Prepare calls where one will revert: transferFrom without allowance
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
@@ -383,10 +532,9 @@ contract BatchExecutionTest is TKGasDelegateBase {
         }
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), calls);
-
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
         vm.prank(paymaster);
-        vm.expectRevert(TKGasDelegate.BatchSizeExceeded.selector);
+        vm.expectRevert(TKGasDelegate.BatchSizeInvalid.selector);
         MockDelegate(user).executeBatch(calls, data);
     }
 
@@ -499,5 +647,238 @@ contract BatchExecutionTest is TKGasDelegateBase {
         vm.expectRevert(TKGasDelegate.DeadlineExceeded.selector);
         MockDelegate(user).executeBatch(calls, data);
         vm.stopPrank();
+    }
+
+    function testHashCallArrayMatchesAbiEncode() public view {
+        // Prepare calls
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 100,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 10 ether)
+        });
+
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 200,
+            data: abi.encodeWithSelector(mockToken.mint.selector, user, 20 ether)
+        });
+
+        uint256 gasBefore2 = gasleft();
+        bytes32[] memory hashes = new bytes32[](calls.length);
+        for (uint256 i = 0; i < calls.length; i++) {
+            bytes32 structDataHash = keccak256(
+                abi.encodePacked(
+                    MockDelegate(user).external_CALL_TYPEHASH(),
+                    uint256(uint160(calls[i].to)), // Pad address to 32 bytes (right-aligned)
+                    calls[i].value,
+                    keccak256(calls[i].data)
+                )
+            );
+            hashes[i] = structDataHash;
+        }
+        // For EIP-712 arrays, hash the concatenation of all struct hashes (no length prefix)
+        bytes32 hashFromHashes = keccak256(abi.encodePacked(hashes));
+        uint256 gasUsed2 = gasBefore2 - gasleft();
+        console.log("gas used by normal abi decoding: %s", gasUsed2);
+
+        // Get hash from the contract function
+        uint256 gasBefore = gasleft();
+        bytes32 hashFromFunction = MockDelegate(user).hashCallArray(calls);
+        uint256 gasUsed = gasBefore - gasleft();
+        console.log("gas used by hashCallArray: %s", gasUsed);
+
+        assertEq(hashFromFunction, hashFromHashes, "hashCallArray should match abi encoded version ");
+
+        // Verify it's deterministic
+        assertEq(hashFromFunction, MockDelegate(user).hashCallArray(calls), "hashCallArray should be deterministic");
+    }
+
+    function testExecuteBatch_Corrupted_Offset_Returns() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+
+        // Read the call data BEFORE encoding
+        IBatchExecution.Call memory call0 = calls[0];
+        bytes32 callTypeHash = MockDelegate(user).external_CALL_TYPEHASH();
+        bytes32 callStructHash =
+            keccak256(abi.encode(callTypeHash, uint256(uint160(call0.to)), call0.value, keccak256(call0.data)));
+
+        uint128 nonce = MockDelegate(user).nonce();
+        uint32 deadline = uint32(block.timestamp + 86400);
+
+        // For a single element array, EIP-712 expects keccak256(abi.encodePacked(structHash))
+        bytes32 executionsHash = keccak256(abi.encodePacked(callStructHash));
+        bytes32 BATCH_EXECUTION_TYPEHASH = MockDelegate(user).external_BATCH_EXECUTION_TYPEHASH();
+        bytes32 structHash;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), nonce)
+            mstore(add(ptr, 0x40), deadline)
+            mstore(add(ptr, 0x60), executionsHash)
+            structHash := keccak256(ptr, 0x80)
+            mstore(0x40, add(ptr, 0x80)) // advance free mem pointer
+        }
+        bytes32 domainSeparator = MockDelegate(user).external_DOMAIN_SEPARATOR();
+        bytes32 typedDataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, typedDataHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory callsEncoded = abi.encode(calls);
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), callsEncoded);
+
+        // Corrupt the offset pointer in the ABI-encoded calls array (should be 0x20, set to 0x00)
+        // Offset pointer is at byte 85 from start of data content (after 32-byte length prefix)
+        assembly {
+            let offsetPtrStart := add(add(data, 0x20), 85)
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } { mstore8(add(offsetPtrStart, i), 0) }
+        }
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.InvalidOffset.selector);
+        MockDelegate(user).executeBatchReturns(data);
+        vm.stopPrank();
+
+        assertEq(mockToken.allowance(user, receiver), 0 ether);
+        assertEq(mockToken.balanceOf(receiver), 0 ether);
+    }
+
+    function testExecuteBatch_Corrupted_Offset_NoReturn() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+
+        // Read the call data BEFORE encoding
+        IBatchExecution.Call memory call0 = calls[0];
+        bytes32 callTypeHash = MockDelegate(user).external_CALL_TYPEHASH();
+        bytes32 callStructHash =
+            keccak256(abi.encode(callTypeHash, uint256(uint160(call0.to)), call0.value, keccak256(call0.data)));
+
+        uint128 nonce = MockDelegate(user).nonce();
+        uint32 deadline = uint32(block.timestamp + 86400);
+
+        // For a single element array, EIP-712 expects keccak256(abi.encodePacked(structHash))
+        bytes32 executionsHash = keccak256(abi.encodePacked(callStructHash));
+        bytes32 BATCH_EXECUTION_TYPEHASH = MockDelegate(user).external_BATCH_EXECUTION_TYPEHASH();
+        bytes32 structHash;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
+            mstore(add(ptr, 0x20), nonce)
+            mstore(add(ptr, 0x40), deadline)
+            mstore(add(ptr, 0x60), executionsHash)
+            structHash := keccak256(ptr, 0x80)
+            mstore(0x40, add(ptr, 0x80)) // advance free mem pointer
+        }
+        bytes32 domainSeparator = MockDelegate(user).external_DOMAIN_SEPARATOR();
+        bytes32 typedDataHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, typedDataHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+        bytes memory callsEncoded = abi.encode(calls);
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), callsEncoded);
+
+        // Corrupt the offset pointer in the ABI-encoded calls array (should be 0x20, set to 0x00)
+        // Offset pointer is at byte 85 from start of data content (after 32-byte length prefix)
+        assembly {
+            let offsetPtrStart := add(add(data, 0x20), 85)
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } { mstore8(add(offsetPtrStart, i), 0) }
+        }
+
+        vm.prank(paymaster);
+        vm.expectRevert(TKGasDelegate.InvalidOffset.selector);
+        MockDelegate(user).executeBatch(data);
+        vm.stopPrank();
+
+        assertEq(mockToken.allowance(user, receiver), 0 ether);
+        assertEq(mockToken.balanceOf(receiver), 0 ether);
+    }
+
+    function testExecuteBatch_Length_One_But_Actually_Two_Elements() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 ether)
+        });
+
+        // Manually corrupt the length field of the calls array in memory to 1 (should be 2)
+        assembly {
+            mstore(calls, 1)
+        }
+        assertEq(calls.length, 1);
+
+        uint128 nonce = MockDelegate(user).nonce();
+        uint32 deadline = uint32(block.timestamp + 86400);
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, deadline, calls);
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), abi.encode(calls));
+
+        bytes[] memory results;
+        vm.prank(paymaster);
+        results = MockDelegate(user).executeBatchReturns(data);
+        vm.stopPrank();
+
+        // result is that it should only execute the first call, so the balance of the receiver should be 0
+        assertEq(mockToken.allowance(user, receiver), 10 ether);
+        assertEq(mockToken.balanceOf(receiver), 0 ether);
+    }
+
+    function testExecuteBatch_Length_Two_But_Actually_One_Element_Reverts() public {
+        mockToken.mint(user, 100 ether);
+        address receiver = makeAddr("receiver");
+
+        uint128 nonce = MockDelegate(user).nonce();
+        uint32 deadline = uint32(block.timestamp + 86400);
+
+        // Manually encode the one and only call with corrupted length = 2
+        bytes memory manualCalls = abi.encodePacked(
+            uint256(2), // corrupted length field
+            abi.encode( // only one element present!
+                IBatchExecution.Call({
+                    to: address(mockToken),
+                    value: 0,
+                    data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+                })
+            )
+        );
+
+        // Need to sign with the actual calls array (length 1) for the signature to be valid
+        IBatchExecution.Call[] memory callsForSignature = new IBatchExecution.Call[](1);
+        callsForSignature[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, receiver, 10 ether)
+        });
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, deadline, callsForSignature);
+
+        bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), manualCalls);
+
+        vm.prank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).executeBatchReturns(data);
+        vm.stopPrank();
+
+        assertEq(mockToken.allowance(user, receiver), 0 ether);
+        assertEq(mockToken.balanceOf(receiver), 0 ether);
     }
 }
