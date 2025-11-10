@@ -738,9 +738,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
         // Offset pointer is at byte 85 from start of data content (after 32-byte length prefix)
         assembly {
             let offsetPtrStart := add(add(data, 0x20), 85)
-            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
-                mstore8(add(offsetPtrStart, i), 0)
-            }
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } { mstore8(add(offsetPtrStart, i), 0) }
         }
 
         vm.prank(paymaster);
@@ -796,9 +794,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
         // Offset pointer is at byte 85 from start of data content (after 32-byte length prefix)
         assembly {
             let offsetPtrStart := add(add(data, 0x20), 85)
-            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
-                mstore8(add(offsetPtrStart, i), 0)
-            }
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } { mstore8(add(offsetPtrStart, i), 0) }
         }
 
         vm.prank(paymaster);
