@@ -10,10 +10,10 @@ contract TKGasStation is ITKGasStation {
     error InvalidFunctionSelector();
     error ExecutionFailed();
 
-    address public immutable tkGasDelegate;
+    address public immutable TK_GAS_DELEGATE;
 
     constructor(address _tkGasDelegate) {
-        tkGasDelegate = _tkGasDelegate;
+        TK_GAS_DELEGATE = _tkGasDelegate;
     }
 
     fallback(bytes calldata data) external returns (bytes memory) {
@@ -67,7 +67,7 @@ contract TKGasStation is ITKGasStation {
             delegatedTo := shr(96, mload(add(code, 0x23)))
         }
 
-        return delegatedTo == tkGasDelegate;
+        return delegatedTo == TK_GAS_DELEGATE;
     }
 
     // Execute functions

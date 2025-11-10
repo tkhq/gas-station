@@ -4,7 +4,7 @@ pragma solidity ^0.8.30;
 import {IBatchExecution} from "./IBatchExecution.sol";
 
 interface ITKGasStation is IBatchExecution {
-    function tkGasDelegate() external view returns (address);
+    function TK_GAS_DELEGATE() external view returns (address);
 
     // Execute functions
     function executeReturns(address _target, address _to, uint256 _ethAmount, bytes calldata _data)

@@ -70,7 +70,7 @@ contract TKGasStationTest is Test {
     }
 
     function testInit() public view {
-        assertTrue(tkGasStation.tkGasDelegate() == address(tkGasDelegate));
+        assertTrue(tkGasStation.TK_GAS_DELEGATE() == address(tkGasDelegate));
     }
 
     function testERC20Transfer() public {
