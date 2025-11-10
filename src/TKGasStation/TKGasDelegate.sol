@@ -63,6 +63,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         0x601e2106a9a69d50c3489343bfc805c6ad1b051e27f87c20ed3735e4fdbb0826;
     // keccak256("BurnSessionCounter(uint128 counter)")
 
+    /// @custom:storage-location erc7201:TKGasDelegate.state
     struct State {
         uint128 nonce;
         mapping(bytes16 => bool) expiredSessionCounters;
