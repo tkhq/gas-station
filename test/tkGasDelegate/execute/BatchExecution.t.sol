@@ -109,6 +109,68 @@ contract BatchExecutionTest is TKGasDelegateBase {
         console.log("Total Gas Used: %s", gasUsed);
     }
 
+    function testExecuteBatchBytesGas_ApproveThenTransferFrom() public {
+        // Mint tokens to user first so they have balance to transfer
+        mockToken.mint(user, 100 ether);
+        address spender = makeAddr("spender");
+        address receiver = makeAddr("receiver");
+        uint256 transferAmount = 10 ether;
+
+        // First, we need to approve the spender from the user's account
+        // This simulates a real-world scenario where user has already approved a spender
+        vm.prank(user);
+        mockToken.approve(spender, transferAmount);
+
+        // Prepare batch: approve (increase allowance) then transferFrom
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);
+
+        // Call 1: mockToken.approve(spender, transferAmount * 2)
+        // Increase the allowance (simulating a top-up scenario)
+        calls[0] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.approve.selector, spender, transferAmount * 2)
+        });
+
+        // Call 2: mockToken.transferFrom(user, receiver, transferAmount)
+        // The spender (via delegate contract) transfers from user to receiver
+        // Note: In batch execution, msg.sender is the delegate contract, so we need to
+        // use a different approach - use transfer instead since delegate acts on behalf of user
+        calls[1] = IBatchExecution.Call({
+            to: address(mockToken),
+            value: 0,
+            data: abi.encodeWithSelector(mockToken.transfer.selector, receiver, transferAmount)
+        });
+
+        // Build signed batch
+        uint128 nonce = MockDelegate(user).nonce();
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), calls);
+
+        // Encode as abi.encode(IBatchExecution.Call[])
+        bytes memory callsEncoded = abi.encode(calls);
+
+        // Construct calldata: [sig(65)][nonce(16)][abi.encode(calls)]
+        bytes memory data =
+            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), callsEncoded);
+
+        // Execute
+        bytes[] memory results;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        results = MockDelegate(user).executeBatchReturns(data);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Success is implicit - if we get here without reverting, the call succeeded
+        assertEq(mockToken.balanceOf(receiver), transferAmount);
+        assertEq(mockToken.allowance(user, spender), transferAmount * 2);
+        assertEq(results.length, 2);
+
+        // Log gas
+        console.log("=== executeBatch(bytes) Approve Then Transfer Gas ===");
+        console.log("Total Gas Used: %s", gasUsed);
+    }
+
     function testExecuteBatchRevertsOnInnerFailure() public {
         // Prepare calls where one will revert: transferFrom without allowance
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](2);

@@ -128,15 +128,28 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             }
         } else if (functionSelector == bytes1(0x10)) {
             // approveThenExecute no return
-            _approveThenExecuteNoReturn(
+            address erc20;
+            address spender;
+            uint256 approveAmount;
+            address outputContract;
+            uint256 ethAmount;
+            assembly ("memory-safe") {
+                erc20 := shr(96, calldataload(nonceEnd))
+                spender := shr(96, calldataload(add(nonceEnd, 20)))
+                approveAmount := calldataload(add(nonceEnd, 40))
+                outputContract := shr(96, calldataload(add(nonceEnd, 72)))
+                let loaded := calldataload(add(nonceEnd, 92))
+                ethAmount := shr(176, loaded) // 10 bytes, right-aligned
+            }
+            _approveThenExecuteNoReturnWithParams(
                 signature,
                 nonceBytes,
                 deadlineBytes,
-                msg.data[nonceEnd:nonceEnd + 20], //erc20Bytes
-                msg.data[nonceEnd + 20:nonceEnd + 40], //spenderBytes
-                msg.data[nonceEnd + 40:nonceEnd + 72], //approveAmountBytes
-                msg.data[nonceEnd + 72:nonceEnd + 92], //outputContractBytes
-                msg.data[nonceEnd + 92:nonceEnd + 102], //ethAmountBytes (10 bytes)
+                erc20,
+                spender,
+                approveAmount,
+                outputContract,
+                ethAmount,
                 msg.data[nonceEnd + 102:] //arguments
             );
             assembly ("memory-safe") {
@@ -225,21 +238,26 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             return result;
         } else if (functionSelector == bytes1(0x11)) {
             // approveThenExecute with return
-
+            address erc20;
+            address spender;
+            uint256 approveAmount;
             address outputContract;
             uint256 ethAmount;
             assembly ("memory-safe") {
-                outputContract := shr(96, calldataload(159)) // Updated offset for deadline
-                let loaded := calldataload(179) // Updated offset for deadline
-                ethAmount := shr(176, loaded)
+                erc20 := shr(96, calldataload(nonceEnd))
+                spender := shr(96, calldataload(add(nonceEnd, 20)))
+                approveAmount := calldataload(add(nonceEnd, 40))
+                outputContract := shr(96, calldataload(add(nonceEnd, 72)))
+                let loaded := calldataload(add(nonceEnd, 92))
+                ethAmount := shr(176, loaded) // 10 bytes, right-aligned
             }
-            bytes memory result = _approveThenExecute(
+            bytes memory result = _approveThenExecuteWithParams(
                 signature,
                 nonceBytes,
                 deadlineBytes,
-                msg.data[nonceEnd:nonceEnd + 20], //erc20Bytes
-                msg.data[nonceEnd + 20:nonceEnd + 40], //spenderBytes
-                msg.data[nonceEnd + 40:nonceEnd + 72], //approveAmountBytes
+                erc20,
+                spender,
+                approveAmount,
                 outputContract,
                 ethAmount,
                 msg.data[nonceEnd + 102:] //arguments
@@ -440,24 +458,21 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     function approveThenExecuteReturns(bytes calldata _data) external returns (bytes memory) {
         // Layout: [signature(65)][nonce(16)][deadline(4)][erc20(20)][spender(20)][approveAmount(32)][output(20)][eth(32)][args]
+        address erc20;
+        address spender;
+        uint256 approveAmount;
         address to;
         uint256 value;
         assembly ("memory-safe") {
+            erc20 := shr(96, calldataload(add(_data.offset, 85)))
+            spender := shr(96, calldataload(add(_data.offset, 105)))
+            approveAmount := calldataload(add(_data.offset, 125))
             to := shr(96, calldataload(add(_data.offset, 157)))
             value := calldataload(add(_data.offset, 177))
         }
-        bytes memory result = _approveThenExecute(
-            _data[0:65],
-            _data[65:81],
-            _data[81:85], // deadline bytes
-            _data[85:105], // erc20 bytes
-            _data[105:125], // spender bytes
-            _data[125:157], // approveAmount bytes
-            to,
-            value,
-            _data[209:]
+        return _approveThenExecuteWithParams(
+            _data[0:65], _data[65:81], _data[81:85], erc20, spender, approveAmount, to, value, _data[209:]
         );
-        return result;
     }
 
     function approveThenExecuteReturns(
@@ -485,97 +500,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _approveThenExecuteNoReturnWithParams(
             _data[0:65], _data[65:81], _data[81:85], _erc20, _spender, _approveAmount, _to, _value, _data[85:]
         );
-    }
-
-    function _approveThenExecute(
-        bytes calldata _signature, // 65 bytes
-        bytes calldata _nonceBytes, // uint128
-        bytes calldata _deadlineBytes, // uint32
-        bytes calldata _erc20Bytes, // address (20 bytes)
-        bytes calldata _spenderBytes, // address
-        bytes calldata _approveAmountBytes, // uint256
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
-    ) internal returns (bytes memory) {
-        bytes32 hash;
-        assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // DeadlineExceeded
-            let ptr := mload(0x40)
-            mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
-            mstore(add(ptr, 0x20), nonceValue)
-            mstore(add(ptr, 0x40), deadline)
-            // erc20 address right-aligned in 32 bytes
-            let erc20Raw := calldataload(_erc20Bytes.offset)
-            mstore(add(ptr, 0x60), shr(96, erc20Raw))
-            // Write spender (20 bytes right-aligned in 32 bytes)
-            let spenderRaw := calldataload(_spenderBytes.offset)
-            mstore(add(ptr, 0x80), shr(96, spenderRaw))
-            // Write approveAmount (32 bytes)
-            calldatacopy(add(ptr, 0xa0), _approveAmountBytes.offset, 32)
-            mstore(add(ptr, 0xc0), _outputContract)
-            mstore(add(ptr, 0xe0), _ethAmount)
-            // Compute argsHash in assembly
-            let argsPtr := add(ptr, 0x100)
-            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
-            let argsHash := keccak256(argsPtr, _arguments.length)
-            mstore(add(ptr, 0x100), argsHash)
-            // total = 0x120 (288) bytes
-            hash := keccak256(ptr, 0x120)
-            mstore(0x40, add(ptr, 0x120))
-        }
-        hash = _hashTypedData(hash);
-
-        _validateExecute(hash, _signature, _nonceBytes);
-        // Build calldata for approve(spender, amount) cheaply in assembly and call token
-        assembly ("memory-safe") {
-            let token := shr(96, calldataload(_erc20Bytes.offset))
-            let ptr := mload(0x40)
-            mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-            // Write spender (20 bytes) into the lower 20 bytes of the next 32-byte word
-            // Offset 4 + 12 = 16 (0x10)
-            calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
-            // Write amount (32 bytes) starting at offset 4 + 32 = 0x24
-            calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
-            let approveReturnPtr := mload(0x40)
-            let success := call(gas(), token, 0, ptr, 0x44, approveReturnPtr, 0x20)
-            switch success
-            case 0 {
-                // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
-                //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-                //calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
-                mstore(add(ptr, 0x24), 0) // essentially write nothing to the next word in the register so it's 0
-                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
-                    let errorPtr := mload(0x40)
-                    mstore(errorPtr, APPROVAL_TO_0_FAILED_SELECTOR)
-                    revert(errorPtr, 0x04)
-                }
-                calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32) // then write something
-                if iszero(call(gas(), token, 0, ptr, 0x44, approveReturnPtr, 0x20)) {
-                    let errorPtr := mload(0x40)
-                    mstore(errorPtr, APPROVAL_FAILED_SELECTOR)
-                    revert(errorPtr, 0x04)
-                }
-            }
-            if iszero(or(iszero(returndatasize()), mload(approveReturnPtr))) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, APPROVAL_RETURN_FALSE_SELECTOR)
-                revert(errorPtr, 0x04)
-            }
-            mstore(0x40, add(ptr, 0x64))
-        }
-        (bool success, bytes memory result) =
-            _ethAmount == 0 ? _outputContract.call(_arguments) : _outputContract.call{value: _ethAmount}(_arguments);
-        if (success) {
-            return result;
-        }
-        revert ExecutionFailed();
     }
 
     function _approveThenExecuteWithParams(
@@ -742,104 +666,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), _outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
-            // No need to restore free memory pointer - execution ends immediately
-        }
-    }
-
-    function _approveThenExecuteNoReturn(
-        bytes calldata _signature, // 65 bytes
-        bytes calldata _nonceBytes, // uint128
-        bytes calldata _deadlineBytes, // uint32
-        bytes calldata _erc20Bytes, // address (20 bytes)
-        bytes calldata _spenderBytes, // address (20 bytes)
-        bytes calldata _approveAmountBytes, // uint256 (32 bytes)
-        bytes calldata _outputContractBytes, // address (20 bytes)
-        bytes calldata _ethAmountBytes,
-        bytes calldata _arguments
-    ) internal {
-        bytes32 hash;
-        assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // DeadlineExceeded
-            let ptr := mload(0x40)
-            mstore(ptr, APPROVE_THEN_EXECUTE_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
-            mstore(add(ptr, 0x20), nonceValue)
-            mstore(add(ptr, 0x40), deadline)
-            // erc20 address right-aligned in 32 bytes
-            let erc20Raw := calldataload(_erc20Bytes.offset)
-            mstore(add(ptr, 0x60), shr(96, erc20Raw))
-            // spender address right-aligned in 32 bytes
-            let spenderRaw := calldataload(_spenderBytes.offset)
-            mstore(add(ptr, 0x80), shr(96, spenderRaw))
-            // approve amount (32 bytes)
-            calldatacopy(add(ptr, 0xa0), _approveAmountBytes.offset, 32)
-            // output contract right-aligned
-            let outRaw := calldataload(_outputContractBytes.offset)
-            mstore(add(ptr, 0xc0), shr(96, outRaw))
-            // eth amount (right-align arbitrary length up to 32 bytes)
-            {
-                let rawEth := calldataload(_ethAmountBytes.offset)
-                let shiftBits := mul(sub(32, _ethAmountBytes.length), 8)
-                let ethVal := shr(shiftBits, rawEth)
-                mstore(add(ptr, 0xe0), ethVal)
-            }
-            // args hash
-            let argsPtr := add(ptr, 0x100)
-            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
-            let argsHash := keccak256(argsPtr, _arguments.length)
-            mstore(add(ptr, 0x100), argsHash)
-            hash := keccak256(ptr, 0x120)
-            mstore(0x40, add(ptr, 0x120))
-        }
-        hash = _hashTypedData(hash);
-
-        _validateExecute(hash, _signature, _nonceBytes);
-
-        // approve then execute; single assembly block to minimize overhead
-        assembly {
-            // Approve
-            let token := shr(96, calldataload(_erc20Bytes.offset))
-            let ptr := mload(0x40)
-            mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-            calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
-            calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32)
-            let approveReturnPtr := mload(0x40)
-            let success := call(gas(), token, 0, ptr, 0x44, approveReturnPtr, 0x20)
-            switch success
-            case 0 {
-                // attempt a special case for usdt on eth mainnet usually requires resetting approval to 0 then setting it again
-                //mstore(ptr, shl(224, 0x095ea7b3)) // IERC20.approve selector
-                //calldatacopy(add(ptr, 0x10), _spenderBytes.offset, 20)
-                mstore(add(ptr, 0x24), 0) // essentially write nothing to the next word in the register so it's 0
-                if iszero(call(gas(), token, 0, ptr, 0x44, 0, 0)) {
-                    let errorPtr := mload(0x40)
-                    mstore(errorPtr, APPROVAL_TO_0_FAILED_SELECTOR)
-                    revert(errorPtr, 0x04)
-                }
-                calldatacopy(add(ptr, 0x24), _approveAmountBytes.offset, 32) // then write something
-                if iszero(call(gas(), token, 0, ptr, 0x44, approveReturnPtr, 0x20)) {
-                    let errorPtr := mload(0x40)
-                    mstore(errorPtr, APPROVAL_FAILED_SELECTOR)
-                    revert(errorPtr, 0x04)
-                }
-            }
-            if iszero(or(iszero(returndatasize()), mload(approveReturnPtr))) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, APPROVAL_RETURN_FALSE_SELECTOR)
-                revert(errorPtr, 0x04)
-            }
-            // Execute
-            let outputAddr := shr(96, calldataload(_outputContractBytes.offset))
-            calldatacopy(ptr, _arguments.offset, _arguments.length)
-            let rawEth := calldataload(_ethAmountBytes.offset)
-            let shiftBits := mul(sub(32, _ethAmountBytes.length), 8)
-            let ethVal := shr(shiftBits, rawEth)
-            if iszero(call(gas(), outputAddr, ethVal, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
             // No need to restore free memory pointer - execution ends immediately
         }
     }
@@ -1711,18 +1537,22 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _executeBatchWithCallsNoReturn(_data[0:65], _data[65:81], _data[81:85], _calls);
     }
 
-    // Missing bytes-only no-return functions
     function approveThenExecute(bytes calldata data) external {
-        _approveThenExecuteNoReturn(
-            data[0:65],
-            data[65:81],
-            data[81:85], // deadline bytes
-            data[85:105], // erc20 bytes
-            data[105:125], // spender bytes
-            data[125:157], // approveAmount bytes
-            data[157:177], // outputContract bytes
-            data[177:209], // ethAmount bytes
-            data[209:]
+        // Layout: [signature(65)][nonce(16)][deadline(4)][erc20(20)][spender(20)][approveAmount(32)][output(20)][eth(32)][args]
+        address erc20;
+        address spender;
+        uint256 approveAmount;
+        address to;
+        uint256 value;
+        assembly ("memory-safe") {
+            erc20 := shr(96, calldataload(add(data.offset, 85)))
+            spender := shr(96, calldataload(add(data.offset, 105)))
+            approveAmount := calldataload(add(data.offset, 125))
+            to := shr(96, calldataload(add(data.offset, 157)))
+            value := calldataload(add(data.offset, 177))
+        }
+        _approveThenExecuteNoReturnWithParams(
+            data[0:65], data[65:81], data[81:85], erc20, spender, approveAmount, to, value, data[209:]
         );
     }
 
