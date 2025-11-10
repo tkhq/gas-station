@@ -969,47 +969,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes calldata _signature,
         bytes calldata _nonceBytes,
         bytes calldata _deadlineBytes,
-        bytes calldata _outputContractBytes,
-        uint256 _ethAmount,
-        bytes calldata _arguments
-    ) internal {
-        bytes32 argsHash = keccak256(_arguments);
-        bytes32 hash; // all this assembly to avoid using abi.encode
-        assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // DeadlineExceeded
-            let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, EXECUTION_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
-            mstore(add(ptr, 0x20), nonceValue)
-            mstore(add(ptr, 0x40), deadline)
-            let raw := calldataload(_outputContractBytes.offset)
-            mstore(add(ptr, 0x60), shr(96, raw))
-            mstore(add(ptr, 0x80), _ethAmount)
-            mstore(add(ptr, 0xa0), argsHash)
-            hash := keccak256(ptr, 0xc0)
-            mstore(0x40, add(ptr, 0xc0))
-        }
-        hash = _hashTypedData(hash);
-
-        _validateExecute(hash, _signature, _nonceBytes);
-        assembly {
-            let outputContract := shr(96, calldataload(_outputContractBytes.offset))
-            let ptr := mload(0x40)
-            calldatacopy(ptr, _arguments.offset, _arguments.length)
-            if iszero(call(gas(), outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
-            // No need to restore free memory pointer - execution ends immediately
-        }
-    }
-
-    function _executeWithValueNoReturn(
-        bytes calldata _signature,
-        bytes calldata _nonceBytes,
-        bytes calldata _deadlineBytes,
         address _outputContract,
         uint256 _ethAmount,
         bytes calldata _arguments
