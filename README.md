@@ -34,6 +34,10 @@ All contracts are deployed at the same address across all networks:
 - **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://testnet.monadexplorer.com/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://testnet.monadexplorer.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
+#### CELO Mainnet
+- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://celoscan.io/address/0x00984ac3c498a35a8d00004200f2001100bc0000)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://celoscan.io/address/0x000066a00056cd44008768e2af00696e19a30084)
+
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
 2. The user then signs a metatransaction (EIP-712) to give permissions to the paymaster to initiate a transaction on behalf of the user
