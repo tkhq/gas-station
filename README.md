@@ -1,26 +1,37 @@
 TK Gas Station lets a user have all their gas paid for by another party using metatransactions.
 
-### Beta Deployments For Testing 
+## Deployments
+
+All contracts are deployed at the same address across all networks:
+- **TKGasStation**: `0x00984aC3c498A35A8d00004200f2001100bC0000`
+- **TKGasDelegate**: `0x000066a00056CD44008768E2aF00696e19A30084`
 
 #### Ethereum Mainnet
+- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://etherscan.io/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://etherscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Base Mainnet
+- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://basescan.org/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://basescan.org/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Sepolia Testnet
+- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://sepolia.etherscan.io/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.etherscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Base Sepolia Testnet
+- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://sepolia.basescan.org/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.basescan.org/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Polygon Mainnet
+- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://polygonscan.com/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://polygonscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Polygon Amoy Testnet
+- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://amoy.polygonscan.com/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://amoy.polygonscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Monad Testnet
+- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://testnet.monadexplorer.com/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://testnet.monadexplorer.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 ## Overall Flow
@@ -86,3 +97,11 @@ For example, a normal execute with no return would be 0x00. A normal execute wit
 # Reporting A Vulnerability/Bug Bounty
 
 See our documentation[https://docs.turnkey.com/security/reporting-a-vulnerability] about our bug bounty program.
+
+
+# Deployment
+
+All contracts are deployed with the create2 factory with the zero address as the deployer
+Anyone can canonically deploy this to a new network
+
+The deploy scripts have the salt for bot the delegate and the gas station purposefully hardcoded 
