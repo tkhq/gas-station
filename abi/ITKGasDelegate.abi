@@ -9,7 +9,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -42,7 +42,7 @@
     "name": "approveThenExecute",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -60,7 +60,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -99,7 +99,7 @@
     "name": "approveThenExecuteReturns",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -164,11 +164,6 @@
         "name": "_counter",
         "type": "uint128",
         "internalType": "uint128"
-      },
-      {
-        "name": "_sender",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -198,7 +193,7 @@
     "name": "execute",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -216,7 +211,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -425,7 +420,7 @@
     "name": "executeBatchSessionArbitrary",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -479,7 +474,7 @@
     "name": "executeBatchSessionArbitraryReturns",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -555,10 +550,23 @@
   },
   {
     "type": "function",
+    "name": "executeNoValueNoReturn",
+    "inputs": [
+      {
+        "name": "_data",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "executeReturns",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -582,7 +590,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -611,7 +619,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -629,7 +637,7 @@
     "name": "executeSession",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -647,7 +655,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -665,7 +673,7 @@
     "name": "executeSessionArbitrary",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -683,7 +691,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -707,7 +715,7 @@
     "name": "executeSessionArbitraryReturns",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -726,7 +734,7 @@
     "name": "executeSessionReturns",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -750,7 +758,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -799,17 +807,17 @@
         "internalType": "uint256"
       },
       {
-        "name": "_outputContract",
+        "name": "_to",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_arguments",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -900,47 +908,6 @@
   },
   {
     "type": "function",
-    "name": "hashBatchExecution",
-    "inputs": [
-      {
-        "name": "_nonce",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "_calls",
-        "type": "tuple[]",
-        "internalType": "struct IBatchExecution.Call[]",
-        "components": [
-          {
-            "name": "to",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "value",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "data",
-            "type": "bytes",
-            "internalType": "bytes"
-          }
-        ]
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "hashBurnNonce",
     "inputs": [
       {
@@ -966,11 +933,6 @@
         "name": "_counter",
         "type": "uint128",
         "internalType": "uint128"
-      },
-      {
-        "name": "_sender",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [
@@ -997,17 +959,17 @@
         "internalType": "uint32"
       },
       {
-        "name": "_outputContract",
+        "name": "_to",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_arguments",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -1041,7 +1003,7 @@
         "internalType": "address"
       },
       {
-        "name": "_outputContract",
+        "name": "_to",
         "type": "address",
         "internalType": "address"
       }
@@ -1067,6 +1029,25 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "supportsInterface",
+    "inputs": [
+      {
+        "name": "_interfaceId",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "pure"
   },
   {
     "type": "function",

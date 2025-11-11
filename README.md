@@ -105,3 +105,15 @@ All contracts are deployed with the create2 factory with the zero address as the
 Anyone can canonically deploy this to a new network
 
 The deploy scripts have the salt for bot the delegate and the gas station purposefully hardcoded 
+
+The delegate should be deployed before the gas station
+
+
+
+``` 
+forge install
+
+forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate --rpc-url <RPC-URL> --broadcast --verify
+
+forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <RPC-URL> --broadcast --verify
+``` 

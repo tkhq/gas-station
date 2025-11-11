@@ -35,7 +35,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -86,7 +86,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -190,11 +190,6 @@
         "name": "_counter",
         "type": "uint128",
         "internalType": "uint128"
-      },
-      {
-        "name": "_sender",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -285,7 +280,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -411,7 +406,7 @@
     "name": "executeBatchSession",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -494,7 +489,7 @@
     "name": "executeBatchSessionArbitrary",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -548,7 +543,7 @@
     "name": "executeBatchSessionArbitraryReturns",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -567,7 +562,7 @@
     "name": "executeBatchSessionReturns",
     "inputs": [
       {
-        "name": "data",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -664,7 +659,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -693,7 +688,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -729,7 +724,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -765,7 +760,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -832,7 +827,7 @@
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
@@ -850,25 +845,6 @@
       }
     ],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "expiredSessionCounters",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint128",
-        "internalType": "uint128"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -913,17 +889,17 @@
         "internalType": "uint256"
       },
       {
-        "name": "_outputContract",
+        "name": "_to",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_arguments",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -1014,13 +990,46 @@
   },
   {
     "type": "function",
-    "name": "hashBatchExecution",
+    "name": "hashBurnNonce",
     "inputs": [
       {
         "name": "_nonce",
         "type": "uint128",
         "internalType": "uint128"
-      },
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hashBurnSessionCounter",
+    "inputs": [
+      {
+        "name": "_counter",
+        "type": "uint128",
+        "internalType": "uint128"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "hashCallArray",
+    "inputs": [
       {
         "name": "_calls",
         "type": "tuple[]",
@@ -1051,50 +1060,7 @@
         "internalType": "bytes32"
       }
     ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "hashBurnNonce",
-    "inputs": [
-      {
-        "name": "_nonce",
-        "type": "uint128",
-        "internalType": "uint128"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "hashBurnSessionCounter",
-    "inputs": [
-      {
-        "name": "_counter",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "_sender",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
+    "stateMutability": "pure"
   },
   {
     "type": "function",
@@ -1111,17 +1077,17 @@
         "internalType": "uint32"
       },
       {
-        "name": "_outputContract",
+        "name": "_to",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "_ethAmount",
+        "name": "_value",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "_arguments",
+        "name": "_data",
         "type": "bytes",
         "internalType": "bytes"
       }
@@ -1155,7 +1121,7 @@
         "internalType": "address"
       },
       {
-        "name": "_outputContract",
+        "name": "_to",
         "type": "address",
         "internalType": "address"
       }
@@ -1165,6 +1131,30 @@
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isValidSignature",
+    "inputs": [
+      {
+        "name": "_hash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "_signature",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes4",
+        "internalType": "bytes4"
       }
     ],
     "stateMutability": "view"
@@ -1296,6 +1286,25 @@
   },
   {
     "type": "function",
+    "name": "supportsInterface",
+    "inputs": [
+      {
+        "name": "_interfaceId",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "validateSignature",
     "inputs": [
       {
@@ -1325,18 +1334,39 @@
   },
   {
     "type": "error",
+    "name": "ApprovalReturnFalse",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ApprovalTo0Failed",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "BatchSizeExceeded",
+    "name": "BatchSizeInvalid",
     "inputs": []
   },
   {
     "type": "error",
     "name": "DeadlineExceeded",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "Debug",
+    "inputs": [
+      {
+        "name": "a",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "b",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
   },
   {
     "type": "error",
@@ -1355,7 +1385,12 @@
   },
   {
     "type": "error",
-    "name": "InvalidOutputContract",
+    "name": "InvalidOffset",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidToContract",
     "inputs": []
   },
   {
