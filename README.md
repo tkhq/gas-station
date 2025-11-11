@@ -1,31 +1,27 @@
-## TK Gas Station - BETA
-
-_THIS PROJECT IS STILL IN BETA AND IS CURRENLTY BEING AUDITED. WE RECOMMEND TO ONLY USE IT FOR TESTING PURPOSES UNTIL THE AUDIT IS COMPLETE_
-
 TK Gas Station lets a user have all their gas paid for by another party using metatransactions.
 
 ### Beta Deployments For Testing 
 
 #### Ethereum Mainnet
-- **TKGasDelegate**: [0x2DBF78db9c361B1EecAb85dd4612AB1A24a891D2](https://etherscan.io/address/0x2dbf78db9c361b1eecab85dd4612ab1a24a891d2)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://etherscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Base Mainnet
-- **TKGasDelegate**: [0x2DBF78db9c361B1EecAb85dd4612AB1A24a891D2](https://basescan.org/address/0x2dbf78db9c361b1eecab85dd4612ab1a24a891d2)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://basescan.org/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Sepolia Testnet
-- **TKGasDelegate**: [0x2DBF78db9c361B1EecAb85dd4612AB1A24a891D2](https://sepolia.etherscan.io/address/0x2dbf78db9c361b1eecab85dd4612ab1a24a891d2)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.etherscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Base Sepolia Testnet
-- **TKGasDelegate**: [0x2DBF78db9c361B1EecAb85dd4612AB1A24a891D2](https://sepolia.basescan.org/address/0x2dbf78db9c361b1eecab85dd4612ab1a24a891d2)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.basescan.org/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Polygon Mainnet
-- **TKGasDelegate**: [0x2DBF78db9c361B1EecAb85dd4612AB1A24a891D2](https://polygonscan.com/address/0x2dbf78db9c361b1eecab85dd4612ab1a24a891d2)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://polygonscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Polygon Amoy Testnet
-- **TKGasDelegate**: [0x2DBF78db9c361B1EecAb85dd4612AB1A24a891D2](https://amoy.polygonscan.com/address/0x2dbf78db9c361b1eecab85dd4612ab1a24a891d2)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://amoy.polygonscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Monad Testnet
-- **TKGasDelegate**: [0x2DBF78db9c361B1EecAb85dd4612AB1A24a891D2](https://testnet.monadexplorer.com/address/0x2dbf78db9c361b1eecab85dd4612ab1a24a891d2)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://testnet.monadexplorer.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
@@ -89,4 +85,4 @@ For example, a normal execute with no return would be 0x00. A normal execute wit
 
 # Reporting A Vulnerability/Bug Bounty
 
-See our documentation[https://docs.turnkey.com/security/reporting-a-vulnerability] about our bug bounty program. _THIS IS STILL IN BETA AND IS NOT OPEN TO BUG BOUNTY_
+See our documentation[https://docs.turnkey.com/security/reporting-a-vulnerability] about our bug bounty program.
