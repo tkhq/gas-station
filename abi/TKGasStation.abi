@@ -15,8 +15,17 @@
     "stateMutability": "nonpayable"
   },
   {
-    "type": "receive",
-    "stateMutability": "payable"
+    "type": "function",
+    "name": "TK_GAS_DELEGATE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -408,52 +417,6 @@
         "internalType": "uint128"
       },
       {
-        "name": "_calls",
-        "type": "tuple[]",
-        "internalType": "struct IBatchExecution.Call[]",
-        "components": [
-          {
-            "name": "to",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "value",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "data",
-            "type": "bytes",
-            "internalType": "bytes"
-          }
-        ]
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "hashBatchExecution",
-    "inputs": [
-      {
-        "name": "_targetEoA",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_nonce",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
         "name": "_deadline",
         "type": "uint32",
         "internalType": "uint32"
@@ -527,11 +490,6 @@
         "name": "_counter",
         "type": "uint128",
         "internalType": "uint128"
-      },
-      {
-        "name": "_sender",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [
@@ -647,19 +605,6 @@
   },
   {
     "type": "function",
-    "name": "tkGasDelegate",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "validateSignature",
     "inputs": [
       {
@@ -695,11 +640,6 @@
   {
     "type": "error",
     "name": "InvalidFunctionSelector",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "NoEthAllowed",
     "inputs": []
   },
   {
