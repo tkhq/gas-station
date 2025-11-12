@@ -3,40 +3,40 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 ## Deployments
 
 All contracts are deployed at the same address across all networks:
-- **TKGasStation**: `0x00984aC3c498A35A8d00004200f2001100bC0000`
+- **TKGasStation**: `0x00000000008c57a1CE37836a5e9d36759D070d8c`
 - **TKGasDelegate**: `0x000066a00056CD44008768E2aF00696e19A30084`
 
 #### Ethereum Mainnet
-- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://etherscan.io/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://etherscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://etherscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Base Mainnet
-- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://basescan.org/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://basescan.org/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://basescan.org/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Sepolia Testnet
-- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://sepolia.etherscan.io/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://sepolia.etherscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.etherscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Base Sepolia Testnet
-- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://sepolia.basescan.org/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://sepolia.basescan.org/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.basescan.org/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Polygon Mainnet
-- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://polygonscan.com/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://polygonscan.com/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://polygonscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
+#### Celo Mainnet
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://celoscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://celoscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
+
 #### Polygon Amoy Testnet
-- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://amoy.polygonscan.com/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://amoy.polygonscan.com/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://amoy.polygonscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Monad Testnet
-- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://testnet.monadexplorer.com/address/0x00984aC3c498A35A8d00004200f2001100bC0000)
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://testnet.monadexplorer.com/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://testnet.monadexplorer.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
-
-#### CELO Mainnet
-- **TKGasStation**: [0x00984aC3c498A35A8d00004200f2001100bC0000](https://celoscan.io/address/0x00984ac3c498a35a8d00004200f2001100bc0000)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://celoscan.io/address/0x000066a00056cd44008768e2af00696e19a30084)
 
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
@@ -113,9 +113,10 @@ The deploy scripts have the salt for bot the delegate and the gas station purpos
 The delegate should be deployed before the gas station
 
 
-
 ``` 
 forge install
+
+forge build
 
 forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate --rpc-url <RPC-URL> --broadcast --verify
 

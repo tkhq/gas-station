@@ -15,7 +15,7 @@ contract DeployTKGasStation is Script {
     function run() external {
         uint256 _deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address _delegate = 0x000066a00056CD44008768E2aF00696e19A30084; // TKGasDelegate 
-        bytes32 _salt = 0x0000000000000000000000000000000000000000c6b3f42ca51eca44cb120242; // should end up as 0x00984aC3c498A35A8d00004200f2001100bC0000
+        bytes32 _salt = 0x00000000000000000000000000000000000000001b6e3b861592b6bd85020054; // resovles to 0x00000000008c57a1ce37836a5e9d36759d070d8c
 
         vm.startBroadcast(_deployerPrivateKey);
 
