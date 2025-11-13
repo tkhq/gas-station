@@ -113,12 +113,58 @@ The deploy scripts have the salt for bot the delegate and the gas station purpos
 The delegate should be deployed before the gas station
 
 
+1. Install Foundry if you haven't already
+Go to https://getfoundry.sh/introduction/installation/ and install if needed 
+
+
+2. Clone the repo
+
+```
+git clone https://github.com/tkhq/gas-station.git
+
+```
+
+3. Add the RPC configuration to the foundry.toml
+
+Fill ```<networkName>``` with your desired network name. I.e. Base
+
+```
+[rpc_endpoints]
+<networkName> = "<PUBLIC-RPC-URL>
+
+[etherscan]
+<networkName> = { key = "${ETHERSCAN_API_KEY}", url = "<NETWORK-ETHERSCAN-URL>" }
+```
+
+
+4. Create an .env file, and add your private key and etherscan API key
+Create the file
+```
+cp ./env.example ./.env
+```
+
+In the file add your keys:
+```
+PRIVATE_KEY=your_private_key_here
+
+# API Key for contract verification (works for both Base and Ethereum)
+ETHERSCAN_API_KEY=your_etherscan_api_key_here
+```
+
+
+5. Install and deploy
+
 ``` 
+cd ./gas-station
+
 forge install
 
 forge build
 
-forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate --rpc-url <RPC-URL> --broadcast --verify
+forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate --rpc-url <networkName> --broadcast --verify
 
-forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <RPC-URL> --broadcast --verify
+forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <networkName> --broadcast --verify
 ``` 
+
+
+6. Add the contract addresses to the readme
