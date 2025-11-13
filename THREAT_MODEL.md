@@ -109,17 +109,3 @@ The following protections are in place:
 2. The gas station does not allow any eth to be sent to it. If the paymaster has a policy to only interact with it, it will not send any eth
 3. Off chain the paymaster has to parse the transaction and set gas limits. This cannot be purely protected on chain
 4. The gas station and gas delegate are made to be gas efficient. Batch transactions have a hard limit of 20. 
-
-# Outstanding questions/areas of focus for the auditors
-
-1. Should this be compliant with EIP-7821 or EIP-1271? I don't think it has to, but I am open to hearing the other side. 
-2. Should some session execution modes be "one time" to be used once? 
-3. For approve then execute, does the approve logic make sense? This is custom to be certain it will work with USDT on mainnet https://github.com/tkhq/gas-station/blob/main/src/TKGasStation/TKGasDelegate.sol#L510-L525 instead of using SafeERC20 
-4. There are a lot of repeat/slightly different inline assembly blocks. Are they all okay? Most of the reason they exist is to have extra-gas efficient modes that do not parse calldata, and interact with the bytes directly
-5. I mixed up some areas where the contract that is interacted with is called "outputContract" or "to" - I should probably make this consistent
-6. In the no-return areas, are there cases where the failure won't revert and just "fail open"? 
-7. Are there ways to bypass the needed checks? Does each function have all the right needed checks?
-8. Are there missing negative tests I should add? 
-9. Is the fallback functionality something I should remove? 
-10. How will this behave with native gas tokens on L2s that are not ethereum? Will it behave the same way? 
-11. Any gas optimization suggestions? 
