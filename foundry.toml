@@ -18,6 +18,7 @@ sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 polygon = "https://polygon-rpc.com"
 polygonAmoy = "https://rpc-amoy.polygon.technology"
 monadTestnet = "https://testnet-rpc.monad.xyz/"
+monad = "https://rpc.monad.xyz"
 celo = "https://forno.celo.org"
 arbitrum = "https://arb1.arbitrum.io/rpc"
 unichain = "https://mainnet.unichain.org"
@@ -33,3 +34,4 @@ polygonAmoy = { key = "${ETHERSCAN_API_KEY}", url = "https://api-amoy.polygonsca
 arbitrum = { key = "${ETHERSCAN_API_KEY}", url = "https://api.arbiscan.io/api" }
 unichain = { key = "${ETHERSCAN_API_KEY}", url = "https://api.uniscan.xyz/api" }
 optimism = { key = "${ETHERSCAN_API_KEY}", url = "https://api-optimistic.etherscan.io/api" }
+monad = { key = "KUVUPXFTC8HNDDMK68CS468VT112H9ZQN3", url = "https://api.monadscan.com/api" }
