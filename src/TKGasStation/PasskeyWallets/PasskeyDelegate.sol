@@ -88,7 +88,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _getStateStorage().expiredSessionCounters[bytes16(_counter)];
     }
 
-    address immutable ARBITER_CONTRACT;
+    address public immutable ARBITER_CONTRACT;
 
     constructor(address _arbiterContract) EIP712() {
         ARBITER_CONTRACT = _arbiterContract;

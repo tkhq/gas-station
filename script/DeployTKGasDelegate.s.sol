@@ -6,7 +6,10 @@ import "forge-std/console2.sol";
 import {TKGasDelegate} from "../src/TKGasStation/TKGasDelegate.sol";
 
 interface IImmutableCreate2Factory {
-    function safeCreate2(bytes32 _salt, bytes calldata _initCode) external payable returns (address _deploymentAddress);
+    function safeCreate2(bytes32 _salt, bytes calldata _initCode)
+        external
+        payable
+        returns (address _deploymentAddress);
 }
 
 contract DeployTKGasDelegate is Script {
@@ -31,4 +34,3 @@ contract DeployTKGasDelegate is Script {
         vm.stopBroadcast();
     }
 }
-

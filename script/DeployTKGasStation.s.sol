@@ -6,7 +6,10 @@ import "forge-std/console2.sol";
 import {TKGasStation} from "../src/TKGasStation/TKGasStation.sol";
 
 interface IImmutableCreate2Factory {
-    function safeCreate2(bytes32 _salt, bytes calldata _initCode) external payable returns (address _deploymentAddress);
+    function safeCreate2(bytes32 _salt, bytes calldata _initCode)
+        external
+        payable
+        returns (address _deploymentAddress);
 }
 
 contract DeployTKGasStation is Script {
@@ -14,7 +17,7 @@ contract DeployTKGasStation is Script {
 
     function run() external {
         uint256 _deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address _delegate = 0x000066a00056CD44008768E2aF00696e19A30084; // TKGasDelegate 
+        address _delegate = 0x000066a00056CD44008768E2aF00696e19A30084; // TKGasDelegate
         bytes32 _salt = 0x00000000000000000000000000000000000000001b6e3b861592b6bd85020054; // resovles to 0x00000000008c57a1ce37836a5e9d36759d070d8c
 
         vm.startBroadcast(_deployerPrivateKey);
@@ -32,5 +35,3 @@ contract DeployTKGasStation is Script {
         vm.stopBroadcast();
     }
 }
-
-
