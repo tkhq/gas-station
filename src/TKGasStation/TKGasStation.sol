@@ -150,12 +150,18 @@ contract TKGasStation is ITKGasStation {
 
     /* Lense Functions */
 
+    function getNonce(address _targetEoA, uint64 _prefix) external view returns (uint128) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).getNonce(_prefix);
+    }
+
     function getNonce(address _targetEoA) external view returns (uint128) {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        uint128 nonce = ITKGasDelegate(_targetEoA).nonce();
-        return nonce;
+        return ITKGasDelegate(_targetEoA).nonce();
     }
 
     function isDelegated(address _targetEoA) external view returns (bool) {

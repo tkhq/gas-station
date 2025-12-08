@@ -40,6 +40,7 @@ interface ITKGasStation is IBatchExecution {
 
     function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external;
 
+    function getNonce(address _targetEoA, uint64 _prefix) external view returns (uint128);
     function getNonce(address _targetEoA) external view returns (uint128);
 
     function isDelegated(address _targetEoA) external view returns (bool);

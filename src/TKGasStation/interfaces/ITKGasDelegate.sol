@@ -5,6 +5,7 @@ import {IBatchExecution} from "./IBatchExecution.sol";
 
 interface ITKGasDelegate is IBatchExecution {
     function nonce() external view returns (uint128);
+    function getNonce(uint64 _prefix) external view returns (uint128);
 
     function validateSignature(bytes32 _hash, bytes calldata _signature) external view returns (bool);
 
@@ -105,7 +106,7 @@ interface ITKGasDelegate is IBatchExecution {
     // Burn functions
     function burnNonce(bytes calldata _signature, uint128 _nonce) external;
     function burnSessionCounter(bytes calldata _signature, uint128 _counter) external;
-    function burnNonce() external;
+    function burnNonce(uint64 _prefix) external;
     function burnSessionCounter(uint128 _counter) external;
 
     // Hash functions

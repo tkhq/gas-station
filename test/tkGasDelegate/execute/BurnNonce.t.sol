@@ -21,6 +21,7 @@ contract BurnTest is TKGasDelegateBase {
 
     function testGassyBurnHighNonce() public {
         uint128 nonce = type(uint128).max - 7;
+        uint64 prefix = uint64(nonce >> 64);
 
         MockDelegate(user).spoof_Nonce(nonce);
 
@@ -30,7 +31,7 @@ contract BurnTest is TKGasDelegateBase {
         MockDelegate(user).burnNonce(signature, nonce);
         vm.stopPrank();
 
-        uint128 currentNonce = MockDelegate(user).nonce();
+        uint128 currentNonce = MockDelegate(user).getNonce(prefix);
         assertEq(currentNonce, nonce + 1);
     }
 
@@ -111,7 +112,7 @@ contract BurnTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
 
         uint128 currentNonce = MockDelegate(user).nonce();
@@ -119,7 +120,7 @@ contract BurnTest is TKGasDelegateBase {
 
         vm.startPrank(user);
         vm.expectRevert();
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
     }
 
@@ -127,7 +128,7 @@ contract BurnTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
 
         uint128 currentNonce = MockDelegate(user).nonce();
@@ -135,7 +136,7 @@ contract BurnTest is TKGasDelegateBase {
 
         vm.startPrank(user);
         vm.expectRevert();
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
     }
 
@@ -146,7 +147,7 @@ contract BurnTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
 
         uint128 currentNonce = MockDelegate(user).nonce();
@@ -183,7 +184,7 @@ contract BurnTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
 
         uint128 nonceAfterDirect = MockDelegate(user).nonce();

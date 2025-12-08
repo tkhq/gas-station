@@ -65,7 +65,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     /// @custom:storage-location erc7201:TKGasDelegate.state
     struct State {
-        uint128 nonce;
+        mapping(uint64 => uint64) nonce;
         mapping(bytes16 => bool) expiredSessionCounters;
     }
 
@@ -79,12 +79,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
-    function nonce() external view returns (uint128) {
-        return _getStateStorage().nonce;
-    }
-
     function checkSessionCounterExpired(uint128 _counter) external view returns (bool) {
         return _getStateStorage().expiredSessionCounters[bytes16(_counter)];
+    }
+
+    function nonce() external view returns (uint128) {
+        uint64 nonceValue = _getStateStorage().nonce[0];
+        return uint128(nonceValue);
+    }
+
+    function getNonce(uint64 _prefix) external view returns (uint128) {
+        uint64 nonceValue = _getStateStorage().nonce[_prefix];
+        return (uint128(_prefix) << 64) | uint128(nonceValue);
     }
 
     constructor() EIP712() {}
@@ -364,21 +370,25 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         assembly ("memory-safe") {
             nonceValue := shr(128, calldataload(_nonceBytes.offset))
         }
-        if (nonceValue != state.nonce) {
+        uint64 prefix = uint64(nonceValue >> 64);
+        uint64 noncePart = uint64(nonceValue);
+        if (noncePart != state.nonce[prefix]) {
             revert InvalidNonce();
         }
         unchecked {
-            ++state.nonce;
+            ++state.nonce[prefix];
         }
     }
 
     function _consumeNonce(uint128 _nonce) internal {
         State storage state = _getStateStorage();
-        if (_nonce != state.nonce) {
+        uint64 prefix = uint64(_nonce >> 64);
+        uint64 noncePart = uint64(_nonce);
+        if (noncePart != state.nonce[prefix]) {
             revert InvalidNonce();
         }
         unchecked {
-            ++state.nonce;
+            ++state.nonce[prefix];
         }
     }
 
@@ -848,12 +858,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _consumeNonce(_nonce);
     }
 
-    function burnNonce() external {
+    function burnNonce(uint64 _prefix) external {
         if (msg.sender != address(this) || msg.sender != tx.origin) {
             revert NotSelf();
         }
         unchecked {
-            ++_getStateStorage().nonce;
+            ++_getStateStorage().nonce[_prefix];
         }
     }
 
