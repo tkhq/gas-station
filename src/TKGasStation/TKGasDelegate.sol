@@ -9,6 +9,9 @@ import {IERC721Receiver} from "./interfaces/IERC721Receiver.sol";
 import {IERC1155Receiver} from "./interfaces/IERC1155Receiver.sol";
 import {IERC1721} from "./interfaces/IERC1721.sol";
 
+/// @title TKGasDelegate
+/// @notice Delegation contract for executing transactions with signature-based authorization
+/// @dev Implements EIP-712 for typed structured data signing, supporting multiple execution modes including standard execution, batch execution, sessions, and ERC20 approve-then-execute patterns
 contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, ITKGasDelegate {
     error BatchSizeInvalid();
     error DeadlineExceeded();
@@ -79,14 +82,23 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
+    /// @notice Returns the current nonce for this delegate
+    /// @dev The nonce increments with each transaction to prevent replay attacks
+    /// @return The current nonce value
     function nonce() external view returns (uint128) {
         return _getStateStorage().nonce;
     }
 
+    /// @notice Checks if a session counter has been burned/expired
+    /// @dev Session counters can be invalidated to revoke session permissions
+    /// @param _counter The session counter to check
+    /// @return true if the counter has been burned, false otherwise
     function checkSessionCounterExpired(uint128 _counter) external view returns (bool) {
         return _getStateStorage().expiredSessionCounters[bytes16(_counter)];
     }
 
+    /// @notice Initializes the TKGasDelegate contract
+    /// @dev Sets up EIP-712 domain separator with name "TKGasDelegate" and version "1"
     constructor() EIP712() {}
 
     fallback(bytes calldata) external returns (bytes memory) {
@@ -347,10 +359,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return ECDSA.recoverCalldata(_hash, _signature) == address(this);
     }
 
+    /// @notice Validates a signature against a hash
+    /// @dev Recovers signer from signature and checks if it matches this contract's address
+    /// @param _hash The hash that was signed
+    /// @param _signature The signature to validate (65 bytes: r, s, v)
+    /// @return true if the signature is valid, false otherwise
     function validateSignature(bytes32 _hash, bytes calldata _signature) external view returns (bool) {
         return _validateSignature(_hash, _signature);
     }
 
+    /// @notice ERC-1271 compliant signature validation
+    /// @dev Returns magic value 0x1626ba7e if signature is valid, 0xffffffff otherwise
+    /// @param _hash The hash that was signed
+    /// @param _signature The signature to validate
+    /// @return Magic value indicating validity (0x1626ba7e for valid, 0xffffffff for invalid)
     function isValidSignature(bytes32 _hash, bytes calldata _signature) external view returns (bytes4) {
         if (_validateSignature(_hash, _signature)) {
             return ERC1271_MAGIC_VALUE;
@@ -395,6 +417,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
+    /// @notice Returns the EIP-712 domain separator for this contract
+    /// @dev Used for signature verification and typed data hashing
+    /// @return The EIP-712 domain separator hash
     function getDomainSeparator() external view returns (bytes32) {
         return _domainSeparator();
     }
@@ -404,6 +429,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         version = "1";
     }
 
+    /// @notice Executes a transaction and returns the result
+    /// @dev Validates signature and nonce before execution. Automatically selects value/no-value path based on _value parameter
+    /// @param _to The contract or address to call
+    /// @param _value The amount of ETH to send (in wei)
+    /// @param _data Encoded data containing signature (65 bytes), nonce (16 bytes), deadline (4 bytes), and arguments
+    /// @return The return data from the executed call
     function executeReturns(address _to, uint256 _value, bytes calldata _data) external returns (bytes memory) {
         bytes memory result = _value == 0
             ? _executeNoValue(_data[0:65], _data[65:81], _data[81:85], _to, _data[85:])
@@ -411,12 +442,21 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return result;
     }
 
+    /// @notice Executes a transaction without returning data (gas-efficient)
+    /// @dev Validates signature and nonce before execution
+    /// @param _to The contract or address to call
+    /// @param _value The amount of ETH to send (in wei)
+    /// @param _data Encoded data containing signature (65 bytes), nonce (16 bytes), deadline (4 bytes), and arguments
     function execute(address _to, uint256 _value, bytes calldata _data) external {
         _value == 0
             ? _executeNoValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _data[85:])
             : _executeWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
     }
 
+    /// @notice Executes a transaction with all parameters encoded in data, returns result
+    /// @dev Parses target address and value from data bytes, then executes
+    /// @param data Encoded data: signature(65) + nonce(16) + deadline(4) + to(20) + value(32) + arguments
+    /// @return The return data from the executed call
     function executeReturns(bytes calldata data) external returns (bytes memory) {
         address to;
         uint256 value;
@@ -432,6 +472,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return result;
     }
 
+    /// @notice Executes a transaction with all parameters encoded in data, no return
+    /// @dev Gas-efficient version when return data is not needed
+    /// @param data Encoded data: signature(65) + nonce(16) + deadline(4) + to(20) + value(32) + arguments
     function execute(bytes calldata data) external {
         address to;
         uint256 value;
@@ -448,6 +491,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
+    /// @notice Executes a transaction with no ETH value and no return data
+    /// @dev Most gas-efficient execution path for simple contract calls
+    /// @param data Encoded data: signature(65) + nonce(16) + deadline(4) + to(20) + arguments
     function executeNoValueNoReturn(bytes calldata data) external {
         address to;
         assembly ("memory-safe") {
@@ -457,6 +503,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _executeNoValueNoReturn(data[0:65], data[65:81], data[81:85], to, data[105:]);
     }
 
+    /// @notice Approves ERC20 tokens then executes a transaction, returning the result
+    /// @dev Parses all parameters from encoded data. Handles USDT-style tokens that require approval reset to 0
+    /// @param _data Encoded data: signature(65) + nonce(16) + deadline(4) + erc20(20) + spender(20) + approveAmount(32) + to(20) + value(32) + arguments
+    /// @return The return data from the executed call
     function approveThenExecuteReturns(bytes calldata _data) external returns (bytes memory) {
         // Layout: [signature(65)][nonce(16)][deadline(4)][erc20(20)][spender(20)][approveAmount(32)][output(20)][eth(32)][args]
         address erc20;
@@ -476,6 +526,15 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         );
     }
 
+    /// @notice Approves ERC20 tokens then executes a transaction, returns result
+    /// @dev Useful for DEX swaps and similar patterns requiring token approval before execution
+    /// @param _to The contract to call after approval
+    /// @param _value The amount of ETH to send (in wei)
+    /// @param _erc20 The ERC20 token contract to approve
+    /// @param _spender The address that will be approved to spend tokens
+    /// @param _approveAmount The amount of tokens to approve
+    /// @param _data Encoded signature, nonce, deadline, and call arguments
+    /// @return The return data from the executed call
     function approveThenExecuteReturns(
         address _to,
         uint256 _value,
@@ -490,6 +549,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return result;
     }
 
+    /// @notice Approves ERC20 tokens then executes a transaction, no return
+    /// @dev Gas-efficient version when return data is not needed
+    /// @param _to The contract to call after approval
+    /// @param _value The amount of ETH to send (in wei)
+    /// @param _erc20 The ERC20 token contract to approve
+    /// @param _spender The address that will be approved to spend tokens
+    /// @param _approveAmount The amount of tokens to approve
+    /// @param _data Encoded signature, nonce, deadline, and call arguments
     function approveThenExecute(
         address _to,
         uint256 _value,
@@ -833,6 +900,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
+    /// @notice Burns a specific nonce to invalidate it
+    /// @dev Prevents replay of transactions signed with this nonce. Requires signature authorization
+    /// @param _signature The signature authorizing the nonce burn (65 bytes)
+    /// @param _nonce The nonce value to burn (will be consumed, blocking its use)
     function burnNonce(bytes calldata _signature, uint128 _nonce) external {
         bytes32 hash;
         assembly ("memory-safe") {
@@ -848,6 +919,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _consumeNonce(_nonce);
     }
 
+    /// @notice Burns the current nonce without signature (must be called by self)
+    /// @dev Can only be called by the contract itself. Increments the nonce to invalidate the current value
     function burnNonce() external {
         if (msg.sender != address(this) || msg.sender != tx.origin) {
             revert NotSelf();
@@ -1366,6 +1439,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
+    /// @notice Burns a session counter to revoke all sessions using that counter
+    /// @dev Marks the counter as expired, preventing future session executions with this counter
+    /// @param _signature The signature authorizing the counter burn (65 bytes)
+    /// @param _counter The session counter value to burn
     function burnSessionCounter(bytes calldata _signature, uint128 _counter) external {
         bytes32 hash;
         assembly ("memory-safe") {
@@ -1384,6 +1461,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _getStateStorage().expiredSessionCounters[bytes16(_counter)] = true;
     }
 
+    /// @notice Burns a session counter without signature (must be called by self)
+    /// @dev Can only be called by the contract itself to revoke session permissions
+    /// @param _counter The session counter value to burn
     function burnSessionCounter(uint128 _counter) external {
         if (msg.sender != address(this) || msg.sender != tx.origin) {
             revert NotSelf();
@@ -1391,6 +1471,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _getStateStorage().expiredSessionCounters[bytes16(_counter)] = true; // does not need to check if the counter is already expired
     }
 
+    /// @notice Executes a session transaction and returns the result
+    /// @dev Sessions allow authorized senders to execute transactions without full EOA signature. Uses counter instead of nonce
+    /// @param data Encoded data: signature(65) + counter(16) + deadline(4) + output(20) + ethAmount(32) + arguments
+    /// @return The return data from the executed call
     function executeSessionReturns(bytes calldata data) external returns (bytes memory) {
         // Layout: [signature(65)][counter(16)][deadline(4)][output(20)][ethAmount(32)][args]
         address output;
@@ -1404,11 +1488,22 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return result;
     }
 
+    /// @notice Executes a session transaction to a specific contract, returns result
+    /// @dev Session must be authorized for the specific _to address
+    /// @param _to The contract address to call (must match session authorization)
+    /// @param _value The amount of ETH to send (in wei)
+    /// @param _data Encoded signature, counter, deadline, and call arguments
+    /// @return The return data from the executed call
     function executeSessionReturns(address _to, uint256 _value, bytes calldata _data) external returns (bytes memory) {
         bytes memory result = _executeSessionWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
         return result;
     }
 
+    /// @notice Executes a session transaction without returning data (gas-efficient)
+    /// @dev Session must be authorized for the specific _to address
+    /// @param _to The contract address to call
+    /// @param _value The amount of ETH to send (in wei)
+    /// @param _data Encoded signature, counter, deadline, and call arguments
     function executeSession(address _to, uint256 _value, bytes calldata _data) external {
         _executeSessionWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
     }
@@ -1930,6 +2025,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return 0xbc197c81;
     }
 
+    /// @notice ERC-165 interface detection
+    /// @dev Returns true if this contract supports the given interface
+    /// @param _interfaceId The interface identifier to check
+    /// @return true if the interface is supported
     function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
         return _interfaceId == 0x01ffc9a7 // ERC165 Interface ID
             || _interfaceId == 0x150b7a02 // ERC721Receiver Interface ID
@@ -1938,10 +2037,22 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     // View functions
 
+    /// @notice Computes the hash of a batch execution call array
+    /// @dev Used internally for batch execution signature verification
+    /// @param _calls Array of Call structs to hash
+    /// @return The keccak256 hash of the encoded call array
     function hashCallArray(IBatchExecution.Call[] calldata _calls) external pure returns (bytes32) {
         return _hashCallArrayUnchecked(_calls);
     }
 
+    /// @notice Computes the EIP-712 typed data hash for an execution
+    /// @dev Used by clients to generate the hash that must be signed for execute functions
+    /// @param _nonce The nonce for replay protection
+    /// @param _deadline The Unix timestamp after which the signature expires
+    /// @param _to The contract or address to call
+    /// @param _value The amount of ETH to send (in wei)
+    /// @param _data The calldata for the transaction
+    /// @return The EIP-712 compliant hash to be signed
     function hashExecution(uint128 _nonce, uint32 _deadline, address _to, uint256 _value, bytes calldata _data)
         external
         view
@@ -1963,6 +2074,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _hashTypedData(hash);
     }
 
+    /// @notice Computes the EIP-712 typed data hash for burning a nonce
+    /// @dev Used to generate the hash that must be signed to invalidate a nonce
+    /// @param _nonce The nonce value to burn
+    /// @return The EIP-712 compliant hash to be signed
     function hashBurnNonce(uint128 _nonce) external view returns (bytes32) {
         bytes32 hash;
         assembly ("memory-safe") {
@@ -1975,6 +2090,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _hashTypedData(hash);
     }
 
+    /// @notice Computes the EIP-712 typed data hash for approve-then-execute
+    /// @dev Used to generate the hash for ERC20 approval followed by contract execution
+    /// @param _nonce The nonce for replay protection
+    /// @param _deadline The Unix timestamp after which the signature expires
+    /// @param _erc20Contract The ERC20 token to approve
+    /// @param _spender The address to approve
+    /// @param _approveAmount The amount of tokens to approve
+    /// @param _to The contract to call after approval
+    /// @param _value The amount of ETH to send (in wei)
+    /// @param _data The calldata for the transaction
+    /// @return The EIP-712 compliant hash to be signed
     function hashApproveThenExecute(
         uint128 _nonce,
         uint32 _deadline,
@@ -2009,6 +2135,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _hashTypedData(hash);
     }
 
+    /// @notice Computes the EIP-712 typed data hash for a session execution
+    /// @dev Sessions allow specific senders to execute transactions to specific contracts
+    /// @param _counter The session counter for replay protection
+    /// @param _deadline The Unix timestamp after which the signature expires
+    /// @param _sender The address authorized to execute in this session
+    /// @param _to The contract that can be called in this session
+    /// @return The EIP-712 compliant hash to be signed
     function hashSessionExecution(uint128 _counter, uint32 _deadline, address _sender, address _to)
         external
         view
@@ -2028,6 +2161,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _hashTypedData(hash);
     }
 
+    /// @notice Computes the EIP-712 typed data hash for an arbitrary session execution
+    /// @dev Arbitrary sessions allow senders to execute transactions to any contract
+    /// @param _counter The session counter for replay protection
+    /// @param _deadline The Unix timestamp after which the signature expires
+    /// @param _sender The address authorized to execute arbitrary transactions
+    /// @return The EIP-712 compliant hash to be signed
     function hashArbitrarySessionExecution(uint128 _counter, uint32 _deadline, address _sender)
         external
         view
@@ -2046,6 +2185,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _hashTypedData(hash);
     }
 
+    /// @notice Computes the EIP-712 typed data hash for a batch execution
+    /// @dev Used to generate the hash for executing multiple transactions atomically
+    /// @param _nonce The nonce for replay protection
+    /// @param _deadline The Unix timestamp after which the signature expires
+    /// @param _calls Array of Call structs containing the batch operations
+    /// @return The EIP-712 compliant hash to be signed
     function hashBatchExecution(uint128 _nonce, uint32 _deadline, IBatchExecution.Call[] calldata _calls)
         external
         view
@@ -2065,6 +2210,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _hashTypedData(hash);
     }
 
+    /// @notice Computes the EIP-712 typed data hash for burning a session counter
+    /// @dev Used to generate the hash that must be signed to revoke session permissions
+    /// @param _counter The session counter value to burn
+    /// @return The EIP-712 compliant hash to be signed
     function hashBurnSessionCounter(uint128 _counter) external view returns (bytes32) {
         bytes32 hash;
         assembly ("memory-safe") {
