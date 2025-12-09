@@ -881,6 +881,16 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _consumeNonce(_nonce);
     }
 
+    function burnNonce() external {
+        if (msg.sender != address(this) || msg.sender != tx.origin) {
+            revert NotSelf();
+        }
+        unchecked {
+            ++_getStateStorage().nonce; // assume the 0 prefix 
+        }
+    }
+    
+
     function burnNonce(uint64 _prefix) external {
         if (msg.sender != address(this) || msg.sender != tx.origin) {
             revert NotSelf();
