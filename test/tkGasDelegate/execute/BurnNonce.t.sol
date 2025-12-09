@@ -202,4 +202,42 @@ contract BurnTest is TKGasDelegateBase {
 
         assertEq(nonceAfterSignature, nonceAfterDirect + 1);
     }
+
+    function testBurnNonceWithDifferentPrefixes() public {
+        // Set up nonces for prefix 0 and prefix 1
+        uint128 noncePrefix0 = 5; // prefix 0, nonce value 5
+        uint128 noncePrefix1 = (uint128(1) << 64) | 10; // prefix 1, nonce value 10
+
+        // Set the nonces
+        MockDelegate(user).spoof_Nonce(noncePrefix0);
+        MockDelegate(user).spoof_Nonce(noncePrefix1);
+
+        // Verify initial nonces
+        uint128 initialNonce0 = MockDelegate(user).getNonce(0);
+        uint128 initialNonce1 = MockDelegate(user).getNonce(1);
+        assertEq(initialNonce0, noncePrefix0);
+        assertEq(initialNonce1, noncePrefix1);
+
+        // Burn nonce at prefix 0
+        vm.startPrank(user, user);
+        MockDelegate(user).burnNonce(0);
+        vm.stopPrank();
+
+        // Verify prefix 0 was incremented, prefix 1 unchanged
+        uint128 nonce0AfterBurn = MockDelegate(user).getNonce(0);
+        uint128 nonce1AfterFirstBurn = MockDelegate(user).getNonce(1);
+        assertEq(nonce0AfterBurn, noncePrefix0 + 1);
+        assertEq(nonce1AfterFirstBurn, noncePrefix1); // Should be unchanged
+
+        // Burn nonce at prefix 1
+        vm.startPrank(user, user);
+        MockDelegate(user).burnNonce(1);
+        vm.stopPrank();
+
+        // Verify both prefixes were incremented correctly
+        uint128 nonce0AfterBothBurns = MockDelegate(user).getNonce(0);
+        uint128 nonce1AfterBothBurns = MockDelegate(user).getNonce(1);
+        assertEq(nonce0AfterBothBurns, noncePrefix0 + 1); // Still +1 from first burn
+        assertEq(nonce1AfterBothBurns, noncePrefix1 + 1); // Now +1 from second burn
+    }
 }
