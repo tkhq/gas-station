@@ -101,6 +101,10 @@ All contracts are deployed at the same address across all networks:
 ### Nonce changes in update
 The contract from the previous version now uses a sequential two-part nonce. This upgrade is compatible with the previous version of the contract and is a minor update since the regularly used nonce is stored at the same location. Nonces are still the uint128. Nonces are now made of two parts, a non-sequential uint64 prefix and a sequential uint64 suffix.  
 
+Using the function call ```nonce()``` will give you the next nonce that uses the "0" prefix. This is fine for most transactions.
+
+If you want parallel transactions, you can use ```getNonce(uint64 _prefix)``` to get the next nonce at that prefix. 
+
 ### Bundle transactions in update
 Bundled transactions in the Bundled Gas Station saves around 20k for EACH transaction bundle passed in since it is all done in one transaction. 
 
@@ -110,9 +114,6 @@ The overhead per bundled transaction is around 1000. The gas saved is the standa
 
  The actual gas savings calulation is ```gasSaved = (21,000 - 1000 - (21,000/N))``` where N is number of bundled transactions. So bundling two transactions would save ~9.5k gas per bundled transaction. With 10 transactions it would save ~17.9k gas per bundled transaction.  
 
-Using the function call ```nonce()``` will give you the next nonce that uses the "0" prefix. This is fine for most transactions.
-
-If you want parallel transactions, you can use ```getNonce(uint64 _prefix)``` to get the next nonce at that prefix. 
 
 
 ## Packing data for calling the fallback function in the delegate
