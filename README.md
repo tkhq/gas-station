@@ -5,50 +5,58 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 All contracts are deployed at the same address across all networks:
 - **TKGasDelegate**: `0xDE2a56291df8293B3417E106fFD939B379aaCf7b`
 - **TKGasStation**: `0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E`
+- **TKBundledGasStation**: `0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9`
 
 #### Ethereum Mainnet
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://etherscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://etherscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://etherscan.io/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
 #### Base Mainnet
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://basescan.org/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://basescan.org/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://basescan.org/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
 #### Sepolia Testnet
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://sepolia.etherscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://sepolia.etherscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://sepolia.etherscan.io/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
 #### Base Sepolia Testnet
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://sepolia.basescan.org/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://sepolia.basescan.org/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://sepolia.basescan.org/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
 #### Polygon Mainnet
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://polygonscan.com/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://polygonscan.com/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://polygonscan.com/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
 #### Celo Mainnet
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://celoscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://celoscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://celoscan.io/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
 #### Arbitrum One
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://arbiscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://arbiscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://arbiscan.io/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
 #### Optimism
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://optimistic.etherscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://optimistic.etherscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://optimistic.etherscan.io/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
 #### Unichain Mainnet
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://uniscan.xyz/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://uniscan.xyz/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://uniscan.xyz/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
 #### Polygon Amoy Testnet
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://amoy.polygonscan.com/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://amoy.polygonscan.com/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKBundledGasStation**: [0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9](https://amoy.polygonscan.com/address/0x48B38fdE73097C6897fa6cd3DF81aCF70B50B8e9)
 
-#### Monad Testnet
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://testnet.monadexplorer.com/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://testnet.monadexplorer.com/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
 
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
@@ -92,6 +100,15 @@ All contracts are deployed at the same address across all networks:
 
 ### Nonce changes in update
 The contract from the previous version now uses a sequential two-part nonce. This upgrade is compatible with the previous version of the contract and is a minor update since the regularly used nonce is stored at the same location. Nonces are still the uint128. Nonces are now made of two parts, a non-sequential uint64 prefix and a sequential uint64 suffix.  
+
+### Bundle transactions in update
+Bundled transactions in the Bundled Gas Station saves around 20k for EACH transaction bundle passed in since it is all done in one transaction. 
+
+In order to use it, simply call the bundleCall function or bundleExecute function. BundleCall can handle any execution type, including batch and approveThenExecute. There is no check preventing the use of session exeuction types, and using the session types is not recommended for this use case, and would be insecure since the gas station is public. BundleExecute can only handle the standard execute type. 
+
+The overhead per bundled transaction is around 1000. The gas saved is the standard 21,000 gas for initiating the transaction.
+
+ The actual gas savings calulation is ```gasSaved = (21,000 - 1000 - (21,000/N))``` where N is number of bundled transactions. So bundling two transactions would save ~9.5k gas per bundled transaction. With 10 transactions it would save ~17.9k gas per bundled transaction.  
 
 Using the function call ```nonce()``` will give you the next nonce that uses the "0" prefix. This is fine for most transactions.
 

@@ -20,7 +20,7 @@ contract DeployTKGasDelegate is Script {
 
         vm.startBroadcast(_deployerPrivateKey);
 
-        bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379; // "Gassy"
+        bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379; // "GassyDelegate"
 
         // Get the creation code (TKGasDelegate has no constructor args)
         bytes memory _initCode = type(TKGasDelegate).creationCode;
