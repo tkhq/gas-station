@@ -10,6 +10,11 @@ interface ITKGasDelegate is IBatchExecution {
     /// @notice Returns the current nonce for this delegate
     /// @return The current nonce value
     function nonce() external view returns (uint128);
+
+    /// @notice Returns the nonce for a given prefix
+    /// @dev Supports both standard nonces (prefix 0) and prefix-based nonces. When prefix is 0, returns the standard nonce. When prefix is non-zero, returns a combined value where the prefix occupies the upper 64 bits and the prefix-specific nonce value occupies the lower 64 bits
+    /// @param _prefix The nonce prefix. Use 0 for the standard nonce, or a non-zero value for prefix-based nonces
+    /// @return The nonce value. For prefix 0, returns the standard nonce. For non-zero prefixes, returns (prefix << 64) | nonceValue
     function getNonce(uint64 _prefix) external view returns (uint128);
 
     /// @notice Validates a signature against a hash
