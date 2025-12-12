@@ -42,6 +42,10 @@ All contracts are deployed at the same address across all networks:
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://uniscan.xyz/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://uniscan.xyz/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
 
+#### Monad Mainnet
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://monadscan.com/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://monadscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
+
 #### Polygon Amoy Testnet
 - **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://amoy.polygonscan.com/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
 - **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://amoy.polygonscan.com/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
