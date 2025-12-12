@@ -91,6 +91,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _getStateStorage().nonce;
     }
 
+    /// @notice Returns the nonce for a given prefix
+    /// @dev Supports both standard nonces (prefix 0) and prefix-based nonces. When prefix is 0, returns the standard nonce. When prefix is non-zero, returns a combined value where the prefix occupies the upper 64 bits and the prefix-specific nonce value occupies the lower 64 bits
+    /// @param _prefix The nonce prefix. Use 0 for the standard nonce, or a non-zero value for prefix-based nonces
+    /// @return The nonce value. For prefix 0, returns the standard nonce. For non-zero prefixes, returns (prefix << 64) | nonceValue
     function getNonce(uint64 _prefix) external view returns (uint128) {
         if (_prefix == 0) {
             return _getStateStorage().nonce;
@@ -98,6 +102,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             uint64 nonceValue = _getStateStorage().nonces[_prefix];
             return (uint128(_prefix) << 64) | uint128(nonceValue);
         }
+    }
 
     /// @notice Checks if a session counter has been burned/expired
     /// @dev Session counters can be invalidated to revoke session permissions
