@@ -70,6 +70,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     struct State {
         uint128 nonce;
         mapping(bytes16 => bool) expiredSessionCounters;
+        mapping(uint64 => uint64) nonces;
     }
 
     bytes32 internal constant STATE_STORAGE_POSITION =
@@ -82,11 +83,25 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
+
     /// @notice Returns the current nonce for this delegate
     /// @dev The nonce increments with each transaction to prevent replay attacks
     /// @return The current nonce value
     function nonce() external view returns (uint128) {
         return _getStateStorage().nonce;
+    }
+
+    /// @notice Returns the nonce for a given prefix
+    /// @dev Supports both standard nonces (prefix 0) and prefix-based nonces. When prefix is 0, returns the standard nonce. When prefix is non-zero, returns a combined value where the prefix occupies the upper 64 bits and the prefix-specific nonce value occupies the lower 64 bits
+    /// @param _prefix The nonce prefix. Use 0 for the standard nonce, or a non-zero value for prefix-based nonces
+    /// @return The nonce value. For prefix 0, returns the standard nonce. For non-zero prefixes, returns (prefix << 64) | nonceValue
+    function getNonce(uint64 _prefix) external view returns (uint128) {
+        if (_prefix == 0) {
+            return _getStateStorage().nonce;
+        } else {
+            uint64 nonceValue = _getStateStorage().nonces[_prefix];
+            return (uint128(_prefix) << 64) | uint128(nonceValue);
+        }
     }
 
     /// @notice Checks if a session counter has been burned/expired
@@ -386,22 +401,45 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         assembly ("memory-safe") {
             nonceValue := shr(128, calldataload(_nonceBytes.offset))
         }
-        if (nonceValue != state.nonce) {
-            revert InvalidNonce();
-        }
-        unchecked {
-            ++state.nonce;
+        uint64 prefix = uint64(nonceValue >> 64);
+        if (prefix == 0) {
+            if (state.nonce != nonceValue) {
+                revert InvalidNonce();
+            }
+            unchecked {
+                ++state.nonce;
+            }
+        } else {
+            uint64 noncePart = uint64(nonceValue);
+            if (noncePart != state.nonces[prefix]) {
+                revert InvalidNonce();
+            }
+            unchecked {
+                ++state.nonces[prefix];
+            }
         }
     }
 
     function _consumeNonce(uint128 _nonce) internal {
         State storage state = _getStateStorage();
-        if (_nonce != state.nonce) {
-            revert InvalidNonce();
+        uint64 prefix = uint64(_nonce >> 64);
+        if (prefix == 0) {
+            if (state.nonce != _nonce) {
+                revert InvalidNonce();
+            }
+            unchecked {
+                ++state.nonce;
+            }
+        } else {
+            uint64 noncePart = uint64(_nonce);
+            if (noncePart != state.nonces[prefix]) {
+                revert InvalidNonce();
+            }
+            unchecked {
+                ++state.nonces[prefix];
+            }
         }
-        unchecked {
-            ++state.nonce;
-        }
+
     }
 
     function _requireCounter(bytes calldata _counterBytes) internal view {
@@ -926,7 +964,23 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             revert NotSelf();
         }
         unchecked {
-            ++_getStateStorage().nonce;
+            ++_getStateStorage().nonce; // assume the 0 prefix 
+        }
+    }
+    
+
+    function burnNonce(uint64 _prefix) external {
+        if (msg.sender != address(this) || msg.sender != tx.origin) {
+            revert NotSelf();
+        }
+        if (_prefix == 0) {
+            unchecked {
+                ++_getStateStorage().nonce;
+            }
+        } else {
+            unchecked {
+                ++_getStateStorage().nonces[_prefix];
+            }
         }
     }
 
