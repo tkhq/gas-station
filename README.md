@@ -195,6 +195,7 @@ forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <netwo
 
 
 Note, you can do a mass redeploy with the following. Just remember to change the deterministic gas delegate address in DeployTKGasStation.s.sol:
+
 ```
 for net in mainnet base sepolia base-sepolia polygon celo arbitrum optimism unichain amoy monad monad-testnet; do
   forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate \

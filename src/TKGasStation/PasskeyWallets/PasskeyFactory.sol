@@ -4,12 +4,12 @@ pragma solidity ^0.8.30;
 import {LibClone} from "solady/utils/LibClone.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 import {PasskeyDelegate} from "./PasskeyDelegate.sol";
-import {IPasskeyArbiter} from "./IPasskeyArbiter.sol";
+import {IArbiter} from "../interfaces/IArbiter.sol";
 
 /// @notice Factory contract for creating deterministic clonable proxies of PasskeyDelegate.
 /// @dev Uses Solady's LibClone to deploy minimal proxy clones (EIP-1167) with CREATE2.
 /// The factory acts as the arbiter contract for all created wallets.
-contract PasskeyFactory is IPasskeyArbiter {
+contract PasskeyFactory is IArbiter {
     error InvalidMBurn();
     error InvalidPublicKeyIndex();
     error InvalidPublicKeyLengthForRemoval();
@@ -88,7 +88,7 @@ contract PasskeyFactory is IPasskeyArbiter {
         emit WalletCreatedFromAddress(instance, msg.sender, _address);
     }
 
-    function createWallet(uint8 _mOf, uint8 _mBurn, PublicKey[] memory _publicKeys, address[] memory _addresses)
+    function createWallet(uint8 _mOf, uint8 _mBurn, PublicKey[] memory _publicKeys, address[] memory _addresses, bytes32 _salt)
         external
         returns (address instance)
     {
@@ -105,7 +105,7 @@ contract PasskeyFactory is IPasskeyArbiter {
 
         RuleSet memory ruleSet =
             RuleSet({mOf: _mOf, n: n, mBurn: _mBurn, publicKeys: _publicKeys, addresses: _addresses});
-        instance = LibClone.clone(IMPLEMENTATION);
+        instance = LibClone.cloneDeterministic(IMPLEMENTATION, _salt);
         ruleSets[instance] = ruleSet;
         emit WalletCreatedWithRuleSet(instance, msg.sender, ruleSet);
     }
@@ -135,10 +135,22 @@ contract PasskeyFactory is IPasskeyArbiter {
         salt = keccak256(abi.encodePacked(_x, _y));
     }
 
-    //IPasskeyArbiter
+    //IArbiter
 
-    function validateSignature(bytes32 _hash, bytes calldata _signature) external view returns (bool) {
-        RuleSet memory ruleSet = ruleSets[msg.sender];
+    function validateSignature(address _target, bytes32 _hash, bytes calldata _signature) external view returns (bool) {
+        return _validateSignatureForTarget(_target, _hash, _signature);
+    }
+
+    function validateSignature(bytes32 _hash, bytes calldata _signature) public view returns (bool) {
+        return _validateSignatureForTarget(msg.sender, _hash, _signature);
+    }
+
+    function _validateSignatureForTarget(address _target, bytes32 _hash, bytes calldata _signature)
+        internal
+        view
+        returns (bool)
+    {
+        RuleSet memory ruleSet = ruleSets[_target];
 
         if (ruleSet.n == 1 && ruleSet.mOf == 1) {
             // case of one of one, assume 65 byte calldata signature
@@ -159,7 +171,7 @@ contract PasskeyFactory is IPasskeyArbiter {
                 }
                 if (index < 128) {
                     // then it is a passkey signature
-                    (bytes32 first32, bytes32 second32) = getTransientPassKeySignature(msg.sender, index);
+                    (bytes32 first32, bytes32 second32) = getTransientPassKeySignature(_target, index);
                     if (first32 == 0 && second32 == 0) {
                         // if null just continue
                         continue;
@@ -173,14 +185,14 @@ contract PasskeyFactory is IPasskeyArbiter {
                 } else {
                     // then it is a address signature
                     uint8 addressIndex = index - MAX_ARRAY_LENGTH; //127
-                    (bytes32 r, bytes32 s, bytes1 v) = getTransientAddressSignature(msg.sender, addressIndex);
+                    (bytes32 r, bytes32 s, bytes1 v) = getTransientAddressSignature(_target, addressIndex);
                     if (r == 0 && s == 0 && v == 0) {
                         // if null just continue
                         continue;
                     }
                     if (
                         SignatureCheckerLib.isValidSignatureNow(
-                            ruleSets[msg.sender].addresses[addressIndex], _hash, uint8(v), r, s
+                            ruleSets[_target].addresses[addressIndex], _hash, uint8(v), r, s
                         )
                     ) {
                         validSignatures++;

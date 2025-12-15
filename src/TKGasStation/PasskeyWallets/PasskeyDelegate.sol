@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {TKGasDelegate} from "../TKGasDelegate.sol";
-import {IPasskeyArbiter} from "./IPasskeyArbiter.sol";
+import {IArbiter} from "../interfaces/IArbiter.sol";
 
 /// @title PasskeyDelegate
 /// @notice TKGasDelegate variant that delegates signature validation to a Passkey arbiter
@@ -24,7 +24,7 @@ contract PasskeyDelegate is TKGasDelegate {
         override
         returns (bool)
     {
-        return IPasskeyArbiter(ARBITER_CONTRACT).validateSignature(_hash, _signature);
+        return IArbiter(ARBITER_CONTRACT).validateSignature(_hash, _signature);
     }
 }
 
