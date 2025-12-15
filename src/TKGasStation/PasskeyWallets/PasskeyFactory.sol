@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 import {LibClone} from "solady/utils/LibClone.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
-import {TKGasDelegate as PasskeyDelegate} from "./PasskeyDelegate.sol";
+import {PasskeyDelegate} from "./PasskeyDelegate.sol";
 import {IPasskeyArbiter} from "./IPasskeyArbiter.sol";
 
 /// @notice Factory contract for creating deterministic clonable proxies of PasskeyDelegate.

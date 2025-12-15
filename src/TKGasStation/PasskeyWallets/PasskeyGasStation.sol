@@ -1,279 +1,62 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {ITKGasDelegate} from "../interfaces/ITKGasDelegate.sol";
-import {ITKGasStation} from "../interfaces/ITKGasStation.sol";
-import {IBatchExecution} from "../interfaces/IBatchExecution.sol";
+import {TKGasStation} from "../TKGasStation.sol";
 
-contract PasskeyGasStation is ITKGasStation {
-    error NotDelegated();
-    error InvalidFunctionSelector();
-    error ExecutionFailed();
+contract PasskeyGasStation is TKGasStation {
+    error A(bytes a, address b);
 
-    address public immutable TK_GAS_DELEGATE;
-
-    constructor(address _tkGasDelegate) {
-        TK_GAS_DELEGATE = _tkGasDelegate;
-    }
-
-    fallback(bytes calldata data) external returns (bytes memory) {
-        address target;
-        assembly {
-            target := shr(96, calldataload(add(data.offset, 1)))
-        }
-        if (!_isDelegated(target)) {
-            revert NotDelegated();
-        }
-
-        if (bytes1(data[21]) == 0x00) {
-            // check if the first byte is 0x00
-            bytes1 functionSelector = bytes1(data[22] & 0xf0); // mask the last nibble
-
-            // only allow execute functions, no session functions
-            if (functionSelector == 0x00 || functionSelector == 0x10 || functionSelector == 0x20) {
-                (bool success, bytes memory result) = target.call(data[21:]);
-                if (success) {
-                    return result;
-                }
-                revert ExecutionFailed();
-            }
-        }
-
-        revert InvalidFunctionSelector();
-    }
-
-    function _isDelegated(address _targetEoA) internal view returns (bool) {
+    constructor(address _tkGasDelegate) TKGasStation(_tkGasDelegate) {}
+    function _isDelegated(address _targetEoA) internal override view returns (bool) {
         uint256 size;
         assembly {
             size := extcodesize(_targetEoA)
         }
-        if (size != 45) {
+
+        // 1) Check runtime length matches LibClone minimal proxy (44 bytes / 0x2c).
+        if (size != 0x2c) {
             return false;
         }
-
-        bytes memory code = new bytes(45);
+        bytes memory code = new bytes(size);
         assembly {
-            extcodecopy(_targetEoA, add(code, 0x20), 0, 45)
+            extcodecopy(_targetEoA, add(code, 0x20), 0, size)
         }
-        
-        // Check prefix: 0x363d3d373d3d3d363d73 (10 bytes)
+
+        // LibClone minimal proxy prefix: 0x363d3d373d3d3d363d73 (10 bytes)
         bytes10 expectedPrefix = 0x363d3d373d3d3d363d73;
         bytes10 codePrefix;
+        address delegatedTo;
+
         assembly {
+            // Load prefix from bytes 0-9 (first 10 bytes of runtime code)
             codePrefix := mload(add(code, 0x20))
+            // Load implementation address from bytes 10-29
+            // mload at offset 0x2a loads bytes 10-41, then shr(96) extracts the rightmost 20 bytes
+            delegatedTo := shr(96, mload(add(code, 0x2a))) // 0x20 (array data offset) + 10 (byte offset)
         }
         if (codePrefix != expectedPrefix) {
+            revert A(abi.encodePacked(codePrefix), TK_GAS_DELEGATE);
             return false;
         }
 
-        // Check suffix: 0x5af43d82803e903d91602b57fd5bf3 (16 bytes, at offset 29)
-        bytes16 expectedSuffix;
-        assembly {
-            // Construct the expected suffix: 0x5af43d82803e903d91602b57fd5bf3
-            expectedSuffix := 0x5af43d82803e903d91602b57fd5bf3
+        if (delegatedTo != TK_GAS_DELEGATE) {
+            revert A(abi.encodePacked(delegatedTo), TK_GAS_DELEGATE);
+            return false;
         }
-        bytes16 codeSuffix;
+
+        // 4) Check suffix: 0x5af43d3d93803e602a57fd5bf3 (13 bytes) at the end.
+        /*bytes13 expectedSuffix = 0x5af43d3d93803e602a57fd5bf3;
+        bytes13 codeSuffix;
         assembly {
-            codeSuffix := mload(add(code, 0x3d)) // 0x20 + 29 = 0x3d
+            // Start at byte index 31 (0-based) => 0x20 + 31 = 0x3f
+            codeSuffix := mload(add(code, 0x3f))
         }
         if (codeSuffix != expectedSuffix) {
             return false;
         }
-
-        address delegatedTo;
-        assembly {
-            // Load the 20-byte address from bytes 10-29 (after prefix, before suffix)
-            delegatedTo := shr(96, mload(add(code, 0x2a))) // 0x20 + 10 = 0x2a
-        }
-
-        return delegatedTo == TK_GAS_DELEGATE;
+*/
+        return true;
     }
 
-    // Execute functions
-    function executeReturns(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
-        external
-        returns (bytes memory)
-    {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        bytes memory result = ITKGasDelegate(_target).executeReturns(_to, _ethAmount, _data);
-        return result;
-    }
-
-    function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
-    }
-
-    // ApproveThenExecute functions
-    function approveThenExecuteReturns(
-        address _target,
-        address _to,
-        uint256 _ethAmount,
-        address _erc20,
-        address _spender,
-        uint256 _approveAmount,
-        bytes calldata _data
-    ) external returns (bytes memory) {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        bytes memory result =
-            ITKGasDelegate(_target).approveThenExecuteReturns(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
-        return result;
-    }
-
-    function approveThenExecute(
-        address _target,
-        address _to,
-        uint256 _ethAmount,
-        address _erc20,
-        address _spender,
-        uint256 _approveAmount,
-        bytes calldata _data
-    ) external {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        ITKGasDelegate(_target).approveThenExecute(_to, _ethAmount, _erc20, _spender, _approveAmount, _data);
-    }
-
-    // Batch execute functions
-    function executeBatchReturns(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external
-        returns (bytes[] memory)
-    {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        bytes[] memory results = ITKGasDelegate(_target).executeBatchReturns(_calls, _data);
-        return results;
-    }
-
-    function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        ITKGasDelegate(_target).executeBatch(_calls, _data);
-    }
-
-    function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        ITKGasDelegate(_targetEoA).burnNonce(_signature, _nonce);
-    }
-
-    /* Lense Functions */
-
-    function getNonce(address _targetEoA) external view returns (uint128) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        uint128 nonce = ITKGasDelegate(_targetEoA).nonce();
-        return nonce;
-    }
-
-    function isDelegated(address _targetEoA) external view returns (bool) {
-        return _isDelegated(_targetEoA);
-    }
-
-    function validateSignature(address _targetEoA, bytes32 _hash, bytes calldata _signature)
-        external
-        view
-        returns (bool)
-    {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).validateSignature(_hash, _signature);
-    }
-
-    // Hash function lenses
-    function hashExecution(
-        address _targetEoA,
-        uint128 _nonce,
-        uint32 _deadline,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
-    ) external view returns (bytes32) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).hashExecution(_nonce, _deadline, _outputContract, _ethAmount, _arguments);
-    }
-
-    function hashBurnNonce(address _targetEoA, uint128 _nonce) external view returns (bytes32) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).hashBurnNonce(_nonce);
-    }
-
-    function hashApproveThenExecute(
-        address _targetEoA,
-        uint128 _nonce,
-        uint32 _deadline,
-        address _erc20Contract,
-        address _spender,
-        uint256 _approveAmount,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
-    ) external view returns (bytes32) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).hashApproveThenExecute(
-            _nonce, _deadline, _erc20Contract, _spender, _approveAmount, _outputContract, _ethAmount, _arguments
-        );
-    }
-
-    function hashSessionExecution(
-        address _targetEoA,
-        uint128 _counter,
-        uint32 _deadline,
-        address _sender,
-        address _outputContract
-    ) external view returns (bytes32) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).hashSessionExecution(_counter, _deadline, _sender, _outputContract);
-    }
-
-    function hashArbitrarySessionExecution(address _targetEoA, uint128 _counter, uint32 _deadline, address _sender)
-        external
-        view
-        returns (bytes32)
-    {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).hashArbitrarySessionExecution(_counter, _deadline, _sender);
-    }
-
-    function hashBatchExecution(
-        address _targetEoA,
-        uint128 _nonce,
-        uint32 _deadline,
-        IBatchExecution.Call[] calldata _calls
-    ) external view returns (bytes32) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).hashBatchExecution(_nonce, _deadline, _calls);
-    }
-
-    function hashBurnSessionCounter(address _targetEoA, uint128 _counter) external view returns (bytes32) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
-        return ITKGasDelegate(_targetEoA).hashBurnSessionCounter(_counter);
-    }
 }
 
