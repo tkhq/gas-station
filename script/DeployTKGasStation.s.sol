@@ -18,7 +18,8 @@ contract DeployTKGasStation is Script {
     function run() external {
         uint256 _deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
-        address _delegate = 0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E; // TKGasDelegate
+        // Deterministic TKGasDelegate address for current bytecode + salt
+        address _delegate = 0x1F9035177fCf4f2290db2a53BE4650fBF8477003; // TKGasDelegate
         bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379; // "Gassy"
 
         vm.startBroadcast(_deployerPrivateKey);

@@ -184,7 +184,7 @@ interface ITKGasDelegate is IBatchExecution {
 
     /// @notice Burns the current nonce without signature (must be called by self)
     function burnNonce() external;
-    
+
     /// @notice Burns the current nonce without signature (must be called by self)
     /// @param _prefix The prefix of the next nonce to burn
     function burnNonce(uint64 _prefix) external;
