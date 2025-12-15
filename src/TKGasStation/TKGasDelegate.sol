@@ -83,7 +83,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
-
     /// @notice Returns the current nonce for this delegate
     /// @dev The nonce increments with each transaction to prevent replay attacks
     /// @return The current nonce value
@@ -370,7 +369,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
-    function _validateSignature(bytes32 _hash, bytes calldata _signature) internal view returns (bool) {
+    function _validateSignature(bytes32 _hash, bytes calldata _signature) internal view virtual returns (bool) {
         return ECDSA.recoverCalldata(_hash, _signature) == address(this);
     }
 
@@ -439,7 +438,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 ++state.nonces[prefix];
             }
         }
-
     }
 
     function _requireCounter(bytes calldata _counterBytes) internal view {
@@ -964,10 +962,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             revert NotSelf();
         }
         unchecked {
-            ++_getStateStorage().nonce; // assume the 0 prefix 
+            ++_getStateStorage().nonce; // assume the 0 prefix
         }
     }
-    
 
     function burnNonce(uint64 _prefix) external {
         if (msg.sender != address(this) || msg.sender != tx.origin) {

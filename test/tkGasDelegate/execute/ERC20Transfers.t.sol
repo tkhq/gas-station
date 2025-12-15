@@ -632,11 +632,11 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(result.length, 32);
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
-        
+
         // Verify nonce at prefix 0xF was incremented
         uint128 currentNonce = MockDelegate(user).getNonce(prefix);
         assertEq(currentNonce, nonce + 1);
-        
+
         // Verify prefix 0 nonce is unchanged
         uint128 noncePrefix0 = MockDelegate(user).getNonce(0);
         assertEq(noncePrefix0, 0);

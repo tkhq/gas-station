@@ -88,13 +88,13 @@ interface ITKGasStation is IBatchExecution {
     /// @param _signature The signature authorizing the nonce burn operation
     /// @param _nonce The nonce value to invalidate
     function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external;
-    
+
     /// @notice Retrieves the current nonce for a delegated EOA
     /// @param _targetEoA The delegated EOA address to query
     /// @param _prefix The uint64 nonce prefix for two part nonces
     /// @return The current nonce value
     function getNonce(address _targetEoA, uint64 _prefix) external view returns (uint128);
-    
+
     /// @notice Retrieves the current nonce for a delegated EOA
     /// @param _targetEoA The delegated EOA address to query
     /// @return The current nonce value

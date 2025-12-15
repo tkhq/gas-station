@@ -47,7 +47,7 @@ contract TKGasStation is ITKGasStation {
         revert InvalidFunctionSelector();
     }
 
-    function _isDelegated(address _targetEoA) internal view returns (bool) {
+    function _isDelegated(address _targetEoA) internal view virtual returns (bool) {
         uint256 size;
         assembly {
             size := extcodesize(_targetEoA)
