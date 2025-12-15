@@ -3,44 +3,44 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 ## Deployments
 
 All contracts are deployed at the same address across all networks:
-- **TKGasDelegate**: `0xDE2a56291df8293B3417E106fFD939B379aaCf7b`
-- **TKGasStation**: `0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E`
+- **TKGasDelegate**: `0x1F9035177fCf4f2290db2a53BE4650fBF8477003`
+- **TKGasStation**: `0x73516fFF0C5373D08Afa7ba590a2D489bB57e236`
 
 #### Ethereum Mainnet
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://etherscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://etherscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://etherscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://etherscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Base Mainnet
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://basescan.org/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://basescan.org/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://basescan.org/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://basescan.org/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Sepolia Testnet
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://sepolia.etherscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://sepolia.etherscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://sepolia.etherscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://sepolia.etherscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Base Sepolia Testnet
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://sepolia.basescan.org/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://sepolia.basescan.org/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://sepolia.basescan.org/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://sepolia.basescan.org/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Polygon Mainnet
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://polygonscan.com/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://polygonscan.com/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://polygonscan.com/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://polygonscan.com/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Celo Mainnet
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://celoscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://celoscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://celoscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://celoscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Arbitrum One
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://arbiscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://arbiscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://arbiscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://arbiscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Optimism
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://optimistic.etherscan.io/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://optimistic.etherscan.io/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://optimistic.etherscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://optimistic.etherscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Unichain Mainnet
-- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://uniscan.xyz/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
-- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://uniscan.xyz/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://uniscan.xyz/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://uniscan.xyz/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Monad Mainnet
 - **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://monadscan.com/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
@@ -192,3 +192,15 @@ forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <netwo
 
 
 6. Add the contract addresses to the readme
+
+
+Note, you can do a mass redeploy with the following. Just remember to change the deterministic gas delegate address in DeployTKGasStation.s.sol:
+```
+for net in mainnet base sepolia base-sepolia polygon celo arbitrum optimism unichain amoy monad monad-testnet; do
+  forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate \
+    --rpc-url $net --broadcast --verify
+
+  forge script script/DeployTKGasStation.s.sol:DeployTKGasStation \
+    --rpc-url $net --broadcast --verify
+done
+```
