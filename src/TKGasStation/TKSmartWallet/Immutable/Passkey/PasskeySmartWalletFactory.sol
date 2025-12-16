@@ -27,4 +27,16 @@ contract PasskeySmartWalletFactory {
         }
         return instance;
     }
+
+    function createWallet(bytes32 x, bytes32 y, bytes32 _salt) external returns (address) {
+        // Encode x and y as immutable arguments
+        bytes memory args = abi.encode(x, y);
+        _salt = keccak256(abi.encodePacked(_salt, x, y));
+        // Use createDeterministicClone which doesn't revert if already deployed
+        (bool alreadyDeployed, address instance) = LibClone.createDeterministicClone(IMPLEMENTATION, args, _salt);
+        if(!alreadyDeployed) {
+            emit WalletCreated(instance, x, y);
+        }
+        return instance;
+    }
 }

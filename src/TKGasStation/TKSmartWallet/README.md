@@ -1,5 +1,7 @@
 # TKSmartWallet
 
+Two versions of the smart wallet and gas station exist. One version is for using passkeys with the fusaka upgrade, and one version is using just an arbitrary address you can point to
+
 ## Base Mainnet Deployments
 
 ### Passkey Smart Wallets
