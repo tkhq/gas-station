@@ -4,27 +4,27 @@ pragma solidity ^0.8.30;
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 
-import {PasskeyFactory} from "../src/TKGasStation/PasskeyWallets/PasskeyFactory.sol";
-import {PasskeyGasStation} from "../src/TKGasStation/PasskeyWallets/PasskeyGasStation.sol";
+import {TKSmartWalletFactory} from "../src/TKGasStation/TKSmartWallet/TKSmartWalletFactory.sol";
+import {TKSmartWalletGasStation} from "../src/TKGasStation/TKSmartWallet/TKSmartWalletGasStation.sol";
 import {TKGasStation} from "../src/TKGasStation/TKGasStation.sol";
 
-/// @notice Deploys PasskeyFactory and a TKGasStation wired to its implementation, on Base or any configured chain.
+/// @notice Deploys TKSmartWalletFactory and a TKGasStation wired to its implementation, on Base or any configured chain.
 contract DeployPasskeyFactoryAndTKGasStation is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy the PasskeyFactory.
-        PasskeyFactory passkeyFactory = new PasskeyFactory();
-        console2.log("PasskeyFactory deployed at:", address(passkeyFactory));
+        // Deploy the TKSmartWalletFactory.
+        TKSmartWalletFactory tkSmartWalletFactory = new TKSmartWalletFactory();
+        console2.log("TKSmartWalletFactory deployed at:", address(tkSmartWalletFactory));
 
-        // The PasskeyFactory's IMPLEMENTATION is the delegate implementation (PasskeyDelegate).
-        address delegateImplementation = passkeyFactory.IMPLEMENTATION();
-        console2.log("Passkey delegate implementation at:", delegateImplementation);
+        // The TKSmartWalletFactory's IMPLEMENTATION is the delegate implementation (TKSmartWalletDelegate).
+        address delegateImplementation = tkSmartWalletFactory.IMPLEMENTATION();
+        console2.log("TKSmartWallet delegate implementation at:", delegateImplementation);
 
         // Deploy TKGasStation pointing at the delegate implementation.
-        PasskeyGasStation tkGasStation = new PasskeyGasStation(delegateImplementation);
+        TKSmartWalletGasStation tkGasStation = new TKSmartWalletGasStation(delegateImplementation);
         console2.log("TKGasStation deployed at:", address(tkGasStation));
 
         vm.stopBroadcast();

@@ -3,14 +3,16 @@ pragma solidity ^0.8.30;
 
 import {LibClone} from "solady/utils/LibClone.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
-import {PasskeyDelegate} from "./PasskeyDelegate.sol";
-import {IArbiter} from "../interfaces/IArbiter.sol";
+import {TKSmartWalletDelegate} from "./TKSmartWalletDelegate.sol";
+import {PublicKey} from "../structs/PublicKey.sol";
+import {RuleSet} from "../structs/RuleSet.sol";
+import {TransientSignature} from "../structs/TransientSignature.sol";
+import {ITKSmartWalletFactory} from "../interfaces/ITKSmartWalletFactory.sol";
 
-/// @notice Factory contract for creating deterministic clonable proxies of PasskeyDelegate.
+/// @notice Factory contract for creating deterministic clonable proxies of TKSmartWalletDelegate.
 /// @dev Uses Solady's LibClone to deploy minimal proxy clones (EIP-1167) with CREATE2.
 /// The factory acts as the arbiter contract for all created wallets.
-contract PasskeyFactory is IArbiter {
-    error InvalidMBurn();
+contract TKSmartWalletFactory is ITKSmartWalletFactory {
     error InvalidPublicKeyIndex();
     error InvalidPublicKeyLengthForRemoval();
     error InvalidAddressIndex();
@@ -22,6 +24,13 @@ contract PasskeyFactory is IArbiter {
     error InvalidArrayLength();
     error InvalidN();
     error InvalidMOf();
+    error InvalidSignatureLength();
+    error InvalidPasskeyOrAddressIndex();
+
+    error PassKeyIndexMustBeLessThan128();
+    error AddressIndexMustBeGreaterThan127AndNot255();
+
+    error InvalidSignaturesLengthForSet();
 
     //IMMUTABLES
 
@@ -37,22 +46,8 @@ contract PasskeyFactory is IArbiter {
     event RuleSetPublicKeyAdded(address indexed wallet, bytes32 x, bytes32 y);
     event RuleSetAddressAdded(address indexed wallet, address addedAddress);
     event RuleSetMOfUpdated(address indexed wallet, uint8 mOf);
-    event RuleSetMBurnUpdated(address indexed wallet, uint8 mBurn);
     event RuleSetPublicKeysReplaced(address indexed wallet, PublicKey[] publicKeys, uint8 n);
     event RuleSetAddressesReplaced(address indexed wallet, address[] addresses, uint8 n);
-
-    struct PublicKey {
-        bytes32 x;
-        bytes32 y;
-    }
-
-    struct RuleSet {
-        uint8 mOf;
-        uint8 n;
-        uint8 mBurn;
-        PublicKey[] publicKeys;
-        address[] addresses;
-    }
 
     mapping(bytes32 => address) internal publicKeyToAddress;
 
@@ -60,9 +55,9 @@ contract PasskeyFactory is IArbiter {
 
     //CONSTRUCTOR
 
-    /// @dev Deploys a PasskeyDelegate implementation with this factory as the arbiter.
+    /// @dev Deploys a TKSmartWalletDelegate implementation with this factory as the arbiter.
     constructor() {
-        IMPLEMENTATION = address(new PasskeyDelegate(address(this)));
+        IMPLEMENTATION = address(new TKSmartWalletDelegate(address(this)));
     }
 
     //DEPLOY FUNCTIONS
@@ -74,7 +69,7 @@ contract PasskeyFactory is IArbiter {
         publicKeyToAddress[keccak256(abi.encodePacked(_x, _y))] = instance;
         PublicKey[] memory publicKeysArray = new PublicKey[](1);
         publicKeysArray[0] = publicKey;
-        ruleSets[instance] = RuleSet({mOf: 1, n: 1, mBurn: 1, publicKeys: publicKeysArray, addresses: new address[](0)});
+        ruleSets[instance] = RuleSet({mOf: 1, n: 1, publicKeys: publicKeysArray, addresses: new address[](0)});
         emit WalletCreated(instance, msg.sender, _x, _y);
     }
 
@@ -83,12 +78,12 @@ contract PasskeyFactory is IArbiter {
         instance = LibClone.cloneDeterministic(IMPLEMENTATION, salt);
         publicKeyToAddress[keccak256(abi.encodePacked(_address))] = instance;
         ruleSets[instance] =
-            RuleSet({mOf: 1, n: 1, mBurn: 1, publicKeys: new PublicKey[](0), addresses: new address[](1)});
+            RuleSet({mOf: 1, n: 1, publicKeys: new PublicKey[](0), addresses: new address[](1)});
         ruleSets[instance].addresses[0] = _address;
         emit WalletCreatedFromAddress(instance, msg.sender, _address);
     }
 
-    function createWallet(uint8 _mOf, uint8 _mBurn, PublicKey[] memory _publicKeys, address[] memory _addresses, bytes32 _salt)
+    function createWallet(uint8 _mOf, PublicKey[] memory _publicKeys, address[] memory _addresses, bytes32 _salt)
         external
         returns (address instance)
     {
@@ -99,12 +94,12 @@ contract PasskeyFactory is IArbiter {
         if (n == 0) {
             revert InvalidN();
         }
-        if (_mOf > n || _mBurn > n || _mOf == 0 || _mBurn == 0) {
+        if (_mOf > n || _mOf == 0) {
             revert InvalidMOf();
         }
 
         RuleSet memory ruleSet =
-            RuleSet({mOf: _mOf, n: n, mBurn: _mBurn, publicKeys: _publicKeys, addresses: _addresses});
+            RuleSet({mOf: _mOf, n: n, publicKeys: _publicKeys, addresses: _addresses});
         instance = LibClone.cloneDeterministic(IMPLEMENTATION, _salt);
         ruleSets[instance] = ruleSet;
         emit WalletCreatedWithRuleSet(instance, msg.sender, ruleSet);
@@ -230,7 +225,56 @@ contract PasskeyFactory is IArbiter {
 
     // External functions to set transient storage
 
+    function setTransientSignatures(address _target, TransientSignature[] calldata _signatures) external returns (bytes memory) {
+        if(_signatures.length == 0 || _signatures.length > 65) {
+            revert InvalidSignaturesLengthForSet();
+        }
+        bytes memory signature = new bytes(65);
+        uint8 passkeyIndex = 0;
+        uint8 addressIndex = 128;
+        uint8 i = 0;
+        for (; i < _signatures.length; i++) {
+            if (_signatures[i].signature.length == 65) {
+                _setTransientAddressSignature(_target, addressIndex, _signatures[i].signature);
+                signature[i] = bytes1(addressIndex);
+                addressIndex++;
+            } else if (_signatures[i].signature.length == 64) {
+                _setTransientPassKeySignature(_target, passkeyIndex, _signatures[i].signature);
+                signature[i] = bytes1(passkeyIndex);
+                passkeyIndex++;
+            } else {
+                revert InvalidSignatureLength(); 
+            }
+        }
+        if (passkeyIndex > 127 || addressIndex > 255) { // not possible to get greater than 255 
+            revert InvalidPasskeyOrAddressIndex();
+        }
+        signature[i] = bytes1(0xFF); // FF is the end of the signature
+        return signature;
+    }
+
+    function setTransientSignature(address _target, uint8 _index, bytes calldata _signature) external {
+        _setTransientSignature(_target, _index, _signature);
+    }
+
+    function _setTransientSignature(address _target, uint8 _index, bytes calldata _signature) internal {
+        if (_signature.length != 65) {
+            _setTransientAddressSignature(_target, _index, _signature);
+        } else if (_signature.length == 64) {
+            _setTransientPassKeySignature(_target, _index, _signature);
+        } else {
+            revert InvalidSignatureLength(); 
+        }
+    }
+
     function setTransientPassKeySignature(address _target, uint8 _index, bytes calldata _signature) external {
+        _setTransientPassKeySignature(_target, _index, _signature);
+    }
+
+    function _setTransientPassKeySignature(address _target, uint8 _index, bytes calldata _signature) internal {
+        if (_index > 127) {
+            revert PassKeyIndexMustBeLessThan128();
+        }
         bytes32 key = keccak256(abi.encodePacked(_target, "passkey", _index));
         assembly ("memory-safe") {
             // Store first 32 bytes of signature in key slot
@@ -241,6 +285,9 @@ contract PasskeyFactory is IArbiter {
     }
 
     function getTransientPassKeySignature(address _target, uint8 _index) public view returns (bytes32, bytes32) {
+        if (_index > 127) {
+            revert PassKeyIndexMustBeLessThan128();
+        }
         bytes32 key = keccak256(abi.encodePacked(_target, "passkey", _index));
         bytes32 first32;
         bytes32 second32;
@@ -254,6 +301,13 @@ contract PasskeyFactory is IArbiter {
     }
 
     function setTransientAddressSignature(address _target, uint8 _index, bytes calldata _signature) external {
+        _setTransientAddressSignature(_target, _index, _signature);
+    }
+
+    function _setTransientAddressSignature(address _target, uint8 _index, bytes calldata _signature) internal {
+        if (_index < 128 || _index == 255) {
+            revert AddressIndexMustBeGreaterThan127AndNot255();
+        }
         bytes32 key = keccak256(abi.encodePacked(_target, "address", _index));
         assembly ("memory-safe") {
             // Store first 32 bytes of signature in key slot
@@ -271,6 +325,9 @@ contract PasskeyFactory is IArbiter {
         view
         returns (bytes32 r, bytes32 s, bytes1 v)
     {
+        if (_index < 128 || _index == 255) {
+            revert AddressIndexMustBeGreaterThan127AndNot255();
+        }
         bytes32 key = keccak256(abi.encodePacked(_target, "address", _index));
         assembly ("memory-safe") {
             r := tload(key)
@@ -305,13 +362,6 @@ contract PasskeyFactory is IArbiter {
         emit RuleSetMOfUpdated(msg.sender, _mOf);
     }
 
-    function setMBurn(uint8 _mBurn) external {
-        if (_mBurn > ruleSets[msg.sender].n || _mBurn > MAX_M_OF || _mBurn == 0) {
-            revert InvalidMBurn();
-        }
-        ruleSets[msg.sender].mBurn = _mBurn;
-        emit RuleSetMBurnUpdated(msg.sender, _mBurn);
-    }
 
     function replacePublicKeys(PublicKey[] calldata _publicKeys) external {
         uint8 pubKeyLen = uint8(_publicKeys.length);
@@ -324,7 +374,7 @@ contract PasskeyFactory is IArbiter {
         if (n == 0) {
             revert InvalidN();
         }
-        if (rs.mOf > n || rs.mBurn > n) {
+        if (rs.mOf > n) {
             revert InvalidMOfForRemoval();
         }
 
@@ -346,7 +396,7 @@ contract PasskeyFactory is IArbiter {
         if (n == 0) {
             revert InvalidN();
         }
-        if (rs.mOf > n || rs.mBurn > n) {
+        if (rs.mOf > n) {
             revert InvalidMOfForRemoval();
         }
 

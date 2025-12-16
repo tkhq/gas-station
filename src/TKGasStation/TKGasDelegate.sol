@@ -460,7 +460,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _domainSeparator();
     }
 
-    function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
+    function _domainNameAndVersion() internal pure virtual override returns (string memory name, string memory version) {
         name = "TKGasDelegate";
         version = "1";
     }

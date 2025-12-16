@@ -2,22 +2,22 @@
 pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
-import {PasskeyFactory} from "../../src/TKGasStation/PasskeyWallets/PasskeyFactory.sol";
-import {PasskeyGasStation} from "../../src/TKGasStation/PasskeyWallets/PasskeyGasStation.sol";
+import {TKSmartWalletFactory} from "../../src/TKGasStation/TKSmartWallet/TKSmartWalletFactory.sol";
+import {TKSmartWalletGasStation} from "../../src/TKGasStation/TKSmartWallet/TKSmartWalletGasStation.sol";
 
 contract PasskeyGasStationTest is Test {
-    PasskeyFactory internal passkeyFactory;
-    PasskeyGasStation internal passkeyGasStation;
+    TKSmartWalletFactory internal passkeyFactory;
+    TKSmartWalletGasStation internal passkeyGasStation;
 
     address internal eoaOwner;
 
     function setUp() public {
         // Deploy the factory and derive the delegate implementation just like the deploy script.
-        passkeyFactory = new PasskeyFactory();
+        passkeyFactory = new TKSmartWalletFactory();
         address delegateImplementation = passkeyFactory.IMPLEMENTATION();
 
-        // Deploy the PasskeyGasStation pointing at the delegate implementation.
-        passkeyGasStation = new PasskeyGasStation(delegateImplementation);
+        // Deploy the TKSmartWalletGasStation pointing at the delegate implementation.
+        passkeyGasStation = new TKSmartWalletGasStation(delegateImplementation);
 
         eoaOwner = makeAddr("eoaOwner");
     }
