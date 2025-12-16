@@ -14,14 +14,13 @@ contract AddressSmartWalletFactory {
     }
 
     function createWallet(address _authority) external returns (address) {
-        
         // Encode authority as immutable argument
         bytes memory args = abi.encode(_authority);
         bytes32 salt = keccak256(args);
-        
+
         // Use createDeterministicClone which doesn't revert if already deployed
         (bool alreadyDeployed, address instance) = LibClone.createDeterministicClone(IMPLEMENTATION, args, salt);
-        if(!alreadyDeployed) {
+        if (!alreadyDeployed) {
             emit WalletCreated(instance, _authority);
         }
         return instance;
@@ -33,7 +32,7 @@ contract AddressSmartWalletFactory {
         _salt = keccak256(abi.encodePacked(_salt, _authority));
         // Use createDeterministicClone which doesn't revert if already deployed
         (bool alreadyDeployed, address instance) = LibClone.createDeterministicClone(IMPLEMENTATION, args, _salt);
-        if(!alreadyDeployed) {
+        if (!alreadyDeployed) {
             emit WalletCreated(instance, _authority);
         }
         return instance;

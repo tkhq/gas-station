@@ -36,7 +36,6 @@ library IsDelegated {
         return delegatedTo == _expectedDelegate;
     }
 
-
     /// @notice Checks if an address is delegated using the LibClone minimal proxy pattern with immutable args
     /// @param _targetEoA The address to check for delegation
     /// @param _expectedDelegate The expected delegate implementation address
@@ -62,28 +61,27 @@ library IsDelegated {
         assembly {
             // Get code size
             let size := extcodesize(_targetEoA)
-            
+
             // Check runtime length matches LibClone minimal proxy (44 bytes / 0x2c)
             // If size doesn't match, set values to zero which will fail the final check
             if eq(size, _expectedRuntimeCodeSize) {
                 // Allocate memory for code (free memory pointer)
                 let codePtr := mload(0x40)
-                
+
                 // Copy runtime code to memory
                 extcodecopy(_targetEoA, codePtr, 0, size)
-                
+
                 // Extract prefix (first 10 bytes)
                 codePrefix := mload(codePtr)
-                
+
                 // Extract delegated address (bytes 11-30, 20 bytes)
                 delegatedTo := shr(96, mload(add(codePtr, 10)))
-                
+
                 // Extract suffix (last 15 bytes, starting at byte 31)
                 codeSuffix := mload(add(codePtr, 30))
             }
         }
-        
+
         return codePrefix == _expectedPrefix && delegatedTo == _expectedDelegate && codeSuffix == _expectedSuffix;
     }
 }
-

@@ -6,7 +6,6 @@ import {TKGasStation} from "../../TKGasStation.sol";
 import {IsDelegated} from "../../IsDelegated.sol";
 
 contract ImmutableSmartWalletGasStation is TKGasStation {
-
     // constants for the minimal proxy pattern by solady LibClone
     uint256 private immutable EXPECTED_RUNTIME_CODE_SIZE; // 44 bytes if nothing
     bytes10 private constant EXPECTED_PREFIX = 0x363d3d373d3d3d363d73;
@@ -16,14 +15,9 @@ contract ImmutableSmartWalletGasStation is TKGasStation {
         EXPECTED_RUNTIME_CODE_SIZE = _expectedRuntimeCodeSize;
     }
 
-    function _isDelegated(address _targetEoA) internal override view returns (bool) {
+    function _isDelegated(address _targetEoA) internal view override returns (bool) {
         return IsDelegated.isDelegatedMinimalProxy(
-            _targetEoA,
-            TK_GAS_DELEGATE,
-            EXPECTED_RUNTIME_CODE_SIZE,
-            EXPECTED_PREFIX,
-            EXPECTED_SUFFIX
+            _targetEoA, TK_GAS_DELEGATE, EXPECTED_RUNTIME_CODE_SIZE, EXPECTED_PREFIX, EXPECTED_SUFFIX
         );
     }
-
 }

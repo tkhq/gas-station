@@ -3,15 +3,17 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {console2} from "forge-std/console2.sol";
-import {PasskeySmartWalletFactory} from "../../src/TKGasStation/TKSmartWallet/Immutable/Passkey/PasskeySmartWalletFactory.sol";
-import {PasskeySmartWalletDelegate} from "../../src/TKGasStation/TKSmartWallet/Immutable/Passkey/PasskeySmartWalletDelegate.sol";
-import {ImmutableSmartWalletGasStation} from "../../src/TKGasStation/TKSmartWallet/Immutable/ImmutableSmartWalletGasStation.sol";
+import {PasskeySmartWalletFactory} from
+    "../../src/TKGasStation/TKSmartWallet/Immutable/Passkey/PasskeySmartWalletFactory.sol";
+import {PasskeySmartWalletDelegate} from
+    "../../src/TKGasStation/TKSmartWallet/Immutable/Passkey/PasskeySmartWalletDelegate.sol";
+import {ImmutableSmartWalletGasStation} from
+    "../../src/TKGasStation/TKSmartWallet/Immutable/ImmutableSmartWalletGasStation.sol";
 
 contract PasskeyFactoryTest is Test {
     PasskeySmartWalletFactory internal factory;
 
     ImmutableSmartWalletGasStation internal gasStation;
-
 
     function setUp() public {
         // Deploy the delegate implementation first
@@ -22,12 +24,15 @@ contract PasskeyFactoryTest is Test {
     }
 
     function testCreatePasskeyWallet() public {
-        address wallet = factory.createWallet(0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb);
+        address wallet = factory.createWallet(
+            0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,
+            0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+        );
         assertNotEq(wallet, address(0), "Wallet should be deployed");
         assertGt(wallet.code.length, 0, "Wallet should have code");
         // With immutable args: 45 bytes (minimal proxy) + 64 bytes (x and y) = 109 bytes
         assertEq(wallet.code.length, 109, "Wallet should be a minimal proxy with immutable args (109 bytes)");
-        
+
         // Print the bytecode
 
         PasskeySmartWalletDelegate delegate = PasskeySmartWalletDelegate(payable(wallet));
@@ -40,7 +45,5 @@ contract PasskeyFactoryTest is Test {
         assertEq(gasStation.getNonce(wallet), 0, "Wallet should have a nonce of 0");
 
         assertEq(gasStation.getNonce(wallet, 0), 0, "Wallet should have a nonce of 0");
-        
     }
-
 }

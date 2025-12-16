@@ -4,11 +4,16 @@ pragma solidity ^0.8.30;
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
 
-import {PasskeySmartWalletFactory} from "../src/TKGasStation/TKSmartWallet/Immutable/Passkey/PasskeySmartWalletFactory.sol";
-import {PasskeySmartWalletDelegate} from "../src/TKGasStation/TKSmartWallet/Immutable/Passkey/PasskeySmartWalletDelegate.sol";
-import {AddressSmartWalletFactory} from "../src/TKGasStation/TKSmartWallet/Immutable/Address/AddressSmartWalletFactory.sol";
-import {AddressSmartWalletDelegate} from "../src/TKGasStation/TKSmartWallet/Immutable/Address/AddressSmartWalletDelegate.sol";
-import {ImmutableSmartWalletGasStation} from "../src/TKGasStation/TKSmartWallet/Immutable/ImmutableSmartWalletGasStation.sol";
+import {PasskeySmartWalletFactory} from
+    "../src/TKGasStation/TKSmartWallet/Immutable/Passkey/PasskeySmartWalletFactory.sol";
+import {PasskeySmartWalletDelegate} from
+    "../src/TKGasStation/TKSmartWallet/Immutable/Passkey/PasskeySmartWalletDelegate.sol";
+import {AddressSmartWalletFactory} from
+    "../src/TKGasStation/TKSmartWallet/Immutable/Address/AddressSmartWalletFactory.sol";
+import {AddressSmartWalletDelegate} from
+    "../src/TKGasStation/TKSmartWallet/Immutable/Address/AddressSmartWalletDelegate.sol";
+import {ImmutableSmartWalletGasStation} from
+    "../src/TKGasStation/TKSmartWallet/Immutable/ImmutableSmartWalletGasStation.sol";
 
 interface IImmutableCreate2Factory {
     function safeCreate2(bytes32 _salt, bytes calldata _initCode)
@@ -37,14 +42,16 @@ contract DeployImmutableSmartWallets is Script {
         // Deploy PasskeySmartWalletFactory with the delegate implementation as constructor arg
         bytes memory passkeyFactoryCreationCode = type(PasskeySmartWalletFactory).creationCode;
         bytes memory passkeyFactoryConstructorArgs = abi.encode(passkeyDelegateImplementation);
-        bytes memory passkeyFactoryInitCode = abi.encodePacked(passkeyFactoryCreationCode, passkeyFactoryConstructorArgs);
+        bytes memory passkeyFactoryInitCode =
+            abi.encodePacked(passkeyFactoryCreationCode, passkeyFactoryConstructorArgs);
         address passkeySmartWalletFactory = create2Factory.safeCreate2(salt, passkeyFactoryInitCode);
         console2.log("PasskeySmartWalletFactory deployed at:", passkeySmartWalletFactory);
 
         // Deploy ImmutableSmartWalletGasStation for Passkey (109 bytes: 45 base + 64 for x and y)
         bytes memory passkeyGasStationCreationCode = type(ImmutableSmartWalletGasStation).creationCode;
         bytes memory passkeyGasStationConstructorArgs = abi.encode(passkeyDelegateImplementation, 109);
-        bytes memory passkeyGasStationInitCode = abi.encodePacked(passkeyGasStationCreationCode, passkeyGasStationConstructorArgs);
+        bytes memory passkeyGasStationInitCode =
+            abi.encodePacked(passkeyGasStationCreationCode, passkeyGasStationConstructorArgs);
         address passkeyGasStation = create2Factory.safeCreate2(salt, passkeyGasStationInitCode);
         console2.log("Passkey ImmutableSmartWalletGasStation deployed at:", passkeyGasStation);
 
@@ -56,14 +63,16 @@ contract DeployImmutableSmartWallets is Script {
         // Deploy AddressSmartWalletFactory with the delegate implementation as constructor arg
         bytes memory addressFactoryCreationCode = type(AddressSmartWalletFactory).creationCode;
         bytes memory addressFactoryConstructorArgs = abi.encode(addressDelegateImplementation);
-        bytes memory addressFactoryInitCode = abi.encodePacked(addressFactoryCreationCode, addressFactoryConstructorArgs);
+        bytes memory addressFactoryInitCode =
+            abi.encodePacked(addressFactoryCreationCode, addressFactoryConstructorArgs);
         address addressSmartWalletFactory = create2Factory.safeCreate2(salt, addressFactoryInitCode);
         console2.log("AddressSmartWalletFactory deployed at:", addressSmartWalletFactory);
 
         // Deploy ImmutableSmartWalletGasStation for Address (77 bytes: 45 base + 32 for address)
         bytes memory addressGasStationCreationCode = type(ImmutableSmartWalletGasStation).creationCode;
         bytes memory addressGasStationConstructorArgs = abi.encode(addressDelegateImplementation, 77);
-        bytes memory addressGasStationInitCode = abi.encodePacked(addressGasStationCreationCode, addressGasStationConstructorArgs);
+        bytes memory addressGasStationInitCode =
+            abi.encodePacked(addressGasStationCreationCode, addressGasStationConstructorArgs);
         address addressGasStation = create2Factory.safeCreate2(salt, addressGasStationInitCode);
         console2.log("Address ImmutableSmartWalletGasStation deployed at:", addressGasStation);
 

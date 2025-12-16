@@ -8,7 +8,6 @@ import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 
 contract AddressSmartWalletDelegate is TKGasDelegate {
-
     using LibClone for address;
 
     constructor() TKGasDelegate() {}
@@ -19,22 +18,22 @@ contract AddressSmartWalletDelegate is TKGasDelegate {
     }
 
     function _validateSignature(bytes32 _hash, bytes calldata _signature) internal view override returns (bool) {
-        // this expects the address to be stored at offset 0 in the immutable args 
+        // this expects the address to be stored at offset 0 in the immutable args
         return SignatureCheckerLib.isValidSignatureNow(_getAuthority(), _hash, _signature);
     }
 
     function getAuthority() public view returns (address) {
-        return _getAuthority();  
+        return _getAuthority();
     }
 
     function _getAuthority() internal view returns (address) {
         address authority;
         assembly {
-            let codePtr := mload(0x40) 
-            extcodecopy(address(), codePtr, 45, 32) // 45 prefix and 12 null bytes 
-            
-            authority := mload(codePtr) 
+            let codePtr := mload(0x40)
+            extcodecopy(address(), codePtr, 45, 32) // 45 prefix and 12 null bytes
+
+            authority := mload(codePtr)
         }
         return authority;
     }
-} 
+}
