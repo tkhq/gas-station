@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import {ITKGasDelegate} from "./interfaces/ITKGasDelegate.sol";
 import {ITKGasStation} from "./interfaces/ITKGasStation.sol";
 import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
+import {IsDelegated} from "./IsDelegated.sol";
 
 /// @title TKGasStation
 /// @notice Gas station contract that routes execution calls to delegated EOA accounts
@@ -48,31 +49,7 @@ contract TKGasStation is ITKGasStation {
     }
 
     function _isDelegated(address _targetEoA) internal view virtual returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(_targetEoA)
-        }
-        if (size != 23) {
-            return false;
-        }
-
-        bytes memory code = new bytes(23);
-        assembly {
-            extcodecopy(_targetEoA, add(code, 0x20), 0, 23)
-        }
-        // prefix is 0xef0100
-        if (code[0] != 0xef || code[1] != 0x01 || code[2] != 0x00) {
-            return false;
-        }
-
-        address delegatedTo;
-
-        assembly {
-            // Load the 20-byte address from bytes 3-22
-            delegatedTo := shr(96, mload(add(code, 0x23)))
-        }
-
-        return delegatedTo == TK_GAS_DELEGATE;
+        return IsDelegated.isDelegatedStandard(_targetEoA, TK_GAS_DELEGATE);
     }
 
     // Execute functions

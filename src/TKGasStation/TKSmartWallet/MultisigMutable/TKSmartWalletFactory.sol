@@ -39,9 +39,7 @@ contract TKSmartWalletFactory is ITKSmartWalletFactory {
     uint8 public constant MAX_M_OF = 64;
     address internal constant P256_VERIFY = address(0x100);
 
-    event WalletCreated(address indexed wallet, address indexed creator, bytes32 x, bytes32 y);
-    event WalletCreatedFromAddress(address indexed wallet, address indexed creator, address _address);
-    event WalletCreatedWithRuleSet(address indexed wallet, address indexed creator, RuleSet ruleSet);
+    event WalletCreatedWithRuleSet(address indexed wallet, address indexed creator, RuleSet ruleSet, address _creator, bytes32 _salt);
 
     event RuleSetPublicKeyAdded(address indexed wallet, bytes32 x, bytes32 y);
     event RuleSetAddressAdded(address indexed wallet, address addedAddress);
@@ -49,9 +47,11 @@ contract TKSmartWalletFactory is ITKSmartWalletFactory {
     event RuleSetPublicKeysReplaced(address indexed wallet, PublicKey[] publicKeys, uint8 n);
     event RuleSetAddressesReplaced(address indexed wallet, address[] addresses, uint8 n);
 
-    mapping(bytes32 => address) internal publicKeyToAddress;
+    mapping(bytes32 => address) public publicKeyToAddress;
 
     mapping(address => RuleSet) public ruleSets;
+
+    mapping
 
     //CONSTRUCTOR
 
@@ -64,29 +64,35 @@ contract TKSmartWalletFactory is ITKSmartWalletFactory {
 
     function createWallet(bytes32 _x, bytes32 _y) external returns (address instance) {
         bytes32 salt = _packBytes32sToSalt(_x, _y);
-        instance = LibClone.cloneDeterministic(IMPLEMENTATION, salt);
-        PublicKey memory publicKey = PublicKey({x: _x, y: _y});
-        publicKeyToAddress[keccak256(abi.encodePacked(_x, _y))] = instance;
         PublicKey[] memory publicKeysArray = new PublicKey[](1);
-        publicKeysArray[0] = publicKey;
-        ruleSets[instance] = RuleSet({mOf: 1, n: 1, publicKeys: publicKeysArray, addresses: new address[](0)});
-        emit WalletCreated(instance, msg.sender, _x, _y);
+        publicKeysArray[0] = PublicKey({x: _x, y: _y});
+        return _createWallet(1, publicKeysArray, new address[](0), address(0), salt);
     }
 
     function createWallet(address _address) external returns (address instance) {
-        bytes32 salt = keccak256(abi.encodePacked(_address));
-        instance = LibClone.cloneDeterministic(IMPLEMENTATION, salt);
-        publicKeyToAddress[keccak256(abi.encodePacked(_address))] = instance;
-        ruleSets[instance] =
-            RuleSet({mOf: 1, n: 1, publicKeys: new PublicKey[](0), addresses: new address[](1)});
-        ruleSets[instance].addresses[0] = _address;
-        emit WalletCreatedFromAddress(instance, msg.sender, _address);
+        address[] memory addresses = new address[](1);
+        addresses[0] = _address;
+        return _createWallet(1, new PublicKey[](0), addresses, address(0), keccak256(abi.encodePacked(_address)));
     }
 
-    function createWallet(uint8 _mOf, PublicKey[] memory _publicKeys, address[] memory _addresses, bytes32 _salt)
+    function createWallet(uint8 _mOf, PublicKey[] memory _publicKeys, address[] memory _addresses, address _creator, bytes32 _salt)
         external
         returns (address instance)
     {
+        return _createWallet(_mOf, _publicKeys, _addresses, _creator, _salt);
+    }
+
+    function _createWallet(uint8 _mOf, PublicKey[] memory _publicKeys, address[] memory _addresses, address _creator, bytes32 _salt) internal returns (address instance) {
+        // allow deterministic address generation by the creator and can limit that a creator can make sure no one else makes a wallet with the same salt
+        // if creator is address(0), then any address can create a wallet with the same salt and initialization data
+        if (_creator == address(0)) {
+            _salt = keccak256(abi.encodePacked(abi.encodePacked(_mOf, _publicKeys, _addresses, _creator, _salt)));
+        } else if (_creator == msg.sender) {
+            _salt = keccak256(abi.encodePacked(_creator, _salt)); // otherwise just use the creator and salt provided by the caller
+        } else {
+            revert InvalidCreator();
+        }
+
         if (_publicKeys.length > MAX_ARRAY_LENGTH || _addresses.length > MAX_ARRAY_LENGTH) {
             revert InvalidArrayLength();
         }
@@ -102,7 +108,7 @@ contract TKSmartWalletFactory is ITKSmartWalletFactory {
             RuleSet({mOf: _mOf, n: n, publicKeys: _publicKeys, addresses: _addresses});
         instance = LibClone.cloneDeterministic(IMPLEMENTATION, _salt);
         ruleSets[instance] = ruleSet;
-        emit WalletCreatedWithRuleSet(instance, msg.sender, ruleSet);
+        emit WalletCreatedWithRuleSet(instance, msg.sender, ruleSet, _creator, _salt);
     }
 
     //VIEW FUNCTIONS
@@ -230,31 +236,22 @@ contract TKSmartWalletFactory is ITKSmartWalletFactory {
             revert InvalidSignaturesLengthForSet();
         }
         bytes memory signature = new bytes(65);
-        uint8 passkeyIndex = 0;
-        uint8 addressIndex = 128;
         uint8 i = 0;
         for (; i < _signatures.length; i++) {
-            if (_signatures[i].signature.length == 65) {
-                _setTransientAddressSignature(_target, addressIndex, _signatures[i].signature);
-                signature[i] = bytes1(addressIndex);
-                addressIndex++;
-            } else if (_signatures[i].signature.length == 64) {
-                _setTransientPassKeySignature(_target, passkeyIndex, _signatures[i].signature);
-                signature[i] = bytes1(passkeyIndex);
-                passkeyIndex++;
+            if (_signatures[i].signature.length == 65) { // address signature 
+                _setTransientAddressSignature(_target, _signatures[i].index + 128, _signatures[i].signature);
+                signature[i] = bytes1( _signatures[i].index + 128);
+            } else if (_signatures[i].signature.length == 64) { // passkey signature
+                _setTransientPassKeySignature(_target, _signatures[i].index, _signatures[i].signature);
+                signature[i] = bytes1(_signatures[i].index);
             } else {
                 revert InvalidSignatureLength(); 
             }
         }
-        if (passkeyIndex > 127 || addressIndex > 255) { // not possible to get greater than 255 
-            revert InvalidPasskeyOrAddressIndex();
+        if (i < 64) { // if not all 65 slots are used, then set the slot to FF to indicate the end of the signature
+            signature[i] = bytes1(0xFF); // FF is the end of the signature
         }
-        signature[i] = bytes1(0xFF); // FF is the end of the signature
         return signature;
-    }
-
-    function setTransientSignature(address _target, uint8 _index, bytes calldata _signature) external {
-        _setTransientSignature(_target, _index, _signature);
     }
 
     function _setTransientSignature(address _target, uint8 _index, bytes calldata _signature) internal {
@@ -265,10 +262,6 @@ contract TKSmartWalletFactory is ITKSmartWalletFactory {
         } else {
             revert InvalidSignatureLength(); 
         }
-    }
-
-    function setTransientPassKeySignature(address _target, uint8 _index, bytes calldata _signature) external {
-        _setTransientPassKeySignature(_target, _index, _signature);
     }
 
     function _setTransientPassKeySignature(address _target, uint8 _index, bytes calldata _signature) internal {
