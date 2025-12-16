@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {InitializableSmartWalletDelegate} from "../InitializableSmartWalletDelegate.sol";
+import {TKGasDelegate} from "../../../TKGasDelegate.sol";
+
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
-contract AddressSmartWalletDelegate is InitializableSmartWalletDelegate {
+import {LibClone} from "solady/utils/LibClone.sol";
 
-    address public authority;
+contract AddressSmartWalletDelegate is TKGasDelegate {
 
-    constructor(address _initializer) InitializableSmartWalletDelegate(_initializer) {}
+    using LibClone for address;
 
-    function _initialize(bytes memory _data) internal virtual override returns (bytes memory) {
-        authority = abi.decode(_data, (address));
-        return _data;
-    }
+    constructor() TKGasDelegate() {}
 
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "AddressSmartWalletDelegate";
@@ -21,6 +19,22 @@ contract AddressSmartWalletDelegate is InitializableSmartWalletDelegate {
     }
 
     function _validateSignature(bytes32 _hash, bytes calldata _signature) internal view override returns (bool) {
-        return SignatureCheckerLib.isValidSignatureNow(authority, _hash, _signature);
+        // this expects the address to be stored at offset 0 in the immutable args 
+        return SignatureCheckerLib.isValidSignatureNow(_getAuthority(), _hash, _signature);
     }
-}
+
+    function getAuthority() public view returns (address) {
+        return _getAuthority();  
+    }
+
+    function _getAuthority() internal view returns (address) {
+        address authority;
+        assembly {
+            let codePtr := mload(0x40) 
+            extcodecopy(address(), codePtr, 45, 32) // 45 prefix and 12 null bytes 
+            
+            authority := mload(codePtr) 
+        }
+        return authority;
+    }
+} 

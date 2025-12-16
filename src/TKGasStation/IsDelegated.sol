@@ -36,27 +36,28 @@ library IsDelegated {
         return delegatedTo == _expectedDelegate;
     }
 
-    /// @notice Checks if an address is delegated using the LibClone minimal proxy pattern (44-byte runtime code)
+
+    /// @notice Checks if an address is delegated using the LibClone minimal proxy pattern with immutable args
     /// @param _targetEoA The address to check for delegation
     /// @param _expectedDelegate The expected delegate implementation address
-    /// @param _expectedRuntimeCodeSize The expected runtime code size (recommended: 0x2c for Solady's LibClone, 44 bytes)
-    /// @param _expectedPrefix The expected code prefix (recommended: 0x3d3d3d3d363d3d37363d73 for Solady's LibClone, 11 bytes)
-    /// @param _expectedSuffix The expected code suffix (recommended: 0x5af43d3d93803e602a57fd5bf3 for Solady's LibClone, 13 bytes)
+    /// @param _expectedRuntimeCodeSize The expected runtime code size (45 bytes base + args length for Solady's LibClone with immutable args)
+    /// @param _expectedPrefix The expected code prefix (recommended: 0x363d3d373d3d3d363d73 for Solady's LibClone with immutable args, 10 bytes)
+    /// @param _expectedSuffix The expected code suffix (recommended: 0x5af43d82803e903d91602b57fd5bf3 for Solady's LibClone with immutable args, 15 bytes)
     /// @return true if the address is delegated to the expected delegate, false otherwise
     function isDelegatedMinimalProxy(
         address _targetEoA,
         address _expectedDelegate,
         uint256 _expectedRuntimeCodeSize,
-        bytes11 _expectedPrefix,
-        bytes13 _expectedSuffix
+        bytes10 _expectedPrefix,
+        bytes15 _expectedSuffix
     ) internal view returns (bool) {
-        // Recommended values for Solady's LibClone minimal proxy:
-        // _expectedRuntimeCodeSize = 0x2c (44 bytes)
-        // _expectedPrefix = 0x3d3d3d3d363d3d37363d73 (11 bytes)
-        // _expectedSuffix = 0x5af43d3d93803e602a57fd5bf3 (13 bytes)
-        bytes11 codePrefix;
+        // Recommended values for Solady's LibClone minimal proxy with immutable args:
+        // _expectedRuntimeCodeSize = 45 + args.length (e.g., 77 for address, 109 for passkey with x and y)
+        // _expectedPrefix = 0x363d3d373d3d3d363d73 (10 bytes)
+        // _expectedSuffix = 0x5af43d82803e903d91602b57fd5bf3 (15 bytes)
+        bytes10 codePrefix;
         address delegatedTo;
-        bytes13 codeSuffix;
+        bytes15 codeSuffix;
 
         assembly {
             // Get code size
@@ -71,14 +72,14 @@ library IsDelegated {
                 // Copy runtime code to memory
                 extcodecopy(_targetEoA, codePtr, 0, size)
                 
-                // Extract prefix (first 11 bytes)
+                // Extract prefix (first 10 bytes)
                 codePrefix := mload(codePtr)
                 
                 // Extract delegated address (bytes 11-30, 20 bytes)
-                delegatedTo := shr(96, mload(add(codePtr, 11)))
+                delegatedTo := shr(96, mload(add(codePtr, 10)))
                 
-                // Extract suffix (last 13 bytes, starting at byte 31)
-                codeSuffix := mload(add(codePtr, 31))
+                // Extract suffix (last 15 bytes, starting at byte 31)
+                codeSuffix := mload(add(codePtr, 30))
             }
         }
         

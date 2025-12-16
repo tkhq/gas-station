@@ -1,21 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {InitializableSmartWalletDelegate} from "../InitializableSmartWalletDelegate.sol";
-import {PublicKey} from "../../structs/PublicKey.sol";
+import {TKGasDelegate} from "../../../TKGasDelegate.sol";
 
+contract PasskeySmartWalletDelegate is TKGasDelegate {
 
-contract PasskeySmartWalletDelegate is InitializableSmartWalletDelegate {
-
-    PublicKey public publicKey;
     address internal constant P256_VERIFY = address(0x100);
 
-    constructor(address _initializer) InitializableSmartWalletDelegate(_initializer) {}
+    error A(bytes a);
 
-    function _initialize(bytes memory _data) internal virtual override returns (bytes memory) {
-        publicKey = abi.decode(_data, (PublicKey));
-        return _data;
-    }
+    constructor() TKGasDelegate() {}
 
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "PasskeySmartWalletDelegate";
@@ -24,18 +18,37 @@ contract PasskeySmartWalletDelegate is InitializableSmartWalletDelegate {
 
     function _validateSignature(bytes32 _hash, bytes calldata _signature) internal view override returns (bool) {
         // note, while this will give a 65 byte signature, the signature is actually 64 bytes and will just ignore the last byte
-        return _validatePasskeySignature(publicKey, _hash, _signature); 
+        return _validatePasskeySignature(_hash, _signature); 
     }
 
-    function _validatePasskeySignature(PublicKey memory _publicKey, bytes32 _hash, bytes calldata _signature)
+    function _validatePasskeySignature(bytes32 _hash, bytes calldata _signature)
         internal
         view
         returns (bool)
     {
         bytes32 messageHash = sha256(abi.encodePacked(_hash));
+        (bytes32 x, bytes32 y) = _getPublicKey();
         bytes memory input =
-            abi.encodePacked(messageHash, _signature[0:32], _signature[32:64], _publicKey.x, _publicKey.y);
+            abi.encodePacked(messageHash, _signature[0:32], _signature[32:64], x, y);
         (bool success, bytes memory result) = P256_VERIFY.staticcall(input);
         return success && result.length == 32 && abi.decode(result, (uint256)) == 1;
+    }
+
+    function getPublicKey() public view returns (bytes32, bytes32) {
+        return _getPublicKey();
+    }
+
+    function _getPublicKey() internal view returns (bytes32, bytes32) {
+        bytes32 x;
+        bytes32 y;
+        assembly {
+            let codePtr := mload(0x40) 
+            // Copy code bytes 45-109 (64 bytes) to memory
+            extcodecopy(address(), codePtr, 45, 64)
+            
+            x := mload(codePtr)
+            y := mload(add(codePtr, 0x20))
+        }
+        return (x, y);
     }
 }
