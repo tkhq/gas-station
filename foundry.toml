@@ -15,12 +15,14 @@ base = "https://mainnet.base.org"
 baseSepolia = "https://sepolia.base.org"
 ethereum = "https://ethereum.publicnode.com"
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
+
 polygon = "https://polygon-rpc.com"
 polygonAmoy = "https://rpc-amoy.polygon.technology"
 monadTestnet = "https://testnet-rpc.monad.xyz/"
 monad = "https://rpc.monad.xyz"
 celo = "https://forno.celo.org"
 arbitrum = "https://arb1.arbitrum.io/rpc"
+arbitrumSepolia = "https://arbitrum-sepolia-rpc.publicnode.com"
 unichain = "https://mainnet.unichain.org"
 optimism = "https://mainnet.optimism.io"
 
@@ -32,6 +34,7 @@ sepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.etherscan.i
 polygon = { key = "${ETHERSCAN_API_KEY}", url = "https://api.polygonscan.com/api" }
 polygonAmoy = { key = "${ETHERSCAN_API_KEY}", url = "https://api-amoy.polygonscan.com/api" }
 arbitrum = { key = "${ETHERSCAN_API_KEY}", url = "https://api.arbiscan.io/api" }
+arbitrumSepolia = { key = "${ETHERSCAN_API_KEY}", url = "https://api-sepolia.arbiscan.io/api" }
 unichain = { key = "${ETHERSCAN_API_KEY}", url = "https://api.uniscan.xyz/api" }
 optimism = { key = "${ETHERSCAN_API_KEY}", url = "https://api-optimistic.etherscan.io/api" }
 monad = { key = "KUVUPXFTC8HNDDMK68CS468VT112H9ZQN3", url = "https://api.monadscan.com/api" }

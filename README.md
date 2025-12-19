@@ -32,7 +32,11 @@ All contracts are deployed at the same address across all networks:
 
 #### Arbitrum One
 - **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://arbiscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://arbiscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.arbiscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
+
+#### Arbitrum Sepolia Testnet
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://sepolia.arbiscan.io/address/0x00000000008c57a1ce37836a5e9d36759d070d8c)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.arbiscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)   
 
 #### Optimism
 - **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://optimistic.etherscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
