@@ -8,7 +8,13 @@ contract MockDelegate is TKGasDelegate {
     constructor() TKGasDelegate() {}
 
     function spoof_Nonce(uint128 _nonce) external {
-        _getStateStorage().nonce = _nonce;
+        uint64 prefix = uint64(_nonce >> 64);
+        if (prefix == 0) {
+            _getStateStorage().nonce = _nonce;
+        } else {
+            uint64 noncePart = uint64(_nonce);
+            _getStateStorage().nonces[prefix] = noncePart;
+        }
     }
 
     function spoof_burnSessionCounter(uint128 _counter) external {
