@@ -468,7 +468,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         returns (string memory name, string memory version)
     {
         name = "TKGasDelegate";
-        version = "1";
+        version = "1.0.1";
     }
 
     /// @notice Executes a transaction and returns the result
