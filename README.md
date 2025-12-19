@@ -133,10 +133,14 @@ The delegate should be deployed before the gas station
 Go to https://getfoundry.sh/introduction/installation/ and install if needed 
 
 
-2. Clone the repo
+2. Clone the repo and checkout the version
 
 ```
 git clone https://github.com/tkhq/gas-station.git
+
+cd gas-station
+
+git checkout v1.0.0
 
 ```
 
