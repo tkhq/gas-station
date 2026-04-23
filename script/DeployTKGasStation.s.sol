@@ -17,6 +17,11 @@ contract DeployTKGasStation is Script {
         address _delegate = 0x000066a00056CD44008768E2aF00696e19A30084; // TKGasDelegate 
         bytes32 _salt = 0x00000000000000000000000000000000000000001b6e3b861592b6bd85020054; // resovles to 0x00000000008c57a1ce37836a5e9d36759d070d8c
 
+        require(
+            IMMUTABLE_CREATE2_FACTORY.code.length > 0,
+            "ImmutableCreate2Factory missing on this chain; deploy 0x0000000000FFe8B47B3e2130213B802212439497 first"
+        );
+
         vm.startBroadcast(_deployerPrivateKey);
 
         // Get the creation code with constructor arguments
@@ -32,5 +37,4 @@ contract DeployTKGasStation is Script {
         vm.stopBroadcast();
     }
 }
-
 

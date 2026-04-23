@@ -112,6 +112,8 @@ The deploy scripts have the salt for bot the delegate and the gas station purpos
 
 The delegate should be deployed before the gas station
 
+If you are deploying to a chain where `0x0000000000FFe8B47B3e2130213B802212439497` does not exist yet, you must deploy 0age's `ImmutableCreate2Factory` on that chain first. Otherwise the scripts will revert because `safeCreate2` is being called on an address with no code.
+
 
 ``` 
 forge install

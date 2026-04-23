@@ -15,6 +15,11 @@ contract DeployTKGasDelegate is Script {
     function run() external {
         uint256 _deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
+        require(
+            IMMUTABLE_CREATE2_FACTORY.code.length > 0,
+            "ImmutableCreate2Factory missing on this chain; deploy 0x0000000000FFe8B47B3e2130213B802212439497 first"
+        );
+
         vm.startBroadcast(_deployerPrivateKey);
 
         // Construct salt: mined for gas efficiency, should be 0x000066a00056CD44008768E2aF00696e19A30084
@@ -31,4 +36,3 @@ contract DeployTKGasDelegate is Script {
         vm.stopBroadcast();
     }
 }
-
