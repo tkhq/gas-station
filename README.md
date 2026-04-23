@@ -38,6 +38,10 @@ All contracts are deployed at the same address across all networks:
 - **TKGasStation**: [0x1cBBD58E521e1133F09E2Ba207e3e75c4DB404D5](https://monadscan.com/address/0x1cBBD58E521e1133F09E2Ba207e3e75c4DB404D5)
 - **TKGasDelegate**: [0x2a31eF110e4Cdb9C332aA1d8633510214299c48B](https://monadscan.com/address/0x2a31eF110e4Cdb9C332aA1d8633510214299c48B)
 
+#### Arc Testnet
+- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://testnet.arcscan.app/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
+- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://testnet.arcscan.app/address/0x000066a00056CD44008768E2aF00696e19A30084)
+
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
 2. The user then signs a metatransaction (EIP-712) to give permissions to the paymaster to initiate a transaction on behalf of the user
@@ -112,6 +116,8 @@ The deploy scripts have the salt for bot the delegate and the gas station purpos
 
 The delegate should be deployed before the gas station
 
+If you are deploying to a chain where `0x0000000000FFe8B47B3e2130213B802212439497` does not exist yet, you must deploy 0age's `ImmutableCreate2Factory` on that chain first. Otherwise the scripts will revert because `safeCreate2` is being called on an address with no code.
+
 
 1. Install Foundry if you haven't already
 Go to https://getfoundry.sh/introduction/installation/ and install if needed 
@@ -165,9 +171,9 @@ forge install
 
 forge build
 
-forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate --rpc-url <networkName> --broadcast --verify
+forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate --rpc-url <RPC-URL>  --broadcast --verify
 
-forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <networkName> --broadcast --verify
+forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <RPC-URL> --broadcast --verify
 ``` 
 
 
