@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import {ITKGasDelegate} from "./interfaces/ITKGasDelegate.sol";
 import {ITKGasStation} from "./interfaces/ITKGasStation.sol";
 import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
+import {IsDelegated} from "./IsDelegated.sol";
 
 /// @title TKGasStation
 /// @notice Gas station contract that routes execution calls to delegated EOA accounts
@@ -47,32 +48,8 @@ contract TKGasStation is ITKGasStation {
         revert InvalidFunctionSelector();
     }
 
-    function _isDelegated(address _targetEoA) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(_targetEoA)
-        }
-        if (size != 23) {
-            return false;
-        }
-
-        bytes memory code = new bytes(23);
-        assembly {
-            extcodecopy(_targetEoA, add(code, 0x20), 0, 23)
-        }
-        // prefix is 0xef0100
-        if (code[0] != 0xef || code[1] != 0x01 || code[2] != 0x00) {
-            return false;
-        }
-
-        address delegatedTo;
-
-        assembly {
-            // Load the 20-byte address from bytes 3-22
-            delegatedTo := shr(96, mload(add(code, 0x23)))
-        }
-
-        return delegatedTo == TK_GAS_DELEGATE;
+    function _isDelegated(address _targetEoA) internal view virtual returns (bool) {
+        return IsDelegated.isDelegatedStandard(_targetEoA, TK_GAS_DELEGATE);
     }
 
     // Execute functions
@@ -203,6 +180,13 @@ contract TKGasStation is ITKGasStation {
 
     /* Lense Functions */
 
+    function getNonce(address _targetEoA, uint64 _prefix) external view returns (uint128) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).getNonce(_prefix);
+    }
+
     /// @notice Retrieves the current nonce for a delegated EOA
     /// @dev The nonce increments with each executed transaction to prevent replay attacks
     /// @param _targetEoA The delegated EOA address to query
@@ -211,8 +195,7 @@ contract TKGasStation is ITKGasStation {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        uint128 nonce = ITKGasDelegate(_targetEoA).nonce();
-        return nonce;
+        return ITKGasDelegate(_targetEoA).nonce();
     }
 
     /// @notice Checks if an address is properly delegated to the TK_GAS_DELEGATE

@@ -21,6 +21,7 @@ contract BurnTest is TKGasDelegateBase {
 
     function testGassyBurnHighNonce() public {
         uint128 nonce = type(uint128).max - 7;
+        uint64 prefix = uint64(nonce >> 64);
 
         MockDelegate(user).spoof_Nonce(nonce);
 
@@ -30,7 +31,7 @@ contract BurnTest is TKGasDelegateBase {
         MockDelegate(user).burnNonce(signature, nonce);
         vm.stopPrank();
 
-        uint128 currentNonce = MockDelegate(user).nonce();
+        uint128 currentNonce = MockDelegate(user).getNonce(prefix);
         assertEq(currentNonce, nonce + 1);
     }
 
@@ -111,7 +112,7 @@ contract BurnTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
 
         uint128 currentNonce = MockDelegate(user).nonce();
@@ -119,7 +120,7 @@ contract BurnTest is TKGasDelegateBase {
 
         vm.startPrank(user);
         vm.expectRevert();
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
     }
 
@@ -127,7 +128,7 @@ contract BurnTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
 
         uint128 currentNonce = MockDelegate(user).nonce();
@@ -135,7 +136,7 @@ contract BurnTest is TKGasDelegateBase {
 
         vm.startPrank(user);
         vm.expectRevert();
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
     }
 
@@ -146,7 +147,7 @@ contract BurnTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
 
         uint128 currentNonce = MockDelegate(user).nonce();
@@ -183,7 +184,7 @@ contract BurnTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
-        MockDelegate(user).burnNonce();
+        MockDelegate(user).burnNonce(0);
         vm.stopPrank();
 
         uint128 nonceAfterDirect = MockDelegate(user).nonce();
@@ -200,5 +201,88 @@ contract BurnTest is TKGasDelegateBase {
         assertEq(nonceAfterSignature, newNonce + 1);
 
         assertEq(nonceAfterSignature, nonceAfterDirect + 1);
+    }
+
+    function testBurnNonceWithDifferentPrefixes() public {
+        // Set up nonces for prefix 0 and prefix 1
+        uint128 noncePrefix0 = 5; // prefix 0, nonce value 5
+        uint128 noncePrefix1 = (uint128(1) << 64) | 10; // prefix 1, nonce value 10
+
+        // Set the nonces
+        MockDelegate(user).spoof_Nonce(noncePrefix0);
+        MockDelegate(user).spoof_Nonce(noncePrefix1);
+
+        // Verify initial nonces
+        uint128 initialNonce0 = MockDelegate(user).getNonce(0);
+        uint128 initialNonce1 = MockDelegate(user).getNonce(1);
+        assertEq(initialNonce0, noncePrefix0);
+        assertEq(initialNonce1, noncePrefix1);
+
+        // Burn nonce at prefix 0
+        vm.startPrank(user, user);
+        MockDelegate(user).burnNonce(0);
+        vm.stopPrank();
+
+        // Verify prefix 0 was incremented, prefix 1 unchanged
+        uint128 nonce0AfterBurn = MockDelegate(user).getNonce(0);
+        uint128 nonce1AfterFirstBurn = MockDelegate(user).getNonce(1);
+        assertEq(nonce0AfterBurn, noncePrefix0 + 1);
+        assertEq(nonce1AfterFirstBurn, noncePrefix1); // Should be unchanged
+
+        // Burn nonce at prefix 1
+        vm.startPrank(user, user);
+        MockDelegate(user).burnNonce(1);
+        vm.stopPrank();
+
+        // Verify both prefixes were incremented correctly
+        uint128 nonce0AfterBothBurns = MockDelegate(user).getNonce(0);
+        uint128 nonce1AfterBothBurns = MockDelegate(user).getNonce(1);
+        assertEq(nonce0AfterBothBurns, noncePrefix0 + 1); // Still +1 from first burn
+        assertEq(nonce1AfterBothBurns, noncePrefix1 + 1); // Now +1 from second burn
+    }
+
+    function testBurnNonceParameterless() public {
+        uint128 nonce = MockDelegate(user).nonce();
+
+        // Must be called by tx.origin (user, user)
+        vm.startPrank(user, user);
+        MockDelegate(user).burnNonce();
+        vm.stopPrank();
+
+        uint128 currentNonce = MockDelegate(user).nonce();
+        assertEq(currentNonce, nonce + 1);
+    }
+
+    function testBurnNonceParameterlessRevertsIfNotSelf() public {
+        uint128 nonce = MockDelegate(user).nonce();
+
+        // Should revert if not called by self or tx.origin
+        vm.startPrank(paymaster);
+        vm.expectRevert();
+        MockDelegate(user).burnNonce();
+        vm.stopPrank();
+
+        // Nonce should be unchanged
+        uint128 currentNonce = MockDelegate(user).nonce();
+        assertEq(currentNonce, nonce);
+    }
+
+    function testBurnNonceParameterlessMultipleTimes() public {
+        uint128 nonce = MockDelegate(user).nonce();
+
+        // Burn nonce multiple times
+        vm.startPrank(user, user);
+        MockDelegate(user).burnNonce();
+        uint128 nonce1 = MockDelegate(user).nonce();
+        assertEq(nonce1, nonce + 1);
+
+        MockDelegate(user).burnNonce();
+        uint128 nonce2 = MockDelegate(user).nonce();
+        assertEq(nonce2, nonce + 2);
+
+        MockDelegate(user).burnNonce();
+        uint128 nonce3 = MockDelegate(user).nonce();
+        assertEq(nonce3, nonce + 3);
+        vm.stopPrank();
     }
 }
