@@ -216,7 +216,7 @@ contract TKGasStationTest is Test {
     }
 
     function testGetNonce() public view {
-        uint128 nonce = tkGasStation.getNonce(user);
+        uint128 nonce = tkGasStation.getNonce(user, 0);
         assertEq(nonce, 0); // Should start at 0
     }
 
@@ -236,7 +236,7 @@ contract TKGasStationTest is Test {
         tkGasStation.burnNonce(user, signature, nonce);
 
         // Nonce should be incremented
-        uint128 newNonce = tkGasStation.getNonce(user);
+        uint128 newNonce = tkGasStation.getNonce(user, 0);
         assertEq(newNonce, nonce + 1);
     }
 

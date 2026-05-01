@@ -3,60 +3,60 @@ TK Gas Station lets a user have all their gas paid for by another party using me
 ## Deployments
 
 All contracts are deployed at the same address across all networks:
-- **TKGasStation**: `0x00000000008c57a1CE37836a5e9d36759D070d8c`
-- **TKGasDelegate**: `0x000066a00056CD44008768E2aF00696e19A30084`
+- **TKGasDelegate**: `0x1F9035177fCf4f2290db2a53BE4650fBF8477003`
+- **TKGasStation**: `0x73516fFF0C5373D08Afa7ba590a2D489bB57e236`
 
 #### Ethereum Mainnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://etherscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://etherscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://etherscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://etherscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Base Mainnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://basescan.org/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://basescan.org/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://basescan.org/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://basescan.org/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Sepolia Testnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://sepolia.etherscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.etherscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://sepolia.etherscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://sepolia.etherscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Base Sepolia Testnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://sepolia.basescan.org/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.basescan.org/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://sepolia.basescan.org/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://sepolia.basescan.org/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Polygon Mainnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://polygonscan.com/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://polygonscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://polygonscan.com/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://polygonscan.com/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Celo Mainnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://celoscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://celoscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://celoscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://celoscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Arbitrum One
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://arbiscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://arbiscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://arbiscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://arbiscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Arbitrum Sepolia Testnet
 - **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://sepolia.arbiscan.io/address/0x00000000008c57a1ce37836a5e9d36759d070d8c)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://sepolia.arbiscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)   
 
 #### Optimism
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://optimistic.etherscan.io/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://optimistic.etherscan.io/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://optimistic.etherscan.io/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://optimistic.etherscan.io/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Unichain Mainnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://uniscan.xyz/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://uniscan.xyz/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x73516fFF0C5373D08Afa7ba590a2D489bB57e236](https://uniscan.xyz/address/0x73516fFF0C5373D08Afa7ba590a2D489bB57e236)
+- **TKGasDelegate**: [0x1F9035177fCf4f2290db2a53BE4650fBF8477003](https://uniscan.xyz/address/0x1F9035177fCf4f2290db2a53BE4650fBF8477003)
 
 #### Monad Mainnet
 - **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://monadscan.com/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
 - **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://monadscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
 
 #### Polygon Amoy Testnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://amoy.polygonscan.com/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://amoy.polygonscan.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://amoy.polygonscan.com/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
+- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://amoy.polygonscan.com/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
 
 #### Monad Testnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://testnet.monadexplorer.com/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://testnet.monadexplorer.com/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0xDE2a56291df8293B3417E106fFD939B379aaCf7b](https://testnet.monadexplorer.com/address/0xDE2a56291df8293B3417E106fFD939B379aaCf7b)
+- **TKGasDelegate**: [0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E](https://testnet.monadexplorer.com/address/0xCcd07F0e6Ffd4B33F181cd5E1674e35cc674065E)
 
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
@@ -97,6 +97,14 @@ All contracts are deployed at the same address across all networks:
     3. The user then delegates back to TKGasDelegate
     4. Since the nonce is reset, old transactions can be replayed.
     This is accepted because we have a deadline transactions and on step 2, if you delegate to a malicious contract the attacker already has control.  
+
+### Nonce changes in update
+The contract from the previous version now uses a sequential two-part nonce. This upgrade is compatible with the previous version of the contract and is a minor update since the regularly used nonce is stored at the same location. Nonces are still the uint128. Nonces are now made of two parts, a non-sequential uint64 prefix and a sequential uint64 suffix.  
+
+Using the function call ```nonce()``` will give you the next nonce that uses the "0" prefix. This is fine for most transactions.
+
+If you want parallel transactions, you can use ```getNonce(uint64 _prefix)``` to get the next nonce at that prefix. 
+
 
 ## Packing data for calling the fallback function in the delegate
 
@@ -192,3 +200,15 @@ forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <netwo
 
 
 6. Add the contract addresses to the readme
+
+
+Note, you can do a mass redeploy with the following. Just remember to change the deterministic gas delegate address in DeployTKGasStation.s.sol:
+```
+for net in mainnet base sepolia base-sepolia polygon celo arbitrum optimism unichain amoy monad monad-testnet; do
+  forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate \
+    --rpc-url $net --broadcast --verify
+
+  forge script script/DeployTKGasStation.s.sol:DeployTKGasStation \
+    --rpc-url $net --broadcast --verify
+done
+```

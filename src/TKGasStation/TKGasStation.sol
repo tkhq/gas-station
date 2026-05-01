@@ -47,7 +47,7 @@ contract TKGasStation is ITKGasStation {
         revert InvalidFunctionSelector();
     }
 
-    function _isDelegated(address _targetEoA) internal view returns (bool) {
+    function _isDelegated(address _targetEoA) internal view virtual returns (bool) {
         uint256 size;
         assembly {
             size := extcodesize(_targetEoA)
@@ -203,6 +203,13 @@ contract TKGasStation is ITKGasStation {
 
     /* Lense Functions */
 
+    function getNonce(address _targetEoA, uint64 _prefix) external view returns (uint128) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).getNonce(_prefix);
+    }
+
     /// @notice Retrieves the current nonce for a delegated EOA
     /// @dev The nonce increments with each executed transaction to prevent replay attacks
     /// @param _targetEoA The delegated EOA address to query
@@ -211,8 +218,7 @@ contract TKGasStation is ITKGasStation {
         if (!_isDelegated(_targetEoA)) {
             revert NotDelegated();
         }
-        uint128 nonce = ITKGasDelegate(_targetEoA).nonce();
-        return nonce;
+        return ITKGasDelegate(_targetEoA).nonce();
     }
 
     /// @notice Checks if an address is properly delegated to the TK_GAS_DELEGATE

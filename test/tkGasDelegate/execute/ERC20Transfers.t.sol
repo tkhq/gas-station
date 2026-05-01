@@ -603,4 +603,49 @@ contract ERC20TransfersTest is TKGasDelegateBase {
         MockDelegate(user).execute(address(mockToken), 0, data);
         vm.stopPrank();
     }
+
+    function testExecuteBytesERC20GasWithPrefixF() public {
+        mockToken.mint(user, 20 * 10 ** 18);
+        address receiver = makeAddr("receiver_execute_bytes_prefix_f");
+
+        // Create nonce with prefix 0xF (15)
+        uint64 prefix = 0xF;
+        uint64 nonceValue = 1;
+        uint128 nonce = (uint128(prefix) << 64) | uint128(nonceValue);
+
+        MockDelegate(user).spoof_Nonce(nonce);
+
+        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
+        bytes memory signature =
+            _signExecute(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+
+        bytes memory executeData =
+            _constructExecuteBytes(signature, nonce, uint32(block.timestamp + 86400), address(mockToken), 0, args);
+
+        bytes memory result;
+        vm.prank(paymaster);
+        uint256 gasBefore = gasleft();
+        result = MockDelegate(user).executeReturns(executeData);
+        uint256 gasUsed = gasBefore - gasleft();
+        vm.stopPrank();
+
+        // Success is implicit - if we get here without reverting, the call succeeded
+        assertEq(result.length, 32);
+        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
+
+        // Verify nonce at prefix 0xF was incremented
+        uint128 currentNonce = MockDelegate(user).getNonce(prefix);
+        assertEq(currentNonce, nonce + 1);
+
+        // Verify prefix 0 nonce is unchanged
+        uint128 noncePrefix0 = MockDelegate(user).getNonce(0);
+        assertEq(noncePrefix0, 0);
+
+        console.log("=== execute(bytes) ERC20 Transfer Gas (Prefix 0xF) ===");
+        console.log("Total Gas Used: %s", gasUsed);
+        console.log("Result length: %s", result.length);
+        console.logBytes(result);
+        bool ret = abi.decode(result, (bool));
+        console.log("Decoded return (bool): %s", ret);
+    }
 }

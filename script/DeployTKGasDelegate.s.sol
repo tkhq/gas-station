@@ -6,7 +6,10 @@ import "forge-std/console2.sol";
 import {TKGasDelegate} from "../src/TKGasStation/TKGasDelegate.sol";
 
 interface IImmutableCreate2Factory {
-    function safeCreate2(bytes32 _salt, bytes calldata _initCode) external payable returns (address _deploymentAddress);
+    function safeCreate2(bytes32 _salt, bytes calldata _initCode)
+        external
+        payable
+        returns (address _deploymentAddress);
 }
 
 contract DeployTKGasDelegate is Script {
@@ -17,8 +20,7 @@ contract DeployTKGasDelegate is Script {
 
         vm.startBroadcast(_deployerPrivateKey);
 
-        // Construct salt: mined for gas efficiency, should be 0x000066a00056CD44008768E2aF00696e19A30084
-        bytes32 _salt = 0x00000000000000000000000000000000000000002c74f4786c5192ee33f500c0;
+        bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379; // "Gassy"
 
         // Get the creation code (TKGasDelegate has no constructor args)
         bytes memory _initCode = type(TKGasDelegate).creationCode;
@@ -31,4 +33,3 @@ contract DeployTKGasDelegate is Script {
         vm.stopBroadcast();
     }
 }
-
