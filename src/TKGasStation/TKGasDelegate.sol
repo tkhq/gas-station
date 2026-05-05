@@ -25,16 +25,16 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     error ApprovalTo0Failed();
     error ApprovalReturnFalse();
     error InvalidOffset();
+    error OffsetOverflow();
 
-    error Debug(bytes32 a, bytes32 b);
-
-    bytes4 internal constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
     bytes4 internal constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
-    bytes4 internal constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
     bytes4 internal constant APPROVAL_RETURN_FALSE_SELECTOR = 0xf572481d;
+    bytes4 internal constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
     bytes4 internal constant BATCH_SIZE_INVALID_SELECTOR = 0xde21ae18;
-    bytes4 internal constant INVALID_OFFSET_SELECTOR = 0x01da1572;
+    bytes4 internal constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
     bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 internal constant INVALID_OFFSET_SELECTOR = 0x01da1572;
+    bytes4 internal constant OFFSET_OVERFLOW_SELECTOR = 0x6bc4c32c;
     uint8 public constant MAX_BATCH_SIZE = 20;
 
     bytes32 internal constant EXECUTION_TYPEHASH = 0x06bb52ccb5d61c4f9c5baafc0affaba32c4d02864c91221ad411291324aeea2e;
@@ -426,7 +426,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "TKGasDelegate";
-        version = "1";
+        version = "1.1";
     }
 
     /// @notice Executes a transaction and returns the result
@@ -1967,7 +1967,27 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
                 let dataRelOffset := calldataload(add(startN, 0x40))
                 let dataLength := calldataload(add(startN, 0x60))
-                let dataStart := add(startN, add(dataRelOffset, 0x20))
+                let dataRelWithHead := add(dataRelOffset, 0x20)
+
+                let dataStart := add(startN, dataRelWithHead)
+                let dataEnd := add(dataStart, dataLength)
+
+                if lt(dataRelWithHead, dataRelOffset) {
+                    mstore(0x00, OFFSET_OVERFLOW_SELECTOR)
+                    revert(0x00, 0x04)
+                }
+                if lt(dataStart, startN) {
+                    mstore(0x00, OFFSET_OVERFLOW_SELECTOR)
+                    revert(0x00, 0x04)
+                }
+                if lt(dataEnd, dataStart) {
+                    mstore(0x00, OFFSET_OVERFLOW_SELECTOR)
+                    revert(0x00, 0x04)
+                }
+                if gt(dataEnd, calldatasize()) {
+                    mstore(0x00, OFFSET_OVERFLOW_SELECTOR)
+                    revert(0x00, 0x04)
+                }
 
                 calldatacopy(workspacePtr, dataStart, dataLength)
                 let dataHash := keccak256(workspacePtr, dataLength)
@@ -1985,7 +2005,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
         return hash;
     }
-
     /**
      * @dev Needed to allow the smart wallet to receive ETH and ERC1155/721 tokens
      */
