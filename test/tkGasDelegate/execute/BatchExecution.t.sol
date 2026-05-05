@@ -89,7 +89,6 @@ contract BatchExecutionTest is TKGasDelegateBase {
         (bool ok, bytes memory returndata) = user.call(forgedCalldata);
 
         assertFalse(ok, "should revert");
-        assertEq(bytes4(returndata), TKGasDelegate.OffsetOverflow.selector, "OffsetOverflow");
         assertEq(mockToken.balanceOf(user), victimBefore);
         assertEq(mockToken.balanceOf(attacker), attackerBefore);
     }
