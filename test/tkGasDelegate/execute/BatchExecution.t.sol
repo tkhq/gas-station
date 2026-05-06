@@ -2,13 +2,15 @@
 pragma solidity ^0.8.30;
 
 import {IBatchExecution} from "../../../src/TKGasStation/interfaces/IBatchExecution.sol";
-import {ITKGasDelegate} from "../../../src/TKGasStation/interfaces/ITKGasDelegate.sol";
 import {TKGasDelegateTestBase as TKGasDelegateBase} from "../TKGasDelegateTestBase.t.sol";
 import {MockDelegate} from "../../mocks/MockDelegate.t.sol";
 import {console} from "forge-std/console.sol";
 import {TKGasDelegate} from "../../../src/TKGasStation/TKGasDelegate.sol";
 
 contract BatchExecutionTest is TKGasDelegateBase {
+    /// @dev executeBatch((address,uint256,bytes)[],bytes)
+    bytes4 internal constant EXECUTE_BATCH_CALLS_AND_BYTES_SELECTOR = 0x5885bbcf;
+
     function testExecuteBatchBytesGas() public {
         // Prepare calls: 2 ERC20 mints to user and a pure view call
         IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](3);
@@ -64,6 +66,32 @@ contract BatchExecutionTest is TKGasDelegateBase {
         // Log gas
         console.log("=== executeBatch(bytes) Gas ===");
         console.log("Total Gas Used: %s", gasUsed);
+    }
+
+    function testMaliciousOffsetOverflow() public {
+        mockToken.mint(user, 1 ether);
+        address attacker = makeAddr("maliciousOffsetAttacker");
+
+        IBatchExecution.Call[] memory calls = new IBatchExecution.Call[](1);
+        calls[0] = IBatchExecution.Call({to: address(mockToken), value: 0, data: ""});
+
+        uint128 batchNonce = MockDelegate(user).nonce();
+        uint32 deadline = uint32(block.timestamp + 1 days);
+        bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, batchNonce, deadline, calls);
+
+        uint256 victimBefore = mockToken.balanceOf(user);
+        uint256 attackerBefore = mockToken.balanceOf(attacker);
+        bytes memory payload = abi.encodeCall(mockToken.transfer, (attacker, victimBefore));
+        bytes memory forgedCalldata =
+            _buildForgedExecuteBatchCalldata(signature, batchNonce, deadline, payload, address(mockToken));
+
+        vm.prank(paymaster);
+        (bool ok, bytes memory returndata) = user.call(forgedCalldata);
+
+        assertFalse(ok, "should revert");
+        assertEq(bytes4(returndata), TKGasDelegate.OffsetOverflow.selector, "OffsetOverflow");
+        assertEq(mockToken.balanceOf(user), victimBefore);
+        assertEq(mockToken.balanceOf(attacker), attackerBefore);
     }
 
     function testExecuteBatchBytesGas_SingleTransfer() public {
@@ -880,5 +908,42 @@ contract BatchExecutionTest is TKGasDelegateBase {
 
         assertEq(mockToken.allowance(user, receiver), 0 ether);
         assertEq(mockToken.balanceOf(receiver), 0 ether);
+    }
+
+    function _buildForgedExecuteBatchCalldata(
+        bytes memory signature,
+        uint128 nonceValue,
+        uint32 deadline,
+        bytes memory payload,
+        address callTo
+    ) internal pure returns (bytes memory) {
+        uint256 dataOffset = 0x40;
+        uint256 payloadBlobOffset = 0x60;
+        uint256 payloadPadding = (0x20 - (payload.length % 0x20)) % 0x20;
+        bytes memory dataContent = bytes.concat(
+            signature,
+            abi.encodePacked(nonceValue),
+            abi.encodePacked(deadline),
+            new bytes(payloadBlobOffset - 85),
+            abi.encode(payload.length),
+            payload,
+            new bytes(payloadPadding)
+        );
+
+        uint256 callsOffset = dataOffset + 0x20 + dataContent.length;
+        uint256 startN = 4 + callsOffset + 0x40;
+        uint256 payloadLengthSlot = 4 + dataOffset + 0x20 + payloadBlobOffset;
+        uint256 delta = startN - payloadLengthSlot;
+        bytes32 relOffsetWord = bytes32(type(uint256).max - (delta - 1));
+
+        return bytes.concat(
+            EXECUTE_BATCH_CALLS_AND_BYTES_SELECTOR,
+            abi.encode(callsOffset, dataOffset),
+            abi.encode(uint256(dataContent.length)),
+            dataContent,
+            abi.encode(
+                uint256(1), uint256(0x20), bytes32(uint256(uint160(callTo))), uint256(0), relOffsetWord, uint256(0)
+            )
+        );
     }
 }
