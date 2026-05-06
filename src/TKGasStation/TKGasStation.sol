@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 import {ITKGasDelegate} from "./interfaces/ITKGasDelegate.sol";
 import {ITKGasStation} from "./interfaces/ITKGasStation.sol";
