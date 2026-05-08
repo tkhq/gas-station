@@ -87,7 +87,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     /// reach back to read the kill switch.
     address internal immutable _SELF;
 
-    /// @notice Single Turnkey-controlled address authorized to flip the kill switch in an emergency.
+    /// @notice Single address authorized to flip the kill switch in an emergency.
+    /// @dev Operationally this address must be secured behind a multi-approval scheme — for
+    /// example a Turnkey policy requiring multiple signers, a Safe / multisig, or an equivalent
+    /// quorum mechanism. A single-signer hot key here is a global denial-of-service surface: an
+    /// attacker who steals it can permanently disable every delegated EOA in one transaction
+    /// (they cannot move funds, but they can force every user into emergency redelegation).
     address public immutable BREAK_GLASS;
 
     function _getStateStorage() internal pure returns (State storage $) {
@@ -107,17 +112,26 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     }
 
     /// @dev Returns true if the kill switch is set on the singleton, regardless of caller context.
-    function _isKilled() internal view returns (bool) {
+    /// In 7702-delegated context this performs an inline-assembly staticcall to the singleton's
+    /// `killed()` (selector 0x1f3a0e41) to avoid Solidity ABI encode/decode overhead. Fails open
+    /// (returns false) only if the staticcall itself fails — impossible for the deployed singleton.
+    function _isKilled() internal view returns (bool isKilled) {
         if (address(this) == _SELF) {
             return killed();
         }
-        (bool ok, bytes memory ret) = _SELF.staticcall(abi.encodeWithSelector(this.killed.selector));
-        return ok && ret.length >= 32 && abi.decode(ret, (bool));
+        address self = _SELF;
+        assembly ("memory-safe") {
+            mstore(0x00, 0x1f3a0e4100000000000000000000000000000000000000000000000000000000)
+            let ok := staticcall(gas(), self, 0x00, 4, 0x00, 32)
+            isKilled := and(ok, iszero(iszero(mload(0x00))))
+        }
     }
 
     /// @notice Permanently disables every signature-gated path of this delegate so all delegated
     /// EOAs fall back to plain EOA behavior, allowing operators to redelegate to a patched
     /// contract without time pressure. Callable exactly once by `BREAK_GLASS` on the singleton.
+    /// @dev This action is irreversible by design; treat the `BREAK_GLASS` address as a high-value
+    /// destructive capability and gate it behind multi-approval (see `BREAK_GLASS` notes).
     function activateBreakGlass() external {
         if (address(this) != _SELF) revert BreakGlassWrongContext();
         if (msg.sender != BREAK_GLASS) revert NotBreakGlass();
@@ -153,6 +167,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     }
 
     fallback(bytes calldata) external returns (bytes memory) {
+        // Defense-in-depth: gate the dispatcher itself so that even a future branch which forgets
+        // to invoke _validateSignature is still disabled by the break-glass kill switch.
+        if (_isKilled()) revert NotSelf();
         bytes1 functionSelector = bytes1(msg.data[1]);
 
         bytes calldata signature = msg.data[2:67];
