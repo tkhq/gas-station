@@ -26,15 +26,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     error ApprovalReturnFalse();
     error InvalidOffset();
 
-    error Debug(bytes32 a, bytes32 b);
-
-    bytes4 internal constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
     bytes4 internal constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
-    bytes4 internal constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
     bytes4 internal constant APPROVAL_RETURN_FALSE_SELECTOR = 0xf572481d;
+    bytes4 internal constant APPROVAL_TO_0_FAILED_SELECTOR = 0xe12092fc;
     bytes4 internal constant BATCH_SIZE_INVALID_SELECTOR = 0xde21ae18;
-    bytes4 internal constant INVALID_OFFSET_SELECTOR = 0x01da1572;
+    bytes4 internal constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
     bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 internal constant INVALID_OFFSET_SELECTOR = 0x01da1572;
     uint8 public constant MAX_BATCH_SIZE = 20;
 
     bytes32 internal constant EXECUTION_TYPEHASH = 0x06bb52ccb5d61c4f9c5baafc0affaba32c4d02864c91221ad411291324aeea2e;
@@ -426,7 +424,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "TKGasDelegate";
-        version = "1";
+        version = "1.1";
     }
 
     /// @notice Executes a transaction and returns the result
@@ -1944,48 +1942,18 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
         return _hashCallArrayUnchecked(_calls);
     }
-
     function _hashCallArrayUnchecked(IBatchExecution.Call[] calldata _calls) internal pure returns (bytes32) {
-        bytes32 hash;
-        assembly {
-            let length := _calls.length
-            let inlineHashesPtr := mload(0x40)
-            let inlineHashesLength := mul(length, 0x20)
-            mstore(0x40, add(inlineHashesPtr, inlineHashesLength)) // leave word for each hash inline
-
-            let ptr := mload(0x40) // workspace -- this will be overwritten many times -- and is free to be overwritten after the loop
-            mstore(ptr, CALL_TYPEHASH)
-            let workspacePtr := add(ptr, 0x20)
-
-            for { let i := 0 } lt(i, length) { i := add(i, 1) } {
-                // Read the offset value for call[i]
-                let offsetValue := calldataload(add(_calls.offset, mul(i, 0x20)))
-                let startN := add(_calls.offset, offsetValue)
-
-                let to := calldataload(startN)
-                let value := calldataload(add(startN, 0x20))
-
-                let dataRelOffset := calldataload(add(startN, 0x40))
-                let dataLength := calldataload(add(startN, 0x60))
-                let dataStart := add(startN, add(dataRelOffset, 0x20))
-
-                calldatacopy(workspacePtr, dataStart, dataLength)
-                let dataHash := keccak256(workspacePtr, dataLength)
-
-                mstore(workspacePtr, to)
-                mstore(add(workspacePtr, 0x20), value)
-                mstore(add(workspacePtr, 0x40), dataHash)
-                let structHash := keccak256(ptr, 0x80)
-
-                mstore(add(inlineHashesPtr, mul(i, 0x20)), structHash)
+        uint256 length = _calls.length;
+        bytes32[] memory structHashes = new bytes32[](length);
+        for (uint256 i; i < length;) {
+            IBatchExecution.Call calldata c = _calls[i];
+            structHashes[i] = keccak256(abi.encode(CALL_TYPEHASH, c.to, c.value, keccak256(c.data)));
+            unchecked {
+                ++i;
             }
-
-            hash := keccak256(inlineHashesPtr, inlineHashesLength)
         }
-
-        return hash;
+        return keccak256(abi.encodePacked(structHashes));
     }
-
     /**
      * @dev Needed to allow the smart wallet to receive ETH and ERC1155/721 tokens
      */
