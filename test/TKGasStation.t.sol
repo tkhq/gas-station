@@ -19,7 +19,7 @@ contract TKGasStationTest is Test {
     uint256 constant USER_PRIVATE_KEY = 0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA;
 
     function setUp() public {
-        tkGasDelegate = new MockDelegate();
+        tkGasDelegate = new MockDelegate(makeAddr("breakGlass"));
         tkGasStation = new TKGasStation(address(tkGasDelegate));
         user = vm.addr(USER_PRIVATE_KEY);
         paymaster = makeAddr("paymaster");
