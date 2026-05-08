@@ -19,8 +19,10 @@ contract DeployTKGasDelegate is Script {
 
         bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379;
 
-        // Get the creation code (TKGasDelegate has no constructor args)
-        bytes memory _initCode = type(TKGasDelegate).creationCode;
+        address _breakGlass = vm.envAddress("BREAK_GLASS_ADDRESS");
+
+        // Build creation code with the break-glass address baked into the constructor args.
+        bytes memory _initCode = abi.encodePacked(type(TKGasDelegate).creationCode, abi.encode(_breakGlass));
 
         // Deploy via ImmutableCreate2Factory
         IImmutableCreate2Factory _factory = IImmutableCreate2Factory(IMMUTABLE_CREATE2_FACTORY);

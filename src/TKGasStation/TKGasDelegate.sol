@@ -25,6 +25,10 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     error ApprovalTo0Failed();
     error ApprovalReturnFalse();
     error InvalidOffset();
+    error NotBreakGlass();
+    error BreakGlassWrongContext();
+
+    event BreakGlassActivated();
 
     bytes4 internal constant APPROVAL_FAILED_SELECTOR = 0x8164f842;
     bytes4 internal constant APPROVAL_RETURN_FALSE_SELECTOR = 0xf572481d;
@@ -74,10 +78,54 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         0x34d5be385818fa5c8c4e7f9d5a028251d28ebab8aaf203a072d1dde2d49a1100;
     // Original: abi.encode(uint256(keccak256("TKGasDelegate.state")) - 1) & ~bytes32(uint256(0xff))
 
+    /// @dev Storage slot for the break-glass kill switch flag. Only ever read/written at the
+    /// singleton's deploy address (i.e. when address(this) == _SELF), never in 7702 EOA storage.
+    bytes32 internal constant KILLED_STORAGE_POSITION =
+        0x6b696c6c6564000000000000000000000000000000000000000000000000006b;
+
+    /// @notice Singleton deploy address, captured at construction so 7702-delegated contexts can
+    /// reach back to read the kill switch.
+    address internal immutable _SELF;
+
+    /// @notice Single Turnkey-controlled address authorized to flip the kill switch in an emergency.
+    address public immutable BREAK_GLASS;
+
     function _getStateStorage() internal pure returns (State storage $) {
         assembly ("memory-safe") {
             $.slot := STATE_STORAGE_POSITION
         }
+    }
+
+    /// @notice Returns whether the break-glass kill switch has been activated on this delegate.
+    /// @dev Reads the killed flag from this contract's own storage. Always call on the singleton
+    /// address (the deployed TKGasDelegate); 7702 EOA contexts have their own (uninitialized) slot.
+    function killed() public view returns (bool isKilled) {
+        bytes32 slot = KILLED_STORAGE_POSITION;
+        assembly ("memory-safe") {
+            isKilled := sload(slot)
+        }
+    }
+
+    /// @dev Returns true if the kill switch is set on the singleton, regardless of caller context.
+    function _isKilled() internal view returns (bool) {
+        if (address(this) == _SELF) {
+            return killed();
+        }
+        (bool ok, bytes memory ret) = _SELF.staticcall(abi.encodeWithSelector(this.killed.selector));
+        return ok && ret.length >= 32 && abi.decode(ret, (bool));
+    }
+
+    /// @notice Permanently disables every signature-gated path of this delegate so all delegated
+    /// EOAs fall back to plain EOA behavior, allowing operators to redelegate to a patched
+    /// contract without time pressure. Callable exactly once by `BREAK_GLASS` on the singleton.
+    function activateBreakGlass() external {
+        if (address(this) != _SELF) revert BreakGlassWrongContext();
+        if (msg.sender != BREAK_GLASS) revert NotBreakGlass();
+        bytes32 slot = KILLED_STORAGE_POSITION;
+        assembly ("memory-safe") {
+            sstore(slot, 1)
+        }
+        emit BreakGlassActivated();
     }
 
     /// @notice Returns the current nonce for this delegate
@@ -96,8 +144,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     }
 
     /// @notice Initializes the TKGasDelegate contract
-    /// @dev Sets up EIP-712 domain separator with name "TKGasDelegate" and version "1"
-    constructor() EIP712() {}
+    /// @dev Sets up EIP-712 domain separator with name "TKGasDelegate" and version "1.1" and
+    /// records the singleton's deploy address plus the Turnkey-controlled break-glass address.
+    /// @param _breakGlass Single address authorized to activate the emergency kill switch.
+    constructor(address _breakGlass) EIP712() {
+        _SELF = address(this);
+        BREAK_GLASS = _breakGlass;
+    }
 
     fallback(bytes calldata) external returns (bytes memory) {
         bytes1 functionSelector = bytes1(msg.data[1]);
@@ -354,6 +407,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     }
 
     function _validateSignature(bytes32 _hash, bytes calldata _signature) internal view returns (bool) {
+        // Break-glass kill switch: when activated on the singleton, every signature-gated entry
+        // point fails (execute*, executeSession*, executeBatch*, approveThenExecute*, signed
+        // burnNonce/burnSessionCounter, ERC-1271). The EOA's underlying key keeps full control,
+        // including the ability to re-sign a fresh EIP-7702 authorization to a patched delegate.
+        if (_isKilled()) return false;
         return ECDSA.recoverCalldata(_hash, _signature) == address(this);
     }
 
