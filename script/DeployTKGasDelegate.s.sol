@@ -15,6 +15,11 @@ contract DeployTKGasDelegate is Script {
     function run() external {
         uint256 _deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
+        require(
+            IMMUTABLE_CREATE2_FACTORY.code.length > 0,
+            "ImmutableCreate2Factory missing on this chain; deploy 0x0000000000FFe8B47B3e2130213B802212439497 first"
+        );
+
         vm.startBroadcast(_deployerPrivateKey);
 
         bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379;
@@ -30,4 +35,3 @@ contract DeployTKGasDelegate is Script {
         vm.stopBroadcast();
     }
 }
-

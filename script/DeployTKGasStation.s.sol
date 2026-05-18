@@ -17,6 +17,11 @@ contract DeployTKGasStation is Script {
         address _delegate = vm.envAddress("TK_GAS_DELEGATE");
         bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379; 
 
+        require(
+            IMMUTABLE_CREATE2_FACTORY.code.length > 0,
+            "ImmutableCreate2Factory missing on this chain; deploy 0x0000000000FFe8B47B3e2130213B802212439497 first"
+        );
+
         vm.startBroadcast(_deployerPrivateKey);
 
         // Get the creation code with constructor arguments
@@ -32,5 +37,4 @@ contract DeployTKGasStation is Script {
         vm.stopBroadcast();
     }
 }
-
 

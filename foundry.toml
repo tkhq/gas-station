@@ -31,3 +31,5 @@ arbitrum = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/ap
 optimism = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=10" }
 monad = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=143" }
 unichain = { key = "${ETHERSCAN_API_KEY}", url = "https://api.uniscan.xyz/api" }
+polygonAmoy = { key = "${ETHERSCAN_API_KEY}", url = "https://api-amoy.polygonscan.com/api" }
+arcTestnet = { key = "${ETHERSCAN_API_KEY}", url = "https://testnet.arcscan.app/api" }
