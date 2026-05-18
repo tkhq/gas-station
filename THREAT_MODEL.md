@@ -85,7 +85,7 @@ There are two major things that can go wrong:
 - The nonce being replayed
 - A malicious transaction is signed
 - Batch transactions only validate part of the batch in execution mode
-- User is unable to recieve some tokens
+- User is unable to receive some tokens
 2. A paymaster pays for a transaction that it doesn't want to 
 - The delegate it interacts with is not the gas delegate
 - The transaction steals eth from the pay master 
@@ -102,7 +102,7 @@ The following protections are in place:
 4. Each nonce will increment before use. If a user delegates to a new delegate, that delegate can overwrite the memory space and reset the nonce, but at that point that delegate could just steal all the funds anyway. 
 5. A malicious transaction can be signed anyway even if the user is not using this delegate. An added risk is that a session metatransaction is signed with a long deadline, but is not used until the user deposits significant funds. This can be mitigated by burning the counter, but since the signature is not broadcasted the user would have to be aware
 6. All transactions are validated in batch transactions are validated as part of the type hash
-7. ERC-721 and ERC-1155 recievers are implemented. An eth reciever function is implemented.
+7. ERC-721 and ERC-1155 receivers are implemented. An eth receiver function is implemented.
 
 ## Paymaster protection
 1. The gas station will verify the user is delegated to the right gas delegate. This can also be done off chain. The paymaster can interact with the delegate directly to save gas if if the paymaster trusts the delegate or does off-chain validation. 
