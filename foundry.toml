@@ -21,6 +21,9 @@ celo = "https://forno.celo.org"
 arbitrum = "https://arb1.arbitrum.io/rpc"
 optimism = "https://mainnet.optimism.io"
 unichain = "https://mainnet.unichain.org"
+arcTestnet = "https://rpc.testnet.arc.network"
+bnb = "https://bsc-dataseed.binance.org"
+bnbTestnet = "https://bsc-testnet-rpc.publicnode.com"
 
 [etherscan]
 base = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=8453" }
@@ -33,3 +36,5 @@ monad = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?c
 unichain = { key = "${ETHERSCAN_API_KEY}", url = "https://api.uniscan.xyz/api" }
 polygonAmoy = { key = "${ETHERSCAN_API_KEY}", url = "https://api-amoy.polygonscan.com/api" }
 arcTestnet = { key = "${ETHERSCAN_API_KEY}", url = "https://testnet.arcscan.app/api" }
+bnb = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=56" }
+bnbTestnet = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=97" }

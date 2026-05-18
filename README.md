@@ -39,8 +39,17 @@ All contracts are deployed at the same address across all networks:
 - **TKGasDelegate**: [0x2a31eF110e4Cdb9C332aA1d8633510214299c48B](https://monadscan.com/address/0x2a31eF110e4Cdb9C332aA1d8633510214299c48B)
 
 #### Arc Testnet
-- **TKGasStation**: [0x00000000008c57a1CE37836a5e9d36759D070d8c](https://testnet.arcscan.app/address/0x00000000008c57a1CE37836a5e9d36759D070d8c)
-- **TKGasDelegate**: [0x000066a00056CD44008768E2aF00696e19A30084](https://testnet.arcscan.app/address/0x000066a00056CD44008768E2aF00696e19A30084)
+- **TKGasStation**: [0x1cBBD58E521e1133F09E2Ba207e3e75c4DB404D5](https://testnet.arcscan.app/address/0x1cBBD58E521e1133F09E2Ba207e3e75c4DB404D5)
+- **TKGasDelegate**: [0x2a31eF110e4Cdb9C332aA1d8633510214299c48B](https://testnet.arcscan.app/address/0x2a31eF110e4Cdb9C332aA1d8633510214299c48B)
+
+#### Bnb Mainnet
+- **TKGasStation**: [0x1cBBD58E521e1133F09E2Ba207e3e75c4DB404D5](https://bscscan.com/address/0x1cBBD58E521e1133F09E2Ba207e3e75c4DB404D5)
+- **TKGasDelegate**: [0x2a31eF110e4Cdb9C332aA1d8633510214299c48B](https://bscscan.com/address/0x2a31eF110e4Cdb9C332aA1d8633510214299c48B)
+
+#### Bnb Testnet
+- **TKGasStation**: [0x1cBBD58E521e1133F09E2Ba207e3e75c4DB404D5](https://bscscan.com/address/0x1cBBD58E521e1133F09E2Ba207e3e75c4DB404D5)
+- **TKGasDelegate**: [0x2a31eF110e4Cdb9C332aA1d8633510214299c48B](https://bscscan.com/address/0x2a31eF110e4Cdb9C332aA1d8633510214299c48B)
+
 
 ## Overall Flow
 1. The user signs a type 4 transaction to delegate access to TKGasDelegate (EIP-7702). This can be broadcasted by the paymaster
@@ -171,9 +180,9 @@ forge install
 
 forge build
 
-forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate --rpc-url <RPC-URL>  --broadcast --verify
+forge script script/DeployTKGasDelegate.s.sol:DeployTKGasDelegate --rpc-url <NETWORK-NAME> --broadcast --verify
 
-forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <RPC-URL> --broadcast --verify
+forge script script/DeployTKGasStation.s.sol:DeployTKGasStation --rpc-url <NETWORK-NAME> --broadcast --verify
 ``` 
 
 
