@@ -16,7 +16,7 @@ contract TypeHashValidationTest is Test {
     MockDelegate delegate;
 
     function setUp() public {
-        delegate = new MockDelegate();
+        delegate = new MockDelegate(makeAddr("breakGlass"));
     }
 
     /**

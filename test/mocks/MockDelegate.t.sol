@@ -5,7 +5,7 @@ import {TKGasDelegate} from "../../src/TKGasStation/TKGasDelegate.sol";
 import {IBatchExecution} from "../../src/TKGasStation/interfaces/IBatchExecution.sol";
 
 contract MockDelegate is TKGasDelegate {
-    constructor() TKGasDelegate() {}
+    constructor(address _breakGlass) TKGasDelegate(_breakGlass) {}
 
     function spoof_Nonce(uint128 _nonce) external {
         _getStateStorage().nonce = _nonce;
