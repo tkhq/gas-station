@@ -22,6 +22,7 @@ arbitrum = "https://arb1.arbitrum.io/rpc"
 optimism = "https://mainnet.optimism.io"
 unichain = "https://mainnet.unichain.org"
 arcTestnet = "https://rpc.testnet.arc.network"
+arc = "${ARC_RPC_URL}"
 bnb = "https://bsc-dataseed.binance.org"
 bnbTestnet = "https://bsc-testnet-rpc.publicnode.com"
 

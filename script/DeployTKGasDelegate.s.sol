@@ -11,21 +11,26 @@ interface IImmutableCreate2Factory {
 
 contract DeployTKGasDelegate is Script {
     address private constant IMMUTABLE_CREATE2_FACTORY = 0x0000000000FFe8B47B3e2130213B802212439497;
+    address private constant EXPECTED_TK_GAS_DELEGATE = 0x2a31eF110e4Cdb9C332aA1d8633510214299c48B;
 
     function run() external {
         uint256 _deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379;
+        bytes memory _initCode = type(TKGasDelegate).creationCode;
+        address _computedDelegate = vm.computeCreate2Address(_salt, keccak256(_initCode), IMMUTABLE_CREATE2_FACTORY);
 
         require(
             IMMUTABLE_CREATE2_FACTORY.code.length > 0,
             "ImmutableCreate2Factory missing on this chain; deploy 0x0000000000FFe8B47B3e2130213B802212439497 first"
         );
+        require(_computedDelegate == EXPECTED_TK_GAS_DELEGATE, "TKGasDelegate canonical address mismatch");
+
+        if (_computedDelegate.code.length > 0) {
+            console2.log("TKGasDelegate already deployed at:", _computedDelegate);
+            return;
+        }
 
         vm.startBroadcast(_deployerPrivateKey);
-
-        bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379;
-
-        // Get the creation code (TKGasDelegate has no constructor args)
-        bytes memory _initCode = type(TKGasDelegate).creationCode;
 
         // Deploy via ImmutableCreate2Factory
         IImmutableCreate2Factory _factory = IImmutableCreate2Factory(IMMUTABLE_CREATE2_FACTORY);
