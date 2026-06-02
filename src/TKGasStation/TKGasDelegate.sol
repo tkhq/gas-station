@@ -111,17 +111,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
-    function _consumeNonce(uint128 _nonce) internal {
-        State storage state = _getStateStorage();
-        if (_nonce != state.nonce) {
-            revert InvalidNonce();
-        }
-        unchecked {
-            ++state.nonce;
-        }
-    }
-
-    /// @notice Returns the EIP-712 domain separator for this contract
+/// @notice Returns the EIP-712 domain separator for this contract
     /// @dev Used for signature verification and typed data hashing
     /// @return The EIP-712 domain separator hash
     function getDomainSeparator() external view returns (bytes32) {
@@ -133,19 +123,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         version = "1.1";
     }
 
-    /// @notice Executes a transaction and returns the result
-    /// @dev Validates signature and nonce before execution. Automatically selects value/no-value path based on _value parameter
-    /// @param _to The contract or address to call
-    /// @param _value The amount of ETH to send (in wei)
-    /// @param _data Encoded data containing signature (65 bytes), nonce (16 bytes), deadline (4 bytes), and arguments
-    /// @return The return data from the executed call
-    function executeReturns(address _to, uint256 _value, bytes calldata _data) external returns (bytes memory) {
-        bytes memory result = _value == 0
-            ? _executeNoValue(_data[0:65], _data[65:81], _data[81:85], _to, _data[85:])
-            : _executeWithValue(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
-        return result;
-    }
-
     /// @notice Executes a transaction without returning data (gas-efficient)
     /// @dev Validates signature and nonce before execution
     /// @param _to The contract or address to call
@@ -155,25 +132,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         _value == 0
             ? _executeNoValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _data[85:])
             : _executeWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
-    }
-
-    /// @notice Executes a transaction with all parameters encoded in data, returns result
-    /// @dev Parses target address and value from data bytes, then executes
-    /// @param data Encoded data: signature(65) + nonce(16) + deadline(4) + to(20) + value(32) + arguments
-    /// @return The return data from the executed call
-    function executeReturns(bytes calldata data) external returns (bytes memory) {
-        address to;
-        uint256 value;
-        assembly ("memory-safe") {
-            // address is 20 bytes immediately after deadline
-            to := shr(96, calldataload(add(data.offset, 85)))
-            // value is 32 bytes immediately after address
-            value := calldataload(add(data.offset, 105))
-        }
-        bytes memory result = value == 0
-            ? _executeNoValue(data[0:65], data[65:81], data[81:85], to, data[137:])
-            : _executeWithValue(data[0:65], data[65:81], data[81:85], to, value, data[137:]);
-        return result;
     }
 
     /// @notice Executes a transaction with all parameters encoded in data, no return
@@ -249,87 +207,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
-    function _executeNoValue(
-        bytes calldata _signature,
-        bytes calldata _nonceBytes,
-        bytes calldata _deadlineBytes,
-        address _outputContract,
-        bytes calldata _arguments
-    ) internal returns (bytes memory) {
-        bytes32 hash;
-        assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // DeadlineExceeded
-            let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, EXECUTION_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
-            mstore(add(ptr, 0x20), nonceValue)
-            mstore(add(ptr, 0x40), deadline)
-            mstore(add(ptr, 0x60), _outputContract)
-            mstore(add(ptr, 0x80), 0) // ethAmount = 0
-            // Compute argsHash in assembly
-            let argsPtr := add(ptr, 0xa0)
-            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
-            let argsHash := keccak256(argsPtr, _arguments.length)
-            mstore(add(ptr, 0xa0), argsHash)
-            hash := keccak256(ptr, 0xc0)
-            mstore(0x40, add(ptr, 0xc0))
-        }
-        hash = _hashTypedData(hash);
-
-        _validateExecute(hash, _signature, _nonceBytes);
-        (bool success, bytes memory result) = _outputContract.call(_arguments);
-        if (success) {
-            return result;
-        }
-        revert ExecutionFailed();
-    }
-
-    function _executeWithValue(
-        bytes calldata _signature,
-        bytes calldata _nonceBytes,
-        bytes calldata _deadlineBytes,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
-    ) internal returns (bytes memory) {
-        bytes32 hash; // all this assembly to avoid using abi.encode
-        assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // DeadlineExceeded
-            let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, EXECUTION_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
-            mstore(add(ptr, 0x20), nonceValue)
-            mstore(add(ptr, 0x40), deadline)
-            mstore(add(ptr, 0x60), _outputContract)
-            mstore(add(ptr, 0x80), _ethAmount)
-            // Compute argsHash in assembly
-            let argsPtr := add(ptr, 0xa0)
-            calldatacopy(argsPtr, _arguments.offset, _arguments.length)
-            let argsHash := keccak256(argsPtr, _arguments.length)
-            mstore(add(ptr, 0xa0), argsHash)
-            hash := keccak256(ptr, 0xc0)
-            mstore(0x40, add(ptr, 0xc0))
-        }
-        hash = _hashTypedData(hash);
-
-        _validateExecute(hash, _signature, _nonceBytes);
-        (bool success, bytes memory result) = _outputContract.call{value: _ethAmount}(_arguments);
-        if (success) {
-            return result;
-        }
-        revert ExecutionFailed();
-    }
-
     function _executeWithValueNoReturn(
         bytes calldata _signature,
         bytes calldata _nonceBytes,
@@ -367,53 +244,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             if iszero(call(gas(), _outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
             // finish exection, no need to restore free memory pointer // mstore(0x40, add(ptr, _arguments.length))
         }
-    }
-
-    function _executeBatchWithCalls(
-        bytes calldata _signature,
-        bytes calldata _nonceBytes,
-        bytes calldata _deadlineBytes,
-        IBatchExecution.Call[] calldata _calls
-    ) internal returns (bytes[] memory) {
-        // Hash the calls array to match the calldata version exactly
-        // The calldata version uses keccak256(_calls) where _calls is abi.encode(IBatchExecution.Call[])
-        // So we need to hash the encoded calls array
-        bytes32 executionsHash = _hashCallArrayUnchecked(_calls);
-        bytes32 hash;
-        assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // DeadlineExceeded
-            let ptr := mload(0x40)
-            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
-            mstore(add(ptr, 0x20), nonceValue)
-            mstore(add(ptr, 0x40), deadline)
-            mstore(add(ptr, 0x60), executionsHash)
-            hash := keccak256(ptr, 0x80)
-            mstore(0x40, add(ptr, 0x80))
-        }
-        hash = _hashTypedData(hash);
-        _validateExecute(hash, _signature, _nonceBytes);
-
-        uint256 length = _calls.length;
-
-        bytes[] memory results = new bytes[](length);
-        for (uint256 i; i < length;) {
-            IBatchExecution.Call calldata execution = _calls[i];
-            (bool success, bytes memory result) = execution.to.call{value: execution.value}(execution.data);
-            if (!success) {
-                revert ExecutionFailed();
-            }
-            results[i] = result;
-            unchecked {
-                ++i;
-            }
-        }
-        return results;
     }
 
     function _executeBatchWithCallsNoReturn(
@@ -459,69 +289,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 ++i;
             }
         }
-    }
-
-    function _executeBatch(
-        bytes calldata _signature,
-        bytes calldata _nonceBytes,
-        bytes calldata _deadlineBytes,
-        bytes calldata _calls
-    ) internal returns (bytes[] memory) {
-        IBatchExecution.Call[] calldata calls;
-        uint256 length;
-        assembly ("memory-safe") {
-            // Read the offset pointer to determine where array data starts
-            let offsetPointer := calldataload(_calls.offset)
-            // If offset pointer is not 0x20, the length is not at the expected position
-            if iszero(eq(offsetPointer, 0x20)) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, INVALID_OFFSET_SELECTOR)
-                revert(errorPtr, 0x04)
-            }
-            // With offset pointer = 0x20, length is at _calls.offset + 0x20, data starts at _calls.offset + 0x40
-            let lengthPos := add(_calls.offset, 0x20)
-            calls.offset := add(_calls.offset, 0x40)
-            calls.length := calldataload(lengthPos)
-            length := calls.length
-        }
-
-        bytes32 executionsHash = _hashCallArrayUnchecked(calls);
-        bytes32 hash;
-
-        assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // DeadlineExceeded
-            let ptr := mload(0x40)
-            mstore(ptr, BATCH_EXECUTION_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
-            mstore(add(ptr, 0x20), nonceValue)
-            mstore(add(ptr, 0x40), deadline)
-            mstore(add(ptr, 0x60), executionsHash)
-            hash := keccak256(ptr, 0x80)
-            mstore(0x40, add(ptr, 0x80))
-        }
-        hash = _hashTypedData(hash);
-        _validateExecute(hash, _signature, _nonceBytes);
-
-        bytes[] memory results = new bytes[](length);
-        for (uint256 i = 0; i < length;) {
-            IBatchExecution.Call calldata execution = calls[i];
-            uint256 ethAmount = execution.value;
-            address outputContract = execution.to;
-            (bool success, bytes memory result) = ethAmount == 0
-                ? outputContract.call(execution.data)
-                : outputContract.call{value: ethAmount}(execution.data);
-            results[i] = result;
-            if (!success) revert ExecutionFailed();
-            unchecked {
-                ++i;
-            }
-        }
-        return results;
     }
 
     function _executeBatchNoReturn(
@@ -596,20 +363,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             }
         }
         return keccak256(abi.encodePacked(structHashes));
-    }
-
-    function executeBatchReturns(bytes calldata data) external returns (bytes[] memory) {
-        // Layout: [signature(65)][nonce(16)][deadline(4)][abi.encode(IBatchExecution.Call[])]
-        bytes[] memory results = _executeBatch(data[0:65], data[65:81], data[81:85], data[85:]);
-        return results;
-    }
-
-    function executeBatchReturns(IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external
-        returns (bytes[] memory)
-    {
-        bytes[] memory results = _executeBatchWithCalls(_data[0:65], _data[65:81], _data[81:85], _calls);
-        return results;
     }
 
     function executeBatch(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {

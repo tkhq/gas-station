@@ -23,11 +23,6 @@ interface ITKGasDelegate is IBatchExecution {
     function supportsInterface(bytes4 _interfaceId) external pure returns (bool);
 
     // Execute functions
-    /// @notice Executes a transaction with all parameters encoded in data, returns result
-    /// @param _data Encoded data: signature(65) + nonce(16) + deadline(4) + to(20) + value(32) + arguments
-    /// @return The return data from the executed call
-    function executeReturns(bytes calldata _data) external returns (bytes memory);
-
     /// @notice Executes a transaction with all parameters encoded in data, no return
     /// @param _data Encoded data: signature(65) + nonce(16) + deadline(4) + to(20) + value(32) + arguments
     function execute(bytes calldata _data) external;
@@ -35,13 +30,6 @@ interface ITKGasDelegate is IBatchExecution {
     /// @notice Executes a transaction with no ETH value and no return data
     /// @param _data Encoded data: signature(65) + nonce(16) + deadline(4) + to(20) + arguments
     function executeNoValueNoReturn(bytes calldata _data) external;
-
-    /// @notice Executes a transaction and returns the result
-    /// @param _to The contract or address to call
-    /// @param _value The amount of ETH to send (in wei)
-    /// @param _data Encoded data containing signature, nonce, deadline, and arguments
-    /// @return The return data from the executed call
-    function executeReturns(address _to, uint256 _value, bytes calldata _data) external returns (bytes memory);
 
     /// @notice Executes a transaction without returning data
     /// @param _to The contract or address to call
@@ -51,22 +39,9 @@ interface ITKGasDelegate is IBatchExecution {
 
     // Batch execute functions
 
-    /// @notice Executes multiple transactions in a single call, returns all results
-    /// @param _data Encoded data: signature(65) + nonce(16) + deadline(4) + abi.encode(Call[])
-    /// @return Array of return data from each executed call
-    function executeBatchReturns(bytes calldata _data) external returns (bytes[] memory);
-
     /// @notice Executes multiple transactions in a single call, no return
     /// @param _data Encoded data: signature(65) + nonce(16) + deadline(4) + abi.encode(Call[])
     function executeBatch(bytes calldata _data) external;
-
-    /// @notice Executes multiple transactions with explicit call array, returns results
-    /// @param _calls Array of Call structs containing the batch operations
-    /// @param _data Encoded signature, nonce, and deadline
-    /// @return Array of return data from each executed call
-    function executeBatchReturns(IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external
-        returns (bytes[] memory);
 
     /// @notice Executes multiple transactions with explicit call array, no return
     /// @param _calls Array of Call structs containing the batch operations

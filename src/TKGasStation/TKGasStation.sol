@@ -10,7 +10,6 @@ import {IBatchExecution} from "./interfaces/IBatchExecution.sol";
 /// @dev This contract acts as an intermediary that validates delegated EOAs and forwards execution calls to TKGasDelegate
 contract TKGasStation is ITKGasStation {
     error NotDelegated();
-    error ExecutionFailed();
 
     address public immutable TK_GAS_DELEGATE;
 
@@ -49,24 +48,6 @@ contract TKGasStation is ITKGasStation {
     }
 
     // Execute functions
-    /// @notice Executes a transaction on behalf of a delegated EOA and returns the result
-    /// @dev Validates that _target is properly delegated before forwarding the call
-    /// @param _target The delegated EOA address that will execute the transaction
-    /// @param _to The contract or address to call
-    /// @param _ethAmount The amount of ETH to send with the call (in wei)
-    /// @param _data The encoded function call data including signature, nonce, deadline, and arguments
-    /// @return The return data from the executed call
-    function executeReturns(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
-        external
-        returns (bytes memory)
-    {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        bytes memory result = ITKGasDelegate(_target).executeReturns(_to, _ethAmount, _data);
-        return result;
-    }
-
     /// @notice Executes a transaction on behalf of a delegated EOA without returning data
     /// @dev Validates that _target is properly delegated before forwarding the call. Gas-efficient version for calls that don't need return data
     /// @param _target The delegated EOA address that will execute the transaction
@@ -81,23 +62,6 @@ contract TKGasStation is ITKGasStation {
     }
 
     // Batch execute functions
-    /// @notice Executes multiple transactions in a single call and returns all results
-    /// @dev Validates delegation before forwarding batch execution. All calls must succeed or the entire batch reverts
-    /// @param _target The delegated EOA address that will execute the transactions
-    /// @param _calls Array of Call structs containing to, value, and data for each transaction
-    /// @param _data The encoded signature, nonce, and deadline for batch authorization
-    /// @return Array of return data from each executed call, in the same order as _calls
-    function executeBatchReturns(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external
-        returns (bytes[] memory)
-    {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
-        bytes[] memory results = ITKGasDelegate(_target).executeBatchReturns(_calls, _data);
-        return results;
-    }
-
     /// @notice Executes multiple transactions in a single call without returning data
     /// @dev Validates delegation before forwarding batch execution. Gas-efficient version when return data is not needed
     /// @param _target The delegated EOA address that will execute the transactions

@@ -93,11 +93,10 @@ contract TKGasStationTest is Test {
             abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
 
         uint256 gasBefore = gasleft();
-        bytes memory result = tkGasStation.executeReturns(user, address(mockToken), 0, paramData);
+        tkGasStation.execute(user, address(mockToken), 0, paramData);
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
-        assertTrue(abi.decode(result, (bool)));
 
         console.log("TKGasStation ERC20 transfer gas: %s", gasUsed);
     }
@@ -152,11 +151,10 @@ contract TKGasStationTest is Test {
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
         bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), "");
-        bytes memory result = tkGasStation.executeReturns(user, receiver, transferAmount, paramData);
+        tkGasStation.execute(user, receiver, transferAmount, paramData);
 
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
-        assertEq(result.length, 0); // ETH transfers return empty result
         assertEq(address(receiver).balance, transferAmount);
 
         console.log("TKGasStation ETH transfer gas: %s", gasUsed);
@@ -313,15 +311,12 @@ contract TKGasStationTest is Test {
         // Execute through TKGasStation
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        bytes[] memory results = tkGasStation.executeBatchReturns(user, calls, paramData);
+        tkGasStation.executeBatch(user, calls, paramData);
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
 
         assertEq(mockToken.balanceOf(receiver1), 5 * 10 ** 18);
         assertEq(mockToken.balanceOf(receiver2), 5 * 10 ** 18);
-        assertEq(results.length, 2);
-        assertTrue(abi.decode(results[0], (bool)));
-        assertTrue(abi.decode(results[1], (bool)));
         console.log("executeBatch gas: %s", gasUsed);
     }
 }

@@ -48,20 +48,15 @@ contract BatchExecutionTest is TKGasDelegateBase {
             abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), callsEncoded);
 
         // Execute
-        bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        results = MockDelegate(user).executeBatchReturns(data);
+        MockDelegate(user).executeBatch(data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
         // Success is implicit - if we get here without reverting, the call succeeded
         // Balance should be 30 ether total minted
         assertEq(mockToken.balanceOf(user), 30 ether);
-        // Third call returned value encoded; decode and check >= 1
-        assertEq(results.length, 3);
-        uint256 ret = abi.decode(results[2], (uint256));
-        assertEq(ret, 1 + 30 ether);
 
         // Log gas
         console.log("=== executeBatch(bytes) Gas ===");
@@ -120,16 +115,14 @@ contract BatchExecutionTest is TKGasDelegateBase {
             abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), callsEncoded);
 
         // Execute
-        bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        results = MockDelegate(user).executeBatchReturns(data);
+        MockDelegate(user).executeBatch(data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
         // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), 10 ether);
-        assertEq(results.length, 1);
 
         // Log gas
         console.log("=== executeBatch(bytes) Single Transfer Gas ===");
@@ -181,17 +174,15 @@ contract BatchExecutionTest is TKGasDelegateBase {
             abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), callsEncoded);
 
         // Execute
-        bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        results = MockDelegate(user).executeBatchReturns(data);
+        MockDelegate(user).executeBatch(data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
         // Success is implicit - if we get here without reverting, the call succeeded
         assertEq(mockToken.balanceOf(receiver), transferAmount);
         assertEq(mockToken.allowance(user, spender), transferAmount * 2);
-        assertEq(results.length, 2);
 
         // Log gas
         console.log("=== executeBatch(bytes) Approve Then Transfer Gas ===");
@@ -333,20 +324,15 @@ contract BatchExecutionTest is TKGasDelegateBase {
 
         // Execute using parameterized version - signature and nonce go in _data
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
-        bytes[] memory results;
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        results = MockDelegate(user).executeBatchReturns(calls, data);
+        MockDelegate(user).executeBatch(calls, data);
         uint256 gasUsed = gasBefore - gasleft();
         vm.stopPrank();
 
         // Success is implicit - if we get here without reverting, the call succeeded
         // Balance should be 30 ether total minted
         assertEq(mockToken.balanceOf(user), 30 ether);
-        // Third call returned value encoded; decode and check >= 1
-        assertEq(results.length, 3);
-        uint256 ret = abi.decode(results[2], (uint256));
-        assertEq(ret, 1 + 30 ether);
 
         // Log gas
         console.log("=== executeBatch(IBatchExecution.Call[], bytes) Gas ===");
@@ -382,18 +368,14 @@ contract BatchExecutionTest is TKGasDelegateBase {
         uint128 nonce = MockDelegate(user).nonce();
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, uint32(block.timestamp + 86400), calls);
 
-        // Execute using parameterized version with Returns - signature and nonce go in _data
+        // Execute using parameterized version - signature and nonce go in _data
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)));
-        bytes[] memory results;
         vm.prank(paymaster);
-        results = MockDelegate(user).executeBatchReturns(calls, data);
+        MockDelegate(user).executeBatch(calls, data);
         vm.stopPrank();
 
         // Verify success
         assertEq(mockToken.balanceOf(user), 30 ether);
-        assertEq(results.length, 3);
-        uint256 ret = abi.decode(results[2], (uint256));
-        assertEq(ret, 1 + 30 ether);
     }
 
     function testExecuteBatchParameterizedRevertsOnInnerFailure() public {
@@ -598,7 +580,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
 
         vm.prank(paymaster);
         vm.expectRevert(TKGasDelegate.InvalidOffset.selector);
-        MockDelegate(user).executeBatchReturns(data);
+        MockDelegate(user).executeBatch(data);
         vm.stopPrank();
 
         assertEq(mockToken.allowance(user, receiver), 0 ether);
@@ -688,9 +670,8 @@ contract BatchExecutionTest is TKGasDelegateBase {
         bytes memory signature = _signBatch(USER_PRIVATE_KEY, user, nonce, deadline, calls);
         bytes memory data = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), abi.encode(calls));
 
-        bytes[] memory results;
         vm.prank(paymaster);
-        results = MockDelegate(user).executeBatchReturns(data);
+        MockDelegate(user).executeBatch(data);
         vm.stopPrank();
 
         // result is that it should only execute the first call, so the balance of the receiver should be 0
@@ -730,7 +711,7 @@ contract BatchExecutionTest is TKGasDelegateBase {
 
         vm.prank(paymaster);
         vm.expectRevert();
-        MockDelegate(user).executeBatchReturns(data);
+        MockDelegate(user).executeBatch(data);
         vm.stopPrank();
 
         assertEq(mockToken.allowance(user, receiver), 0 ether);

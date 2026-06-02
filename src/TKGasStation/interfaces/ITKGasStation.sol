@@ -12,16 +12,6 @@ interface ITKGasStation is IBatchExecution {
     function TK_GAS_DELEGATE() external view returns (address);
 
     // Execute functions
-    /// @notice Executes a transaction on behalf of a delegated EOA and returns the result
-    /// @param _target The delegated EOA address that will execute the transaction
-    /// @param _to The contract or address to call
-    /// @param _ethAmount The amount of ETH to send with the call (in wei)
-    /// @param _data The encoded function call data including signature, nonce, deadline, and arguments
-    /// @return The return data from the executed call
-    function executeReturns(address _target, address _to, uint256 _ethAmount, bytes calldata _data)
-        external
-        returns (bytes memory);
-
     /// @notice Executes a transaction on behalf of a delegated EOA without returning data
     /// @param _target The delegated EOA address that will execute the transaction
     /// @param _to The contract or address to call
@@ -30,15 +20,6 @@ interface ITKGasStation is IBatchExecution {
     function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external;
 
     // Batch execute functions
-    /// @notice Executes multiple transactions in a single call and returns all results
-    /// @param _target The delegated EOA address that will execute the transactions
-    /// @param _calls Array of Call structs containing to, value, and data for each transaction
-    /// @param _data The encoded signature, nonce, and deadline for batch authorization
-    /// @return Array of return data from each executed call
-    function executeBatchReturns(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data)
-        external
-        returns (bytes[] memory);
-
     /// @notice Executes multiple transactions in a single call without returning data
     /// @param _target The delegated EOA address that will execute the transactions
     /// @param _calls Array of Call structs containing to, value, and data for each transaction
