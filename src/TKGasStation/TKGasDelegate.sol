@@ -111,7 +111,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
-/// @notice Returns the EIP-712 domain separator for this contract
+    /// @notice Returns the EIP-712 domain separator for this contract
     /// @dev Used for signature verification and typed data hashing
     /// @return The EIP-712 domain separator hash
     function getDomainSeparator() external view returns (bytes32) {
