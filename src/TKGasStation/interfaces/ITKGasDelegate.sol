@@ -58,6 +58,11 @@ interface ITKGasDelegate is IBatchExecution {
     /// @notice Burns the current nonce without a signature; must be called by this contract itself
     function burnNonce() external;
 
+    /// @notice Computes the EIP-712 typed data hash for burning a nonce
+    /// @param _nonce The nonce to be burned
+    /// @return The EIP-712 compliant hash to be signed
+    function hashBurnNonce(uint128 _nonce) external view returns (bytes32);
+
     // Hash functions
     /// @notice Computes the EIP-712 typed data hash for an execution
     /// @param _nonce The nonce for replay protection

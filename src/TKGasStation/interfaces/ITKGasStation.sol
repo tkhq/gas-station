@@ -26,6 +26,12 @@ interface ITKGasStation is IBatchExecution {
     /// @param _data The encoded signature, nonce, and deadline for batch authorization
     function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external;
 
+    /// @notice Invalidates a specific nonce to cancel a pending signed transaction
+    /// @param _targetEoA The delegated EOA address whose nonce will be burned
+    /// @param _signature The signature authorizing the nonce burn operation
+    /// @param _nonce The nonce value to invalidate
+    function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external;
+
     /// @notice Retrieves the current nonce for a delegated EOA
     /// @param _targetEoA The delegated EOA address to query
     /// @return The current nonce value
@@ -35,4 +41,10 @@ interface ITKGasStation is IBatchExecution {
     /// @param _targetEoA The address to check for delegation status
     /// @return true if the address is delegated, false otherwise
     function isDelegated(address _targetEoA) external view returns (bool);
+
+    /// @notice Computes the EIP-712 typed data hash for burning a nonce
+    /// @param _targetEoA The delegated EOA whose nonce will be burned
+    /// @param _nonce The nonce value to burn
+    /// @return The EIP-712 compliant hash to be signed
+    function hashBurnNonce(address _targetEoA, uint128 _nonce) external view returns (bytes32);
 }

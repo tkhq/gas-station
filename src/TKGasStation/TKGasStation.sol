@@ -74,6 +74,18 @@ contract TKGasStation is ITKGasStation {
         ITKGasDelegate(_target).executeBatch(_calls, _data);
     }
 
+    /// @notice Invalidates a specific nonce to prevent replay attacks or cancel pending operations
+    /// @dev Validates delegation before allowing nonce burn. Requires signature authorization from the EOA owner
+    /// @param _targetEoA The delegated EOA address whose nonce will be burned
+    /// @param _signature The signature authorizing the nonce burn operation
+    /// @param _nonce The nonce value to invalidate
+    function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        ITKGasDelegate(_targetEoA).burnNonce(_signature, _nonce);
+    }
+
     /* Lense Functions */
 
     /// @notice Retrieves the current nonce for a delegated EOA
@@ -111,6 +123,18 @@ contract TKGasStation is ITKGasStation {
             revert NotDelegated();
         }
         return ITKGasDelegate(_targetEoA).validateSignature(_hash, _signature);
+    }
+
+    /// @notice Computes the EIP-712 typed data hash for burning a nonce
+    /// @dev Used to generate the hash that must be signed to invalidate a nonce
+    /// @param _targetEoA The delegated EOA whose nonce will be burned
+    /// @param _nonce The nonce value to burn
+    /// @return The EIP-712 compliant hash to be signed
+    function hashBurnNonce(address _targetEoA, uint128 _nonce) external view returns (bytes32) {
+        if (!_isDelegated(_targetEoA)) {
+            revert NotDelegated();
+        }
+        return ITKGasDelegate(_targetEoA).hashBurnNonce(_nonce);
     }
 
     // Hash function lenses
