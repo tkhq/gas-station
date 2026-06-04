@@ -11,10 +11,6 @@
     "stateMutability": "nonpayable"
   },
   {
-    "type": "fallback",
-    "stateMutability": "nonpayable"
-  },
-  {
     "type": "function",
     "name": "TK_GAS_DELEGATE",
     "inputs": [],
@@ -26,98 +22,6 @@
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "approveThenExecute",
-    "inputs": [
-      {
-        "name": "_target",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_to",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_ethAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_erc20",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_spender",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_approveAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_data",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "approveThenExecuteReturns",
-    "inputs": [
-      {
-        "name": "_target",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_to",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_ethAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_erc20",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_spender",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_approveAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_data",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -212,86 +116,6 @@
   },
   {
     "type": "function",
-    "name": "executeBatchReturns",
-    "inputs": [
-      {
-        "name": "_target",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_calls",
-        "type": "tuple[]",
-        "internalType": "struct IBatchExecution.Call[]",
-        "components": [
-          {
-            "name": "to",
-            "type": "address",
-            "internalType": "address"
-          },
-          {
-            "name": "value",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "data",
-            "type": "bytes",
-            "internalType": "bytes"
-          }
-        ]
-      },
-      {
-        "name": "_data",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes[]",
-        "internalType": "bytes[]"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "executeReturns",
-    "inputs": [
-      {
-        "name": "_target",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_to",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_ethAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_data",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "getNonce",
     "inputs": [
       {
@@ -305,99 +129,6 @@
         "name": "",
         "type": "uint128",
         "internalType": "uint128"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "hashApproveThenExecute",
-    "inputs": [
-      {
-        "name": "_targetEoA",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_nonce",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "_deadline",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "_erc20Contract",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_spender",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_approveAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_outputContract",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_ethAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_arguments",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "hashArbitrarySessionExecution",
-    "inputs": [
-      {
-        "name": "_targetEoA",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_counter",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "_deadline",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "_sender",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
       }
     ],
     "stateMutability": "view"
@@ -479,30 +210,6 @@
   },
   {
     "type": "function",
-    "name": "hashBurnSessionCounter",
-    "inputs": [
-      {
-        "name": "_targetEoA",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_counter",
-        "type": "uint128",
-        "internalType": "uint128"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "hashExecution",
     "inputs": [
       {
@@ -534,45 +241,6 @@
         "name": "_arguments",
         "type": "bytes",
         "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "hashSessionExecution",
-    "inputs": [
-      {
-        "name": "_targetEoA",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_counter",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "_deadline",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "_sender",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_outputContract",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "outputs": [
@@ -631,16 +299,6 @@
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "error",
-    "name": "ExecutionFailed",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidFunctionSelector",
-    "inputs": []
   },
   {
     "type": "error",
