@@ -48,6 +48,16 @@ interface ITKGasDelegate is IBatchExecution {
     /// @param _data Encoded signature, nonce, and deadline
     function executeBatch(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external;
 
+    // Nonce management
+
+    /// @notice Burns a specific nonce to cancel a pending signed transaction
+    /// @param _signature The 65-byte signature authorizing the nonce burn
+    /// @param _nonce The nonce value to invalidate
+    function burnNonce(bytes calldata _signature, uint128 _nonce) external;
+
+    /// @notice Burns the current nonce without a signature; must be called by this contract itself
+    function burnNonce() external;
+
     // Hash functions
     /// @notice Computes the EIP-712 typed data hash for an execution
     /// @param _nonce The nonce for replay protection

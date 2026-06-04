@@ -33,6 +33,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     bytes32 internal constant CALL_TYPEHASH = 0x9085b19ea56248c94d86174b3784cfaaa8673d1041d6441f61ff52752dac8483;
     // keccak256("Call(address to,uint256 value,bytes data)")
 
+    bytes32 internal constant BURN_NONCE_TYPEHASH = 0x1abb8920e48045adda3ed0ce4be4357be95d4aa21af287280f532fc031584bda;
+    // keccak256("BurnNonce(uint128 nonce)")
+
     /// @custom:storage-location erc7201:TKGasDelegate.state
     struct State {
         uint128 nonce;
@@ -111,6 +114,16 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
     }
 
+    function _consumeNonce(uint128 _nonce) internal {
+        State storage state = _getStateStorage();
+        if (_nonce != state.nonce) {
+            revert InvalidNonce();
+        }
+        unchecked {
+            ++state.nonce;
+        }
+    }
+
     /// @notice Returns the EIP-712 domain separator for this contract
     /// @dev Used for signature verification and typed data hashing
     /// @return The EIP-712 domain separator hash
@@ -163,6 +176,36 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             to := shr(96, calldataload(add(data.offset, 85)))
         }
         _executeNoValueNoReturn(data[0:65], data[65:81], data[81:85], to, data[105:]);
+    }
+
+    /// @notice Burns a specific nonce to cancel a pending signed transaction
+    /// @dev Requires a valid signature over the BurnNonce typehash. Allows end users to cancel transactions.
+    /// @param _signature The 65-byte signature authorizing the nonce burn
+    /// @param _nonce The nonce value to invalidate
+    function burnNonce(bytes calldata _signature, uint128 _nonce) external {
+        bytes32 hash;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, BURN_NONCE_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            hash := keccak256(ptr, 0x40)
+            mstore(0x40, add(ptr, 0x40))
+        }
+        hash = _hashTypedData(hash);
+
+        _requireSelf(hash, _signature);
+        _consumeNonce(_nonce);
+    }
+
+    /// @notice Burns the current nonce without a signature; must be called by this contract itself
+    /// @dev Increments the nonce to invalidate the current value
+    function burnNonce() external {
+        if (msg.sender != address(this) || msg.sender != tx.origin) {
+            revert NotSelf();
+        }
+        unchecked {
+            ++_getStateStorage().nonce;
+        }
     }
 
     function _executeNoValueNoReturn(
@@ -430,6 +473,21 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     /// @return The keccak256 hash of the encoded call array
     function hashCallArray(IBatchExecution.Call[] calldata _calls) external pure returns (bytes32) {
         return _hashCallArrayUnchecked(_calls);
+    }
+
+    /// @notice Computes the EIP-712 typed data hash for a nonce burn
+    /// @param _nonce The nonce to be burned
+    /// @return The EIP-712 compliant hash to be signed
+    function hashBurnNonce(uint128 _nonce) external view returns (bytes32) {
+        bytes32 hash;
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            mstore(ptr, BURN_NONCE_TYPEHASH)
+            mstore(add(ptr, 0x20), _nonce)
+            hash := keccak256(ptr, 0x40)
+            mstore(0x40, add(ptr, 0x40))
+        }
+        return _hashTypedData(hash);
     }
 
     /// @notice Computes the EIP-712 typed data hash for an execution

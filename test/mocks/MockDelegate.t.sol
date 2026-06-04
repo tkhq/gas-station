@@ -34,4 +34,8 @@ contract MockDelegate is TKGasDelegate {
     function external_hashCallArrayUnchecked(IBatchExecution.Call[] calldata _calls) external pure returns (bytes32) {
         return _hashCallArrayUnchecked(_calls);
     }
+
+    function external_BURN_NONCE_TYPEHASH() external pure returns (bytes32) {
+        return BURN_NONCE_TYPEHASH;
+    }
 }

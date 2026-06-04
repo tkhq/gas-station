@@ -89,6 +89,18 @@ contract TKGasDelegateTestBase is Test {
         return abi.encodePacked(_signature, nonce16, bytes4(_deadline), to20, value32, _args);
     }
 
+    function _signBurnNonce(uint256 _privateKey, address payable _publicKey, uint128 _nonce)
+        internal
+        returns (bytes memory)
+    {
+        address signer = vm.addr(_privateKey);
+        vm.startPrank(signer);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, MockDelegate(_publicKey).hashBurnNonce(_nonce));
+        bytes memory signature = abi.encodePacked(r, s, v);
+        vm.stopPrank();
+        return signature;
+    }
+
     function _signBatch(
         uint256 _privateKey,
         address payable _publicKey,
