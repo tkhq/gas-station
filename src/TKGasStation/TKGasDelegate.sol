@@ -21,6 +21,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
     bytes4 internal constant DEADLINE_EXCEEDED_SELECTOR = 0x559895a3;
     bytes4 internal constant ERC1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 internal constant EXECUTION_FAILED_SELECTOR = 0xacfdb444;
     bytes4 internal constant INVALID_OFFSET_SELECTOR = 0x01da1572;
 
     bytes32 internal constant EXECUTION_TYPEHASH = 0x06bb52ccb5d61c4f9c5baafc0affaba32c4d02864c91221ad411291324aeea2e;
@@ -245,7 +246,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         assembly {
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
-            if iszero(call(gas(), _outputContract, 0, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            if iszero(call(gas(), _outputContract, 0, ptr, _arguments.length, 0, 0)) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, EXECUTION_FAILED_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
             // No need to restore free memory pointer - execution ends immediately
         }
     }
@@ -284,7 +289,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         assembly {
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
-            if iszero(call(gas(), _outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) { revert(0, 0) }
+            if iszero(call(gas(), _outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) {
+                let errorPtr := mload(0x40)
+                mstore(errorPtr, EXECUTION_FAILED_SELECTOR)
+                revert(errorPtr, 0x04)
+            }
             // finish exection, no need to restore free memory pointer // mstore(0x40, add(ptr, _arguments.length))
         }
     }
@@ -386,7 +395,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             assembly ("memory-safe") {
                 let ptr := mload(0x40)
                 calldatacopy(ptr, _callData2.offset, _callData2.length)
-                if iszero(call(gas(), outputContract, ethAmount, ptr, _callData2.length, 0, 0)) { revert(0, 0) }
+                if iszero(call(gas(), outputContract, ethAmount, ptr, _callData2.length, 0, 0)) {
+                    let errorPtr := mload(0x40)
+                    mstore(errorPtr, EXECUTION_FAILED_SELECTOR)
+                    revert(errorPtr, 0x04)
+                }
                 mstore(0x40, add(ptr, _callData2.length))
             }
             unchecked {
