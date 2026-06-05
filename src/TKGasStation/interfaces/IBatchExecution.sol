@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 /// @title IBatchExecution
 /// @notice Interface defining the structure for batch transaction execution
