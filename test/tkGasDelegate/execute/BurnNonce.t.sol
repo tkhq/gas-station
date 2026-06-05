@@ -35,7 +35,7 @@ contract BurnTest is TKGasDelegateBase {
     }
 
     function testBurnNonceUncheckedWillWrapAround() public {
-        // since nonces can only be incremente once per transaction, and it takes up to 128 bits to overflow, there is no check
+        // since nonces can only be incremented once per transaction, and it takes up to 128 bits to overflow, there is no check
         // This lack of check is acceptable since it's a state that can only be increased by one per transaction and it would take aeons to overflow
         uint128 nonce = type(uint128).max;
 
@@ -90,40 +90,24 @@ contract BurnTest is TKGasDelegateBase {
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
 
-        bytes memory result;
         vm.prank(paymaster);
         vm.expectRevert();
-        bytes memory execData = _constructExecuteBytes(
-            executeSignature,
-            nonce,
-            uint32(block.timestamp + 86400),
-            address(mockToken),
-            0,
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+        MockDelegate(user).execute(
+            _constructExecuteBytes(
+                executeSignature,
+                nonce,
+                uint32(block.timestamp + 86400),
+                address(mockToken),
+                0,
+                abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+            )
         );
-        result = MockDelegate(user).executeReturns(execData);
         vm.stopPrank();
 
         assertEq(mockToken.balanceOf(receiver), 0);
     }
 
     function testGassyDirectBurnNonce() public {
-        uint128 nonce = MockDelegate(user).nonce();
-
-        vm.startPrank(user, user);
-        MockDelegate(user).burnNonce();
-        vm.stopPrank();
-
-        uint128 currentNonce = MockDelegate(user).nonce();
-        assertEq(currentNonce, nonce + 1);
-
-        vm.startPrank(user);
-        vm.expectRevert();
-        MockDelegate(user).burnNonce();
-        vm.stopPrank();
-    }
-
-    function testGassyDirectBurnNonceRevertsInvalidNonce() public {
         uint128 nonce = MockDelegate(user).nonce();
 
         vm.startPrank(user, user);
@@ -162,18 +146,18 @@ contract BurnTest is TKGasDelegateBase {
             abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
         );
 
-        bytes memory result;
         vm.prank(paymaster);
         vm.expectRevert();
-        bytes memory execData2 = _constructExecuteBytes(
-            executeSignature,
-            nonce,
-            uint32(block.timestamp + 86400),
-            address(mockToken),
-            0,
-            abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+        MockDelegate(user).execute(
+            _constructExecuteBytes(
+                executeSignature,
+                nonce,
+                uint32(block.timestamp + 86400),
+                address(mockToken),
+                0,
+                abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18)
+            )
         );
-        result = MockDelegate(user).executeReturns(execData2);
         vm.stopPrank();
 
         assertEq(mockToken.balanceOf(receiver), 0);

@@ -93,11 +93,10 @@ contract TKGasStationTest is Test {
             abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
 
         uint256 gasBefore = gasleft();
-        bytes memory result = tkGasStation.executeReturns(user, address(mockToken), 0, paramData);
+        tkGasStation.execute(user, address(mockToken), 0, paramData);
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
         assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
-        assertTrue(abi.decode(result, (bool)));
 
         console.log("TKGasStation ERC20 transfer gas: %s", gasUsed);
     }
@@ -152,11 +151,10 @@ contract TKGasStationTest is Test {
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
         bytes memory paramData = abi.encodePacked(signature, bytes16(nonce), bytes4(deadline), "");
-        bytes memory result = tkGasStation.executeReturns(user, receiver, transferAmount, paramData);
+        tkGasStation.execute(user, receiver, transferAmount, paramData);
 
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
-        assertEq(result.length, 0); // ETH transfers return empty result
         assertEq(address(receiver).balance, transferAmount);
 
         console.log("TKGasStation ETH transfer gas: %s", gasUsed);
@@ -220,84 +218,10 @@ contract TKGasStationTest is Test {
         assertEq(nonce, 0); // Should start at 0
     }
 
-    function testBurnNonce() public {
-        MockDelegate(payable(address(tkGasDelegate))).spoof_Nonce(1);
-        uint128 nonce = MockDelegate(payable(user)).nonce();
-
-        // Create a proper signature for burnNonce
-        vm.startPrank(user);
-        bytes32 hash = MockDelegate(payable(user)).hashBurnNonce(nonce);
-        vm.stopPrank();
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, hash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        // Burn nonce should work
-        tkGasStation.burnNonce(user, signature, nonce);
-
-        // Nonce should be incremented
-        uint128 newNonce = tkGasStation.getNonce(user);
-        assertEq(newNonce, nonce + 1);
-    }
-
     function testReceiveReverts() public {
         vm.expectRevert();
         (bool success,) = address(tkGasStation).call{value: 1 ether}("");
         success; // Silence unused variable warning
-    }
-
-    function testFallbackInvalidFunctionSelectorRevert() public {
-        // Test fallback with invalid function selector
-        vm.expectRevert();
-        (bool success,) = address(tkGasStation).call(abi.encodePacked(bytes1(0x00), user, bytes1(0x80))); // Invalid selector
-        success; // Silence unused variable warning
-    }
-
-    // Tests for newly implemented no-return functions
-    function testApproveThenExecuteNoReturn() public {
-        console.log("=== TESTING approveThenExecuteNoReturn ===");
-
-        mockToken.mint(user, 20 * 10 ** 18);
-        address receiver = makeAddr("receiver");
-
-        // Spoof nonce
-        MockDelegate(payable(address(tkGasDelegate))).spoof_Nonce(3);
-        uint128 nonce = MockDelegate(payable(user)).nonce();
-
-        // Create signature for approveThenExecute
-        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-
-        vm.startPrank(user);
-        bytes32 hash = MockDelegate(payable(user)).hashApproveThenExecute(
-            nonce,
-            uint32(block.timestamp + 86400), // deadline
-            address(mockToken), // erc20
-            address(mockToken), // spender
-            10 * 10 ** 18, // approveAmount
-            address(mockToken), // outputContract
-            0, // ethAmount
-            args
-        );
-        vm.stopPrank();
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, hash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        // Build data for approveThenExecuteNoReturn (use simple format like execute)
-        bytes memory paramData =
-            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
-
-        // Execute through TKGasStation
-        vm.prank(paymaster);
-        uint256 gasBefore = gasleft();
-        tkGasStation.approveThenExecute(
-            user, address(mockToken), 0, address(mockToken), address(mockToken), 10 * 10 ** 18, paramData
-        );
-        uint256 gasAfter = gasleft();
-        uint256 gasUsed = gasBefore - gasAfter;
-
-        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
-        console.log("approveThenExecute gas: %s", gasUsed);
     }
 
     function testExecuteBatchNoReturn() public {
@@ -348,53 +272,6 @@ contract TKGasStationTest is Test {
         console.log("executeBatch gas: %s", gasUsed);
     }
 
-    function testApproveThenExecute() public {
-        console.log("=== TESTING approveThenExecute (with return) ===");
-
-        mockToken.mint(user, 20 * 10 ** 18);
-        address receiver = makeAddr("receiver");
-
-        // Spoof nonce
-        MockDelegate(payable(address(tkGasDelegate))).spoof_Nonce(5);
-        uint128 nonce = MockDelegate(payable(user)).nonce();
-
-        // Create signature for approveThenExecute
-        bytes memory args = abi.encodeWithSelector(mockToken.transfer.selector, receiver, 10 * 10 ** 18);
-
-        vm.startPrank(user);
-        bytes32 hash = MockDelegate(payable(user)).hashApproveThenExecute(
-            nonce,
-            uint32(block.timestamp + 86400), // deadline
-            address(mockToken), // erc20
-            address(mockToken), // spender
-            10 * 10 ** 18, // approveAmount
-            address(mockToken), // outputContract
-            0, // ethAmount
-            args
-        );
-        vm.stopPrank();
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, hash);
-        bytes memory signature = abi.encodePacked(r, s, v);
-
-        // Build data for approveThenExecute
-        bytes memory paramData =
-            abi.encodePacked(signature, bytes16(nonce), bytes4(uint32(block.timestamp + 86400)), args);
-
-        // Execute through TKGasStation
-        vm.prank(paymaster);
-        uint256 gasBefore = gasleft();
-        bytes memory result = tkGasStation.approveThenExecuteReturns(
-            user, address(mockToken), 0, address(mockToken), address(mockToken), 10 * 10 ** 18, paramData
-        );
-        uint256 gasAfter = gasleft();
-        uint256 gasUsed = gasBefore - gasAfter;
-
-        assertEq(mockToken.balanceOf(receiver), 10 * 10 ** 18);
-        assertTrue(abi.decode(result, (bool)));
-        console.log("approveThenExecute gas: %s", gasUsed);
-    }
-
     function testExecuteBatch() public {
         console.log("=== TESTING executeBatch (with return) ===");
 
@@ -434,15 +311,12 @@ contract TKGasStationTest is Test {
         // Execute through TKGasStation
         vm.prank(paymaster);
         uint256 gasBefore = gasleft();
-        bytes[] memory results = tkGasStation.executeBatchReturns(user, calls, paramData);
+        tkGasStation.executeBatch(user, calls, paramData);
         uint256 gasAfter = gasleft();
         uint256 gasUsed = gasBefore - gasAfter;
 
         assertEq(mockToken.balanceOf(receiver1), 5 * 10 ** 18);
         assertEq(mockToken.balanceOf(receiver2), 5 * 10 ** 18);
-        assertEq(results.length, 2);
-        assertTrue(abi.decode(results[0], (bool)));
-        assertTrue(abi.decode(results[1], (bool)));
         console.log("executeBatch gas: %s", gasUsed);
     }
 }

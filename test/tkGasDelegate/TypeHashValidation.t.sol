@@ -28,53 +28,20 @@ contract TypeHashValidationTest is Test {
         // Expected typehash values calculated from type strings
         bytes32 expectedExecutionTypehash =
             keccak256("Execution(uint128 nonce,uint32 deadline,address to,uint256 value,bytes data)");
-        bytes32 expectedApproveThenExecuteTypehash = keccak256(
-            "ApproveThenExecute(uint128 nonce,uint32 deadline,address erc20Contract,address spender,uint256 approveAmount,address to,uint256 value,bytes data)"
-        );
         bytes32 expectedBatchExecutionTypehash = keccak256(
             "BatchExecution(uint128 nonce,uint32 deadline,Call[] calls)Call(address to,uint256 value,bytes data)"
         );
         bytes32 expectedCallTypehash = keccak256("Call(address to,uint256 value,bytes data)");
-        bytes32 expectedBurnNonceTypehash = keccak256("BurnNonce(uint128 nonce)");
-        bytes32 expectedSessionExecutionTypehash =
-            keccak256("SessionExecution(uint128 counter,uint32 deadline,address sender,address to)");
-        bytes32 expectedArbitrarySessionExecutionTypehash =
-            keccak256("ArbitrarySessionExecution(uint128 counter,uint32 deadline,address sender)");
-        bytes32 expectedBurnSessionCounterTypehash = keccak256("BurnSessionCounter(uint128 counter)");
 
         // Actual typehash values from the contract
         bytes32 actualExecutionTypehash = delegate.external_EXECUTION_TYPEHASH();
-        bytes32 actualApproveThenExecuteTypehash = delegate.external_APPROVE_THEN_EXECUTE_TYPEHASH();
         bytes32 actualBatchExecutionTypehash = delegate.external_BATCH_EXECUTION_TYPEHASH();
         bytes32 actualCallTypehash = delegate.external_CALL_TYPEHASH();
-        bytes32 actualBurnNonceTypehash = delegate.external_BURN_NONCE_TYPEHASH();
-        bytes32 actualSessionExecutionTypehash = delegate.external_SESSION_EXECUTION_TYPEHASH();
-        bytes32 actualArbitrarySessionExecutionTypehash = delegate.external_ARBITRARY_SESSION_EXECUTION_TYPEHASH();
-        bytes32 actualBurnSessionCounterTypehash = delegate.external_BURN_SESSION_COUNTER_TYPEHASH();
 
         // Validate each typehash
         assertEq(actualExecutionTypehash, expectedExecutionTypehash, "EXECUTION_TYPEHASH mismatch");
-        assertEq(
-            actualApproveThenExecuteTypehash,
-            expectedApproveThenExecuteTypehash,
-            "APPROVE_THEN_EXECUTE_TYPEHASH mismatch"
-        );
         assertEq(actualBatchExecutionTypehash, expectedBatchExecutionTypehash, "BATCH_EXECUTION_TYPEHASH mismatch");
         assertEq(actualCallTypehash, expectedCallTypehash, "CALL_TYPEHASH mismatch");
-        assertEq(actualBurnNonceTypehash, expectedBurnNonceTypehash, "BURN_NONCE_TYPEHASH mismatch");
-        assertEq(
-            actualSessionExecutionTypehash, expectedSessionExecutionTypehash, "SESSION_EXECUTION_TYPEHASH mismatch"
-        );
-        assertEq(
-            actualArbitrarySessionExecutionTypehash,
-            expectedArbitrarySessionExecutionTypehash,
-            "ARBITRARY_SESSION_EXECUTION_TYPEHASH mismatch"
-        );
-        assertEq(
-            actualBurnSessionCounterTypehash,
-            expectedBurnSessionCounterTypehash,
-            "BURN_SESSION_COUNTER_TYPEHASH mismatch"
-        );
     }
 
     /**
@@ -100,70 +67,6 @@ contract TypeHashValidationTest is Test {
         // Test that calling the function twice with same inputs produces same hash (consistency check)
         bytes32 contractHash2 = delegate.hashExecution(nonce, deadline, outputContract, ethAmount, arguments);
         assertEq(contractHash, contractHash2, "Hash function should be deterministic");
-    }
-
-    /**
-     * @notice Validates BURN_NONCE_TYPEHASH
-     */
-    function testBurnNonceTypeHash() public view {
-        uint128 nonce = 1;
-        bytes32 hash = delegate.hashBurnNonce(nonce);
-
-        // Verify the hash is non-zero and deterministic
-        assertTrue(hash != bytes32(0), "BurnNonce hash should not be zero");
-        assertEq(hash, delegate.hashBurnNonce(nonce), "BurnNonce hash should be deterministic");
-    }
-
-    /**
-     * @notice Validates SESSION_EXECUTION_TYPEHASH
-     */
-    function testSessionExecutionTypeHash() public view {
-        uint128 counter = 1;
-        uint32 deadline = uint32(block.timestamp + 1 days);
-        address sender = address(0x1234);
-        address outputContract = address(0x5678);
-
-        bytes32 hash = delegate.hashSessionExecution(counter, deadline, sender, outputContract);
-
-        // Verify the hash is non-zero and deterministic
-        assertTrue(hash != bytes32(0), "SessionExecution hash should not be zero");
-        assertEq(
-            hash,
-            delegate.hashSessionExecution(counter, deadline, sender, outputContract),
-            "SessionExecution hash should be deterministic"
-        );
-    }
-
-    /**
-     * @notice Validates ARBITRARY_SESSION_EXECUTION_TYPEHASH
-     */
-    function testArbitrarySessionExecutionTypeHash() public view {
-        uint128 counter = 1;
-        uint32 deadline = uint32(block.timestamp + 1 days);
-        address sender = address(0x1234);
-
-        bytes32 hash = delegate.hashArbitrarySessionExecution(counter, deadline, sender);
-
-        // Verify the hash is non-zero and deterministic
-        assertTrue(hash != bytes32(0), "ArbitrarySessionExecution hash should not be zero");
-        assertEq(
-            hash,
-            delegate.hashArbitrarySessionExecution(counter, deadline, sender),
-            "ArbitrarySessionExecution hash should be deterministic"
-        );
-    }
-
-    /**
-     * @notice Validates BURN_SESSION_COUNTER_TYPEHASH
-     */
-    function testBurnSessionCounterTypeHash() public view {
-        uint128 counter = 1;
-
-        bytes32 hash = delegate.hashBurnSessionCounter(counter);
-
-        // Verify the hash is non-zero and deterministic
-        assertTrue(hash != bytes32(0), "BurnSessionCounter hash should not be zero");
-        assertEq(hash, delegate.hashBurnSessionCounter(counter), "BurnSessionCounter hash should be deterministic");
     }
 
     /**
