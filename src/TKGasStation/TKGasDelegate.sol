@@ -12,6 +12,7 @@ import {IERC1721} from "./interfaces/IERC1721.sol";
 /// @title TKGasDelegate
 /// @notice Delegation contract for executing transactions with signature-based authorization
 /// @dev Implements EIP-712 for typed structured data signing, supporting standard execution and batch execution
+/// @custom:security-contact security@turnkey.com
 contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, ITKGasDelegate {
     error DeadlineExceeded();
     error InvalidNonce();
