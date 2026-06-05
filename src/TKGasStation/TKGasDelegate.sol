@@ -322,14 +322,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
 
         uint256 length = _calls.length;
 
-        for (uint256 i; i < length;) {
+        for (uint256 i; i < length; ++i) {
             IBatchExecution.Call calldata execution = _calls[i];
             (bool success,) = execution.to.call{value: execution.value}(execution.data);
             if (!success) {
                 revert ExecutionFailed();
-            }
-            unchecked {
-                ++i;
             }
         }
     }
@@ -378,7 +375,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         }
         hash = _hashTypedData(hash);
         _validateExecute(hash, _signature, _nonceBytes);
-        for (uint256 i = 0; i < length;) {
+        for (uint256 i = 0; i < length; ++i) {
             IBatchExecution.Call calldata execution = calls[i];
             uint256 ethAmount = execution.value;
             address outputContract = execution.to;
@@ -389,21 +386,15 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
                 if iszero(call(gas(), outputContract, ethAmount, ptr, _callData2.length, 0, 0)) { revert(0, 0) }
                 mstore(0x40, add(ptr, _callData2.length))
             }
-            unchecked {
-                ++i;
-            }
         }
     }
 
     function _hashCallArrayUnchecked(IBatchExecution.Call[] calldata _calls) internal pure returns (bytes32) {
         uint256 length = _calls.length;
         bytes32[] memory structHashes = new bytes32[](length);
-        for (uint256 i; i < length;) {
+        for (uint256 i; i < length; ++i) {
             IBatchExecution.Call calldata c = _calls[i];
             structHashes[i] = keccak256(abi.encode(CALL_TYPEHASH, c.to, c.value, keccak256(c.data)));
-            unchecked {
-                ++i;
-            }
         }
         return keccak256(abi.encodePacked(structHashes));
     }
