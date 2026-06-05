@@ -7,10 +7,10 @@ import {TKGasDelegate} from "../src/TKGasStation/TKGasDelegate.sol";
 
 contract GetDelegateInitCodeHash is Script {
     function run() external {
-        // Get the creation code (TKGasDelegate has no constructor args)
-        bytes memory _initCode = type(TKGasDelegate).creationCode;
-        
-        // Hash the init code
+        address _gasStation = vm.envAddress("GAS_STATION_ADDRESS");
+
+        bytes memory _initCode = abi.encodePacked(type(TKGasDelegate).creationCode, abi.encode(_gasStation));
+
         bytes32 _initCodeHash = keccak256(_initCode);
         
         console2.log("Init code hash (keccak256):");

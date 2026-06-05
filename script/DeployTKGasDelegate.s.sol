@@ -22,15 +22,17 @@ contract DeployTKGasDelegate is Script {
 
         vm.startBroadcast(_deployerPrivateKey);
 
+        address _gasStation = vm.envAddress("GAS_STATION_ADDRESS");
+
         bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379;
 
-        // Get the creation code (TKGasDelegate has no constructor args)
-        bytes memory _initCode = type(TKGasDelegate).creationCode;
+        bytes memory _initCode = abi.encodePacked(type(TKGasDelegate).creationCode, abi.encode(_gasStation));
 
         // Deploy via ImmutableCreate2Factory
         IImmutableCreate2Factory _factory = IImmutableCreate2Factory(IMMUTABLE_CREATE2_FACTORY);
         address _delegate = _factory.safeCreate2(_salt, _initCode);
         console2.log("TKGasDelegate deployed at:", _delegate);
+        console2.log("GAS_STATION set to:", _gasStation);
 
         vm.stopBroadcast();
     }
