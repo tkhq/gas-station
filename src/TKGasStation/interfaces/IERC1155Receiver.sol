@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.30;
+pragma solidity 0.8.30;
 
 interface IERC1155Receiver {
     function onERC1155Received(address operator, address from, uint256 id, uint256 value, bytes calldata data)
