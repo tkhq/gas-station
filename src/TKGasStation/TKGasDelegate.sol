@@ -60,7 +60,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     }
 
     /// @notice Initializes the TKGasDelegate contract
-    /// @dev Sets up EIP-712 domain separator with name "TKGasDelegate" and version "1"
+    /// @dev Sets up EIP-712 domain separator with name "TKGasDelegate" and version "1.1"
     constructor() EIP712() {}
 
     // Internal helpers to centralize common validation logic
