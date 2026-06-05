@@ -16,6 +16,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     error DeadlineExceeded();
     error InvalidNonce();
     error NotSelf();
+    error NotGasStation();
     error ExecutionFailed();
     error InvalidOffset();
 
@@ -58,9 +59,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         return _getStateStorage().nonce;
     }
 
-    /// @notice Initializes the TKGasDelegate contract
-    /// @dev Sets up EIP-712 domain separator with name "TKGasDelegate" and version "1"
-    constructor() EIP712() {}
+    address public immutable GAS_STATION;
+
+    /// @param _gasStation The TKGasStation address authorized to call restricted functions
+    constructor(address _gasStation) EIP712() {
+        GAS_STATION = _gasStation;
+    }
 
     // Internal helpers to centralize common validation logic
 
@@ -183,6 +187,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     /// @param _signature The 65-byte signature authorizing the nonce burn
     /// @param _nonce The nonce value to invalidate
     function burnNonce(bytes calldata _signature, uint128 _nonce) external {
+        if (msg.sender != GAS_STATION) {
+            revert NotGasStation();
+        }
         bytes32 hash;
         assembly ("memory-safe") {
             let ptr := mload(0x40)

@@ -20,7 +20,7 @@ contract TKGasDelegateTestBase is Test {
 
     function setUp() public virtual {
         // Deploy MockDelegate
-        tkGasDelegate = new MockDelegate();
+        tkGasDelegate = new MockDelegate(paymaster);
         user = payable(vm.addr(USER_PRIVATE_KEY)); // 0x3545A2F3928d5b21E71a790FB458F4AE03306C55
         user2 = payable(vm.addr(USER_PRIVATE_KEY_2));
 
