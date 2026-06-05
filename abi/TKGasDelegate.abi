@@ -1,12 +1,31 @@
 [
   {
     "type": "constructor",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "_gasStation",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "stateMutability": "nonpayable"
   },
   {
     "type": "receive",
     "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "GAS_STATION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -536,6 +555,11 @@
   {
     "type": "error",
     "name": "InvalidOffset",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotGasStation",
     "inputs": []
   },
   {
