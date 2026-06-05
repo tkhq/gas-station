@@ -25,6 +25,19 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     bytes4 internal constant EXECUTION_FAILED_SELECTOR = 0xacfdb444;
     bytes4 internal constant INVALID_OFFSET_SELECTOR = 0x01da1572;
 
+    // ERC token receiver return values and interface IDs
+    bytes4 internal constant ON_ERC721_RECEIVED = 0x150b7a02;
+    bytes4 internal constant ON_ERC1155_RECEIVED = 0xf23a6e61;
+    bytes4 internal constant ON_ERC1155_BATCH_RECEIVED = 0xbc197c81;
+    bytes4 internal constant ERC165_INTERFACE_ID = 0x01ffc9a7;
+    // ERC721Receiver interface ID equals ON_ERC721_RECEIVED (0x150b7a02)
+    bytes4 internal constant ERC1155_RECEIVER_INTERFACE_ID = 0x4e2312e0;
+
+    // Bit-shift widths for extracting packed calldata fields from 32-byte words
+    uint256 internal constant NONCE_SHIFT = 128; // uint128 occupies the high 128 bits
+    uint256 internal constant DEADLINE_SHIFT = 224; // uint32 occupies the high 32 bits
+    uint256 internal constant ADDRESS_SHIFT = 96; // address (160 bits) occupies the high 160 bits
+
     bytes32 internal constant EXECUTION_TYPEHASH = 0x06bb52ccb5d61c4f9c5baafc0affaba32c4d02864c91221ad411291324aeea2e;
     // keccak256("Execution(uint128 nonce,uint32 deadline,address to,uint256 value,bytes data)")
 
@@ -106,7 +119,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         uint128 nonceValue;
         State storage state = _getStateStorage();
         assembly ("memory-safe") {
-            nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            nonceValue := shr(NONCE_SHIFT, calldataload(_nonceBytes.offset))
         }
         if (nonceValue != state.nonce) {
             revert InvalidNonce();
@@ -157,7 +170,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         uint256 value;
         assembly ("memory-safe") {
             // address is 20 bytes immediately after deadline
-            to := shr(96, calldataload(add(data.offset, 85)))
+            to := shr(ADDRESS_SHIFT, calldataload(add(data.offset, 85)))
             // value is 32 bytes immediately after address
             value := calldataload(add(data.offset, 105))
         }
@@ -175,7 +188,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         address to;
         assembly ("memory-safe") {
             // address is 20 bytes immediately after deadline
-            to := shr(96, calldataload(add(data.offset, 85)))
+            to := shr(ADDRESS_SHIFT, calldataload(add(data.offset, 85)))
         }
         _executeNoValueNoReturn(data[0:65], data[65:81], data[81:85], to, data[105:]);
     }
@@ -219,7 +232,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     ) internal {
         bytes32 hash;
         assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            let deadline := shr(DEADLINE_SHIFT, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
                 mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
@@ -227,7 +240,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             } // DeadlineExceeded
             let ptr := mload(0x40)
             mstore(ptr, EXECUTION_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            let nonceValue := shr(NONCE_SHIFT, calldataload(_nonceBytes.offset))
             mstore(add(ptr, 0x20), nonceValue)
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), _outputContract)
@@ -267,7 +280,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes32 argsHash = keccak256(_arguments);
         bytes32 hash; // all this assembly to avoid using abi.encode
         assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            let deadline := shr(DEADLINE_SHIFT, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
                 mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
@@ -275,7 +288,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             } // DeadlineExceeded
             let ptr := mload(0x40) // Get free memory pointer
             mstore(ptr, EXECUTION_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            let nonceValue := shr(NONCE_SHIFT, calldataload(_nonceBytes.offset))
             mstore(add(ptr, 0x20), nonceValue)
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), _outputContract)
@@ -311,7 +324,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes32 executionsHash = _hashCallArrayUnchecked(_calls);
         bytes32 hash;
         assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            let deadline := shr(DEADLINE_SHIFT, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
                 mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
@@ -320,7 +333,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             let ptr := mload(0x40)
 
             mstore(ptr, BATCH_EXECUTION_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            let nonceValue := shr(NONCE_SHIFT, calldataload(_nonceBytes.offset))
             mstore(add(ptr, 0x20), nonceValue)
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), executionsHash)
@@ -368,7 +381,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         bytes32 executionsHash = _hashCallArrayUnchecked(calls);
         bytes32 hash;
         assembly ("memory-safe") {
-            let deadline := shr(224, calldataload(_deadlineBytes.offset))
+            let deadline := shr(DEADLINE_SHIFT, calldataload(_deadlineBytes.offset))
             if gt(timestamp(), deadline) {
                 let errorPtr := mload(0x40)
                 mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
@@ -376,7 +389,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
             } // DeadlineExceeded
             let ptr := mload(0x40)
             mstore(ptr, BATCH_EXECUTION_TYPEHASH)
-            let nonceValue := shr(128, calldataload(_nonceBytes.offset))
+            let nonceValue := shr(NONCE_SHIFT, calldataload(_nonceBytes.offset))
             mstore(add(ptr, 0x20), nonceValue)
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), executionsHash)
@@ -435,7 +448,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         uint256, /* tokenId */
         bytes calldata /* data */
     ) external pure override returns (bytes4) {
-        return 0x150b7a02;
+        return ON_ERC721_RECEIVED;
     }
 
     // ERC1155 Receiver function
@@ -446,7 +459,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         uint256, /* value */
         bytes calldata /* data */
     ) external pure override returns (bytes4) {
-        return 0xf23a6e61;
+        return ON_ERC1155_RECEIVED;
     }
 
     // ERC1155 Batch Receiver function
@@ -457,7 +470,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
         uint256[] calldata, /* values */
         bytes calldata /* data */
     ) external pure override returns (bytes4) {
-        return 0xbc197c81;
+        return ON_ERC1155_BATCH_RECEIVED;
     }
 
     /// @notice ERC-165 interface detection
@@ -465,9 +478,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1721, I
     /// @param _interfaceId The interface identifier to check
     /// @return true if the interface is supported
     function supportsInterface(bytes4 _interfaceId) external pure returns (bool) {
-        return _interfaceId == 0x01ffc9a7 // ERC165 Interface ID
-            || _interfaceId == 0x150b7a02 // ERC721Receiver Interface ID
-            || _interfaceId == 0x4e2312e0; // ERC1155Receiver Interface ID (xor of onERC1155Received and onERC1155BatchReceived)
+        return _interfaceId == ERC165_INTERFACE_ID
+            || _interfaceId == ON_ERC721_RECEIVED // ERC721Receiver interface ID equals onERC721Received selector
+            || _interfaceId == ERC1155_RECEIVER_INTERFACE_ID;
     }
 
     // View functions
