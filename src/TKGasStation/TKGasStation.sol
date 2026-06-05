@@ -55,9 +55,7 @@ contract TKGasStation is ITKGasStation {
     /// @param _ethAmount The amount of ETH to send with the call (in wei)
     /// @param _data The encoded function call data including signature, nonce, deadline, and arguments
     function execute(address _target, address _to, uint256 _ethAmount, bytes calldata _data) external {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
+        require(_isDelegated(_target), NotDelegated());
         ITKGasDelegate(_target).execute(_to, _ethAmount, _data);
     }
 
@@ -68,9 +66,7 @@ contract TKGasStation is ITKGasStation {
     /// @param _calls Array of Call structs containing to, value, and data for each transaction
     /// @param _data The encoded signature, nonce, and deadline for batch authorization
     function executeBatch(address _target, IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {
-        if (!_isDelegated(_target)) {
-            revert NotDelegated();
-        }
+        require(_isDelegated(_target), NotDelegated());
         ITKGasDelegate(_target).executeBatch(_calls, _data);
     }
 
@@ -80,9 +76,7 @@ contract TKGasStation is ITKGasStation {
     /// @param _signature The signature authorizing the nonce burn operation
     /// @param _nonce The nonce value to invalidate
     function burnNonce(address _targetEoA, bytes calldata _signature, uint128 _nonce) external {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
+        require(_isDelegated(_targetEoA), NotDelegated());
         ITKGasDelegate(_targetEoA).burnNonce(_signature, _nonce);
     }
 
@@ -93,9 +87,7 @@ contract TKGasStation is ITKGasStation {
     /// @param _targetEoA The delegated EOA address to query
     /// @return The current nonce value (uint128)
     function getNonce(address _targetEoA) external view returns (uint128) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
+        require(_isDelegated(_targetEoA), NotDelegated());
         uint128 nonce = ITKGasDelegate(_targetEoA).nonce();
         return nonce;
     }
@@ -119,9 +111,7 @@ contract TKGasStation is ITKGasStation {
         view
         returns (bool)
     {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
+        require(_isDelegated(_targetEoA), NotDelegated());
         return ITKGasDelegate(_targetEoA).validateSignature(_hash, _signature);
     }
 
@@ -131,9 +121,7 @@ contract TKGasStation is ITKGasStation {
     /// @param _nonce The nonce value to burn
     /// @return The EIP-712 compliant hash to be signed
     function hashBurnNonce(address _targetEoA, uint128 _nonce) external view returns (bytes32) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
+        require(_isDelegated(_targetEoA), NotDelegated());
         return ITKGasDelegate(_targetEoA).hashBurnNonce(_nonce);
     }
 
@@ -155,9 +143,7 @@ contract TKGasStation is ITKGasStation {
         uint256 _ethAmount,
         bytes calldata _arguments
     ) external view returns (bytes32) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
+        require(_isDelegated(_targetEoA), NotDelegated());
         return ITKGasDelegate(_targetEoA).hashExecution(_nonce, _deadline, _outputContract, _ethAmount, _arguments);
     }
 
@@ -174,9 +160,7 @@ contract TKGasStation is ITKGasStation {
         uint32 _deadline,
         IBatchExecution.Call[] calldata _calls
     ) external view returns (bytes32) {
-        if (!_isDelegated(_targetEoA)) {
-            revert NotDelegated();
-        }
+        require(_isDelegated(_targetEoA), NotDelegated());
         return ITKGasDelegate(_targetEoA).hashBatchExecution(_nonce, _deadline, _calls);
     }
 }
