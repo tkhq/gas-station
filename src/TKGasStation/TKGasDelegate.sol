@@ -238,6 +238,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         }
     }
 
+    /// @notice Core execution path for calls that send ETH and discard return data
+    /// @dev Builds and verifies the EIP-712 Execution hash then calls _outputContract with _ethAmount
+    /// @param _signature The 65-byte ECDSA signature over the Execution struct hash
+    /// @param _nonceBytes Packed calldata slice containing the uint128 nonce
+    /// @param _deadlineBytes Packed calldata slice containing the uint32 deadline
+    /// @param _outputContract The address to call
+    /// @param _ethAmount The amount of ETH (in wei) to forward with the call
+    /// @param _arguments Calldata to forward to _outputContract
     function _executeNoReturn(
         bytes calldata _signature,
         bytes calldata _nonceBytes,
