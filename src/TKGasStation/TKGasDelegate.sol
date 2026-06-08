@@ -178,9 +178,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
     /// @param _value The amount of ETH to send (in wei)
     /// @param _data Encoded data containing signature (65 bytes), nonce (16 bytes), deadline (4 bytes), and arguments
     function execute(address _to, uint256 _value, bytes calldata _data) external {
-        _value == 0
-            ? _executeNoValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _data[85:])
-            : _executeWithValueNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
+        _executeNoReturn(_data[0:65], _data[65:81], _data[81:85], _to, _value, _data[85:]);
     }
 
     /// @notice Executes a transaction with all parameters encoded in data, no return
@@ -195,11 +193,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
             // value is 32 bytes immediately after address
             value := calldataload(add(data.offset, 105))
         }
-        if (value == 0) {
-            _executeNoValueNoReturn(data[0:65], data[65:81], data[81:85], to, data[137:]);
-        } else {
-            _executeWithValueNoReturn(data[0:65], data[65:81], data[81:85], to, value, data[137:]);
-        }
+        _executeNoReturn(data[0:65], data[65:81], data[81:85], to, value, data[137:]);
     }
 
     /// @notice Executes a transaction with no ETH value and no return data
@@ -211,7 +205,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
             // address is 20 bytes immediately after deadline
             to := shr(ADDRESS_SHIFT, calldataload(add(data.offset, 85)))
         }
-        _executeNoValueNoReturn(data[0:65], data[65:81], data[81:85], to, data[105:]);
+        _executeNoReturn(data[0:65], data[65:81], data[81:85], to, 0, data[105:]);
     }
 
     /// @notice Burns a specific nonce to cancel a pending signed transaction
@@ -244,18 +238,20 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         }
     }
 
-    /// @notice Core execution path for calls that send no ETH and discard return data
-    /// @dev Builds and verifies the EIP-712 Execution hash then calls _outputContract
+    /// @notice Core execution path for calls that send ETH and discard return data
+    /// @dev Builds and verifies the EIP-712 Execution hash then calls _outputContract with _ethAmount
     /// @param _signature The 65-byte ECDSA signature over the Execution struct hash
     /// @param _nonceBytes Packed calldata slice containing the uint128 nonce
     /// @param _deadlineBytes Packed calldata slice containing the uint32 deadline
     /// @param _outputContract The address to call
+    /// @param _ethAmount The amount of ETH (in wei) to forward with the call
     /// @param _arguments Calldata to forward to _outputContract
-    function _executeNoValueNoReturn(
+    function _executeNoReturn(
         bytes calldata _signature,
         bytes calldata _nonceBytes,
         bytes calldata _deadlineBytes,
         address _outputContract,
+        uint256 _ethAmount,
         bytes calldata _arguments
     ) internal {
         bytes32 hash;
@@ -272,7 +268,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
             mstore(add(ptr, 0x20), nonceValue)
             mstore(add(ptr, 0x40), deadline)
             mstore(add(ptr, 0x60), _outputContract)
-            mstore(add(ptr, 0x80), 0)
+            mstore(add(ptr, 0x80), _ethAmount)
             // Compute argsHash in assembly to avoid a separate solidity temp
             let argsPtr := add(ptr, 0xa0)
             calldatacopy(argsPtr, _arguments.offset, _arguments.length)
@@ -288,63 +284,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         assembly {
             let ptr := mload(0x40)
             calldatacopy(ptr, _arguments.offset, _arguments.length)
-            if iszero(call(gas(), _outputContract, 0, ptr, _arguments.length, 0, 0)) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, EXECUTION_FAILED_SELECTOR)
-                revert(errorPtr, 0x04)
-            }
-            // No need to restore free memory pointer - execution ends immediately
-        }
-    }
-
-    /// @notice Core execution path for calls that send ETH and discard return data
-    /// @dev Builds and verifies the EIP-712 Execution hash then calls _outputContract with _ethAmount
-    /// @param _signature The 65-byte ECDSA signature over the Execution struct hash
-    /// @param _nonceBytes Packed calldata slice containing the uint128 nonce
-    /// @param _deadlineBytes Packed calldata slice containing the uint32 deadline
-    /// @param _outputContract The address to call
-    /// @param _ethAmount The amount of ETH (in wei) to forward with the call
-    /// @param _arguments Calldata to forward to _outputContract
-    function _executeWithValueNoReturn(
-        bytes calldata _signature,
-        bytes calldata _nonceBytes,
-        bytes calldata _deadlineBytes,
-        address _outputContract,
-        uint256 _ethAmount,
-        bytes calldata _arguments
-    ) internal {
-        bytes32 argsHash = keccak256(_arguments);
-        bytes32 hash; // all this assembly to avoid using abi.encode
-        assembly ("memory-safe") {
-            let deadline := shr(DEADLINE_SHIFT, calldataload(_deadlineBytes.offset))
-            if gt(timestamp(), deadline) {
-                let errorPtr := mload(0x40)
-                mstore(errorPtr, DEADLINE_EXCEEDED_SELECTOR)
-                revert(errorPtr, 0x04)
-            } // DeadlineExceeded
-            let ptr := mload(0x40) // Get free memory pointer
-            mstore(ptr, EXECUTION_TYPEHASH)
-            let nonceValue := shr(NONCE_SHIFT, calldataload(_nonceBytes.offset))
-            mstore(add(ptr, 0x20), nonceValue)
-            mstore(add(ptr, 0x40), deadline)
-            mstore(add(ptr, 0x60), _outputContract)
-            mstore(add(ptr, 0x80), _ethAmount)
-            mstore(add(ptr, 0xa0), argsHash)
-            hash := keccak256(ptr, 0xc0)
-            mstore(0x40, add(ptr, 0xc0))
-        }
-        hash = _hashTypedData(hash);
-
-        _validateExecute(hash, _signature, _nonceBytes);
-        assembly {
-            let ptr := mload(0x40)
-            calldatacopy(ptr, _arguments.offset, _arguments.length)
             if iszero(call(gas(), _outputContract, _ethAmount, ptr, _arguments.length, 0, 0)) {
                 let errorPtr := mload(0x40)
                 mstore(errorPtr, EXECUTION_FAILED_SELECTOR)
                 revert(errorPtr, 0x04)
             }
-            // finish exection, no need to restore free memory pointer // mstore(0x40, add(ptr, _arguments.length))
+            // No need to restore free memory pointer - execution ends immediately
         }
     }
 
@@ -447,20 +392,21 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         }
         hash = _hashTypedData(hash);
         _validateExecute(hash, _signature, _nonceBytes);
+        uint256 callPtr;
+        assembly ("memory-safe") {
+            callPtr := mload(0x40)
+        }
         for (uint256 i = 0; i < length; ++i) {
             IBatchExecution.Call calldata execution = calls[i];
             uint256 ethAmount = execution.value;
             address outputContract = execution.to;
-            bytes calldata _callData2 = execution.data;
+            bytes calldata callData = execution.data;
             assembly ("memory-safe") {
-                let ptr := mload(0x40)
-                calldatacopy(ptr, _callData2.offset, _callData2.length)
-                if iszero(call(gas(), outputContract, ethAmount, ptr, _callData2.length, 0, 0)) {
-                    let errorPtr := mload(0x40)
-                    mstore(errorPtr, EXECUTION_FAILED_SELECTOR)
-                    revert(errorPtr, 0x04)
+                calldatacopy(callPtr, callData.offset, callData.length)
+                if iszero(call(gas(), outputContract, ethAmount, callPtr, callData.length, 0, 0)) {
+                    mstore(callPtr, EXECUTION_FAILED_SELECTOR)
+                    revert(callPtr, 0x04)
                 }
-                mstore(0x40, add(ptr, _callData2.length))
             }
         }
     }
