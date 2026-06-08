@@ -47,6 +47,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         0x34d5be385818fa5c8c4e7f9d5a028251d28ebab8aaf203a072d1dde2d49a1100;
     // Original: abi.encode(uint256(keccak256("TKGasDelegate.state")) - 1) & ~bytes32(uint256(0xff))
 
+    /// @notice Returns a storage pointer to the ERC-7201 namespaced state struct
+    /// @return $ Storage reference to the State struct
     function _getStateStorage() internal pure returns (State storage $) {
         assembly ("memory-safe") {
             $.slot := STATE_STORAGE_POSITION
@@ -66,17 +68,28 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
 
     // Internal helpers to centralize common validation logic
 
+    /// @notice Verifies the signature over _hash and consumes the nonce encoded in _nonceBytes
+    /// @param _hash The EIP-712 typed data hash that was signed
+    /// @param _signature The 65-byte ECDSA signature authorizing this call
+    /// @param _nonceBytes Raw calldata slice from which the uint128 nonce is extracted
     function _validateExecute(bytes32 _hash, bytes calldata _signature, bytes calldata _nonceBytes) internal {
         _requireSelf(_hash, _signature);
         _consumeNonce(_nonceBytes);
     }
 
+    /// @notice Reverts with NotSelf unless the signature over _hash was made by address(this)
+    /// @param _hash The hash that was signed
+    /// @param _signature The 65-byte ECDSA signature
     function _requireSelf(bytes32 _hash, bytes calldata _signature) internal view {
         if (!_validateSignature(_hash, _signature)) {
             revert NotSelf();
         }
     }
 
+    /// @notice Returns true if _signature over _hash was produced by address(this)
+    /// @param _hash The hash that was signed
+    /// @param _signature The 65-byte ECDSA signature
+    /// @return true if the recovered signer equals address(this)
     function _validateSignature(bytes32 _hash, bytes calldata _signature) internal view returns (bool) {
         return ECDSA.recoverCalldata(_hash, _signature) == address(this);
     }
@@ -102,6 +115,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         return 0xffffffff;
     }
 
+    /// @notice Decodes a uint128 nonce from packed calldata bytes, verifies it matches the stored nonce, and increments it
+    /// @dev The nonce is stored in the high 128 bits of the 32-byte calldata word at _nonceBytes.offset
+    /// @param _nonceBytes Raw calldata slice containing the packed uint128 nonce
     function _consumeNonce(bytes calldata _nonceBytes) internal {
         uint128 nonceValue;
         State storage state = _getStateStorage();
@@ -116,6 +132,8 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         }
     }
 
+    /// @notice Verifies _nonce matches the stored nonce and increments it
+    /// @param _nonce The expected current nonce value
     function _consumeNonce(uint128 _nonce) internal {
         State storage state = _getStateStorage();
         if (_nonce != state.nonce) {
@@ -133,6 +151,9 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         return _domainSeparator();
     }
 
+    /// @notice Returns the EIP-712 domain name and version used in the domain separator
+    /// @return name The domain name "TKGasDelegate"
+    /// @return version The domain version "1.1"
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "TKGasDelegate";
         version = "1.1";
@@ -210,6 +231,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         }
     }
 
+    /// @notice Core execution path for calls that send no ETH and discard return data
+    /// @dev Builds and verifies the EIP-712 Execution hash then calls _outputContract
+    /// @param _signature The 65-byte ECDSA signature over the Execution struct hash
+    /// @param _nonceBytes Packed calldata slice containing the uint128 nonce
+    /// @param _deadlineBytes Packed calldata slice containing the uint32 deadline
+    /// @param _outputContract The address to call
+    /// @param _arguments Calldata to forward to _outputContract
     function _executeNoValueNoReturn(
         bytes calldata _signature,
         bytes calldata _nonceBytes,
@@ -256,6 +284,14 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         }
     }
 
+    /// @notice Core execution path for calls that send ETH and discard return data
+    /// @dev Builds and verifies the EIP-712 Execution hash then calls _outputContract with _ethAmount
+    /// @param _signature The 65-byte ECDSA signature over the Execution struct hash
+    /// @param _nonceBytes Packed calldata slice containing the uint128 nonce
+    /// @param _deadlineBytes Packed calldata slice containing the uint32 deadline
+    /// @param _outputContract The address to call
+    /// @param _ethAmount The amount of ETH (in wei) to forward with the call
+    /// @param _arguments Calldata to forward to _outputContract
     function _executeWithValueNoReturn(
         bytes calldata _signature,
         bytes calldata _nonceBytes,
@@ -299,6 +335,12 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         }
     }
 
+    /// @notice Executes a validated batch of calls supplied as a typed calldata array
+    /// @dev Verifies the EIP-712 BatchExecution hash, then executes each call; reverts if any call fails
+    /// @param _signature The 65-byte ECDSA signature over the BatchExecution struct hash
+    /// @param _nonceBytes Packed calldata slice containing the uint128 nonce
+    /// @param _deadlineBytes Packed calldata slice containing the uint32 deadline
+    /// @param _calls Array of Call structs to execute in order
     function _executeBatchWithCallsNoReturn(
         bytes calldata _signature,
         bytes calldata _nonceBytes,
@@ -341,6 +383,13 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         }
     }
 
+    /// @notice Executes a validated batch of calls supplied as ABI-encoded bytes
+    /// @dev Decodes the ABI-encoded Call[] from _calls, verifies the EIP-712 BatchExecution hash via assembly,
+    ///      then executes each call; reverts if the offset pointer is not 0x20 or any call fails
+    /// @param _signature The 65-byte ECDSA signature over the BatchExecution struct hash
+    /// @param _nonceBytes Packed calldata slice containing the uint128 nonce
+    /// @param _deadlineBytes Packed calldata slice containing the uint32 deadline
+    /// @param _calls ABI-encoded Call[] array (offset pointer + length + elements)
     function _executeBatchNoReturn(
         bytes calldata _signature,
         bytes calldata _nonceBytes,
@@ -403,6 +452,11 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         }
     }
 
+    /// @notice Computes the EIP-712 array hash for a Call[] without validating array length
+    /// @dev Each element is hashed as keccak256(CALL_TYPEHASH, to, value, keccak256(data)); the
+    ///      results are packed and hashed. Callers are responsible for ensuring _calls is non-empty.
+    /// @param _calls The array of Call structs to hash
+    /// @return The keccak256 hash of the packed per-element struct hashes
     function _hashCallArrayUnchecked(IBatchExecution.Call[] calldata _calls) internal pure returns (bytes32) {
         uint256 length = _calls.length;
         bytes32[] memory structHashes = new bytes32[](length);
@@ -413,10 +467,17 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         return keccak256(abi.encodePacked(structHashes));
     }
 
+    /// @notice Executes a batch of calls without returning data
+    /// @dev _calls is passed as a typed calldata array; _data carries signature(65) + nonce(16) + deadline(4)
+    /// @param _calls Array of Call structs to execute
+    /// @param _data Encoded authorization: signature(65) + nonce(16) + deadline(4)
     function executeBatch(IBatchExecution.Call[] calldata _calls, bytes calldata _data) external {
         _executeBatchWithCallsNoReturn(_data[0:65], _data[65:81], _data[81:85], _calls);
     }
 
+    /// @notice Executes a batch of calls with all parameters ABI-encoded in a single bytes blob
+    /// @dev _data carries signature(65) + nonce(16) + deadline(4) + ABI-encoded Call[] array
+    /// @param data Encoded data: signature(65) + nonce(16) + deadline(4) + abi.encode(Call[])
     function executeBatch(bytes calldata data) external {
         _executeBatchNoReturn(data[0:65], data[65:81], data[81:85], data[85:]);
     }
