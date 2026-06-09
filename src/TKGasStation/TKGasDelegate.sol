@@ -221,15 +221,6 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         _consumeNonce(_nonce);
     }
 
-    /// @notice Burns the current nonce without a signature; must be called by this contract itself
-    /// @dev Increments the nonce to invalidate the current value
-    function burnNonce() external {
-        require(msg.sender == address(this) && msg.sender == tx.origin, NotSelf());
-        unchecked {
-            ++_getStateStorage().nonce;
-        }
-    }
-
     /// @notice Core execution path for calls that send ETH and discard return data
     /// @dev Builds and verifies the EIP-712 Execution hash then calls _outputContract with _ethAmount
     /// @param _signature The 65-byte ECDSA signature over the Execution struct hash

@@ -28,13 +28,6 @@
   },
   {
     "type": "function",
-    "name": "burnNonce",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "eip712Domain",
     "inputs": [],
     "outputs": [
