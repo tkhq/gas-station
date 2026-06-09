@@ -94,9 +94,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
     /// @param _hash The hash that was signed
     /// @param _signature The 65-byte ECDSA signature
     function _requireSelf(bytes32 _hash, bytes calldata _signature) internal view {
-        if (!_validateSignature(_hash, _signature)) {
-            revert NotSelf();
-        }
+        require(_validateSignature(_hash, _signature), NotSelf());
     }
 
     /// @notice Returns true if _signature over _hash was produced by address(this)
@@ -137,9 +135,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
         assembly ("memory-safe") {
             nonceValue := shr(NONCE_SHIFT, calldataload(_nonceBytes.offset))
         }
-        if (nonceValue != state.nonce) {
-            revert InvalidNonce();
-        }
+        require(nonceValue == state.nonce, InvalidNonce());
         unchecked {
             ++state.nonce;
         }
@@ -149,9 +145,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
     /// @param _nonce The expected current nonce value
     function _consumeNonce(uint128 _nonce) internal {
         State storage state = _getStateStorage();
-        if (_nonce != state.nonce) {
-            revert InvalidNonce();
-        }
+        require(_nonce == state.nonce, InvalidNonce());
         unchecked {
             ++state.nonce;
         }
@@ -230,9 +224,7 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
     /// @notice Burns the current nonce without a signature; must be called by this contract itself
     /// @dev Increments the nonce to invalidate the current value
     function burnNonce() external {
-        if (msg.sender != address(this) || msg.sender != tx.origin) {
-            revert NotSelf();
-        }
+        require(msg.sender == address(this) && msg.sender == tx.origin, NotSelf());
         unchecked {
             ++_getStateStorage().nonce;
         }
