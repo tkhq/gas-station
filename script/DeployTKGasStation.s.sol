@@ -11,12 +11,12 @@ interface IImmutableCreate2Factory {
 
 contract DeployTKGasStation is Script {
     address private constant IMMUTABLE_CREATE2_FACTORY = 0x0000000000FFe8B47B3e2130213B802212439497;
-    address private constant EXPECTED_TK_GAS_STATION = 0x1cBBD58E521e1133F09E2Ba207e3e75c4DB404D5;
+    address private constant EXPECTED_TK_GAS_STATION = 0x5aF5194B4b0909eB978e3Cf1e25333852277f07D;
 
     function run() external {
         uint256 _deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address _delegate = vm.envAddress("TK_GAS_DELEGATE");
-        bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000004761737379;
+        bytes32 _salt = 0x0000000000000000000000000000000000000000000000000000476173737932;
 
         require(
             IMMUTABLE_CREATE2_FACTORY.code.length > 0,
