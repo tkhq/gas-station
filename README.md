@@ -18,6 +18,10 @@ All contracts are deployed at the same address across all networks:
 - **TKGasStation**: [0x5aF5194B4b0909eB978e3Cf1e25333852277f07D](https://basescan.org/address/0x5aF5194B4b0909eB978e3Cf1e25333852277f07D)
 - **TKGasDelegate**: [0x955D84139e7621bc571b117D8EB5D28A4A222C6f](https://basescan.org/address/0x955D84139e7621bc571b117D8EB5D28A4A222C6f)
 
+#### Base Sepolia
+- **TKGasStation**: [0x5aF5194B4b0909eB978e3Cf1e25333852277f07D](https://sepolia.basescan.org/address/0x5aF5194B4b0909eB978e3Cf1e25333852277f07D)
+- **TKGasDelegate**: [0x955D84139e7621bc571b117D8EB5D28A4A222C6f](https://sepolia.basescan.org/address/0x955D84139e7621bc571b117D8EB5D28A4A222C6f)
+
 #### Polygon Mainnet
 - **TKGasStation**: [0x5aF5194B4b0909eB978e3Cf1e25333852277f07D](https://polygonscan.com/address/0x5aF5194B4b0909eB978e3Cf1e25333852277f07D)
 - **TKGasDelegate**: [0x955D84139e7621bc571b117D8EB5D28A4A222C6f](https://polygonscan.com/address/0x955D84139e7621bc571b117D8EB5D28A4A222C6f)
@@ -38,9 +42,17 @@ All contracts are deployed at the same address across all networks:
 - **TKGasStation**: [0x5aF5194B4b0909eB978e3Cf1e25333852277f07D](https://optimistic.etherscan.io/address/0x5aF5194B4b0909eB978e3Cf1e25333852277f07D)
 - **TKGasDelegate**: [0x955D84139e7621bc571b117D8EB5D28A4A222C6f](https://optimistic.etherscan.io/address/0x955D84139e7621bc571b117D8EB5D28A4A222C6f)
 
+#### Optimism Sepolia
+- **TKGasStation**: [0x5aF5194B4b0909eB978e3Cf1e25333852277f07D](https://testnet-explorer.optimism.io/address/0x5aF5194B4b0909eB978e3Cf1e25333852277f07D)
+- **TKGasDelegate**: [0x955D84139e7621bc571b117D8EB5D28A4A222C6f](https://testnet-explorer.optimism.io/address/0x955D84139e7621bc571b117D8EB5D28A4A222C6f)
+
 #### Monad Mainnet
 - **TKGasStation**: [0x5aF5194B4b0909eB978e3Cf1e25333852277f07D](https://monadscan.com/address/0x5aF5194B4b0909eB978e3Cf1e25333852277f07D)
 - **TKGasDelegate**: [0x955D84139e7621bc571b117D8EB5D28A4A222C6f](https://monadscan.com/address/0x955D84139e7621bc571b117D8EB5D28A4A222C6f)
+
+#### Monad Testnet
+- **TKGasStation**: [0x5aF5194B4b0909eB978e3Cf1e25333852277f07D](https://testnet.monadvision.com/address/0x5aF5194B4b0909eB978e3Cf1e25333852277f07D)
+- **TKGasDelegate**: [0x955D84139e7621bc571b117D8EB5D28A4A222C6f](https://testnet.monadvision.com/address/0x955D84139e7621bc571b117D8EB5D28A4A222C6f)
 
 #### Arc Testnet 
 - **TKGasStation**: [0x5aF5194B4b0909eB978e3Cf1e25333852277f07D](https://testnet.arcscan.app/address/0x5aF5194B4b0909eB978e3Cf1e25333852277f07D)
