@@ -30,6 +30,8 @@ arc = "${ARC_RPC_URL}"
 arcTestnet = "https://rpc.testnet.arc.network"
 bnb = "https://bsc-dataseed.binance.org"
 bnbTestnet = "https://bsc-testnet-rpc.publicnode.com"
+robinhood="https://rpc.mainnet.chain.robinhood.com"
+robinhoodtestnet="https://rpc.testnet.chain.robinhood.com"
 
 [etherscan]
 base = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=8453" }
@@ -48,3 +50,5 @@ polygonAmoy = { key = "${ETHERSCAN_API_KEY}", url = "https://api-amoy.polygonsca
 arcTestnet = { key = "${ETHERSCAN_API_KEY}", url = "https://testnet.arcscan.app/api" }
 bnb = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=56" }
 bnbTestnet = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=97" }
+robinhood = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=4663" }
+robinhoodtestnet = { key = "${ETHERSCAN_API_KEY}", url = "https://api.etherscan.io/v2/api?chainid=46630" }
