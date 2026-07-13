@@ -112,7 +112,7 @@ All contracts are deployed at the same address across all networks:
 * Burning a nonce only burns the current nonce. Ones that are premade will be valid
 * Nonces are sequential and can only be used sequentially
 * A user can burn their own counter or nonce without a 712
-* The gas delegate implements recievers for ERC-721 and ERC-1155
+* The gas delegate implements receivers for ERC-721 and ERC-1155
 * The Gas station cannot use session based auth. This is because authorizing the gas station to send arbitrary messages would enable anyone to send arbitrary messages through the gas station
 * There is no requirement for the paymaster to interact with the gas station. The paymaster can interact with the delegate directly if they trust that the user is using the right delegate by doing off-chain validation. 
 * The delegate does not implement EIP-7821[https://eips.ethereum.org/EIPS/eip-7821] as described since the execute function is _payable_. As a security measure to not drain the paymaster, no execute functions by design are allowed to be payable
