@@ -80,20 +80,36 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
         assertEq(result, ERC1271_INVALID_SIGNATURE);
     }
 
-    function testIsValidSignature_EmptySignature_Reverts() public {
+    function testIsValidSignature_EmptySignature_ReturnsInvalidValue() public view {
         bytes32 messageHash = keccak256("test message");
         bytes memory emptySignature = "";
 
-        vm.expectRevert();
-        MockDelegate(user).isValidSignature(messageHash, emptySignature);
+        bytes4 result = MockDelegate(user).isValidSignature(messageHash, emptySignature);
+        assertEq(result, ERC1271_INVALID_SIGNATURE);
     }
 
-    function testIsValidSignature_MalformedSignature_Reverts() public {
+    function testIsValidSignature_MalformedSignature_ReturnsInvalidValue() public view {
         bytes32 messageHash = keccak256("test message");
         bytes memory malformedSignature = "0x1234"; // Too short
 
-        vm.expectRevert();
-        MockDelegate(user).isValidSignature(messageHash, malformedSignature);
+        bytes4 result = MockDelegate(user).isValidSignature(messageHash, malformedSignature);
+        assertEq(result, ERC1271_INVALID_SIGNATURE);
+    }
+
+    function testIsValidSignature_TruncatedToThirtyTwoBytes_ReturnsInvalidValue() public view {
+        bytes32 messageHash = keccak256("test message");
+        bytes memory truncated = abi.encodePacked(bytes32(0), bytes32(0)); // 64 bytes, no v
+
+        bytes4 result = MockDelegate(user).isValidSignature(messageHash, truncated);
+        assertEq(result, ERC1271_INVALID_SIGNATURE);
+    }
+
+    function testIsValidSignature_InvalidRecoveryId_ReturnsInvalidValue() public view {
+        bytes32 messageHash = keccak256("test message");
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(USER_PRIVATE_KEY, messageHash);
+
+        bytes memory badV = abi.encodePacked(r, s, uint8(0)); // not 27/28
+        assertEq(MockDelegate(user).isValidSignature(messageHash, badV), ERC1271_INVALID_SIGNATURE);
     }
 
     function testValidateSignature_WithEIP712Hash_ReturnsTrue() public view {
@@ -189,11 +205,21 @@ contract SignatureValidationTest is TKGasDelegateTestBase {
     }
 
     function testIsValidSignature_ZeroHash_Reverts() public {
+        // A zero hash with an unrecoverable signature is still reported as invalid rather
+        // than reverting, per ERC-1271. Kept as a revert test only to pin that
+        // validateSignature (the execution path) is unchanged.
         bytes32 zeroHash = bytes32(0);
         bytes memory signature = abi.encodePacked(bytes32(0), bytes32(0), uint8(0));
 
         vm.expectRevert();
-        MockDelegate(user).isValidSignature(zeroHash, signature);
+        MockDelegate(user).validateSignature(zeroHash, signature);
+    }
+
+    function testIsValidSignature_ZeroHash_ReturnsInvalidValue() public view {
+        bytes32 zeroHash = bytes32(0);
+        bytes memory signature = abi.encodePacked(bytes32(0), bytes32(0), uint8(0));
+
+        assertEq(MockDelegate(user).isValidSignature(zeroHash, signature), ERC1271_INVALID_SIGNATURE);
     }
 
     function testValidateSignature_ConsistencyWithIsValidSignature() public view {

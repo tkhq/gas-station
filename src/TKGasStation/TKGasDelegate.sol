@@ -120,10 +120,16 @@ contract TKGasDelegate is EIP712, IERC1155Receiver, IERC721Receiver, IERC1271, I
     /// @param _signature The signature to validate
     /// @return Magic value indicating validity (0x1626ba7e for valid, 0xffffffff for invalid)
     function isValidSignature(bytes32 _hash, bytes calldata _signature) external view returns (bytes4) {
-        if (_validateSignature(_hash, _signature)) {
-            return ERC1271_MAGIC_VALUE;
+        // ERC-1271 expects a malformed or non-recoverable signature to be reported as the
+        // invalid magic value rather than as a revert: callers use this return value to decide
+        // whether a contract can handle a given signer, and an unconditional revert makes every
+        // non-ECDSA signer indistinguishable from a broken call.
+        bytes4 invalidSignature = 0xffffffff;
+        try this.validateSignature(_hash, _signature) returns (bool isValid) {
+            return isValid ? ERC1271_MAGIC_VALUE : invalidSignature;
+        } catch {
+            return invalidSignature;
         }
-        return 0xffffffff;
     }
 
     /// @notice Decodes a uint128 nonce from packed calldata bytes, verifies it matches the stored nonce, and increments it
